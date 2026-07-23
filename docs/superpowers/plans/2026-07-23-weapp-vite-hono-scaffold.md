@@ -62,15 +62,12 @@ vitest.config.ts
 - Create: .npmrc
 - Create: .gitignore
 - Create: .env.example
-- Create: server/index.ts
-- Create: server/app.ts
+- Create or modify: pnpm-workspace.yaml
 - Test: tests/smoke/toolchain.test.ts
 
 **Interfaces:**
 
-- Package scripts: dev:weapp, dev:api, dev, prepare, typecheck, typecheck:app, typecheck:server, lint, test, test:coverage, build, build:server, analyze:budget, verify。
-- server/app.ts exports app: Hono and never opens a port。
-- server/index.ts starts serve({ fetch: app.fetch, port })。
+- Package scripts: dev:weapp, dev:api, dev, prepare, typecheck, typecheck:app, typecheck:server, lint, test, test:coverage, build, build:server, analyze:budget, verify；dev:api 和 build:server 在 Task 2 添加后可用。
 - Frontend and server have separate TypeScript projects。
 
 - [ ] Step 1: Inspect actual CLI contracts.
@@ -180,7 +177,7 @@ pnpm prepare
 Expected: all exit 0. Then stage only Task 1 files and commit:
 
 ~~~bash
-git add package.json pnpm-lock.yaml vite.config.ts tsconfig.app.json tsconfig.server.json vitest.config.ts project.config.json .npmrc .gitignore .env.example server/index.ts server/app.ts tests/smoke/toolchain.test.ts
+git add package.json pnpm-lock.yaml pnpm-workspace.yaml vite.config.ts tsconfig.server.json vitest.config.ts project.config.json .npmrc .gitignore .env.example scripts/dev-all.mjs tests/smoke/toolchain.test.ts
 git commit -m "chore: bootstrap wevu and hono toolchain"
 ~~~
 
