@@ -38,7 +38,7 @@
 - 真实生产后端、数据库、微信 AppSecret、支付或生产发布；
 - 真实业务账号和不可逆写操作；
 - H5 作为首要运行目标；
-- Vue Mini、标准 Pinia、Pinia Colada、Vue Router、Axios 或默认 TailwindCSS；
+- Vue Mini、标准 Pinia、Pinia Colada、Vue Router、Axios 或原生 Web TailwindCSS 工作流；允许按小程序编译链需要使用 `weapp-tailwindcss`；
 - 微前端、动态模块加载、远程组件和完整离线写队列；
 - 自动上传体验版或正式版本。
 
@@ -350,7 +350,7 @@ pnpm analyze:budget
 
 - `weapp-vite` 与 `wevu` 使用官方脚手架生成的精确匹配版本；
 - `@tanstack/query-core`、`tdesign-miniprogram`、Hono 和 Node adapter 锁定在 `pnpm-lock.yaml`；
-- 禁止安装 Pinia Colada、标准 Pinia、Vue Router、Axios、浏览器 Vue UI 库和默认 TailwindCSS；
+- 禁止安装 Pinia Colada、标准 Pinia、Vue Router、Axios 和浏览器 Vue UI 库；允许 `weapp-tailwindcss`，但不引入原生 Web TailwindCSS 配置、类名扫描和浏览器运行时工作流；
 - Hono Fixture 不保存真实密钥，不模拟生产支付或生产权限；
 - CORS、日志和测试账号只服务本地开发；
 - Codex MCP 仅启用 weapp-vite 相关工具，不暴露发布和上传工具；
@@ -366,4 +366,3 @@ pnpm analyze:budget
 - `pnpm prepare`、`pnpm typecheck`、`pnpm lint`、`pnpm test`、`pnpm build` 和 `pnpm analyze:budget` 有实际输出记录；
 - 若环境支持，完成 MCP/DevTools 运行时证据；否则明确记录未验证项；
 - 完成报告列出文件、命令、决策、运行时证据和剩余风险。
-

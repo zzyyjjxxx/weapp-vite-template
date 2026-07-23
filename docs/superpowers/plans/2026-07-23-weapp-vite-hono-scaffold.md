@@ -13,7 +13,7 @@
 - 当前目录 /Users/mang/Project/weapp-vite-template 是项目根目录。
 - weapp-vite 与 wevu 使用官方脚手架生成的精确匹配版本，并提交 pnpm-lock.yaml。
 - 页面运行时 API 只能从 wevu 导入；禁止在业务代码中使用标准 vue 运行时入口。
-- 禁止安装或导入 pinia、@pinia/colada、vue-router、axios、浏览器版 Vue UI 库和默认 TailwindCSS。
+- 禁止安装或导入 pinia、@pinia/colada、vue-router、axios 和浏览器版 Vue UI 库；允许使用 weapp-tailwindcss，但不引入原生 Web TailwindCSS 配置、类名扫描和浏览器运行时工作流。
 - 普通 JSON 请求唯一入口是 src/shared/http/client.ts；领域 API 唯一入口是 src/features/*/service.ts。
 - 页面不直接调用 fetch、wpi、wx.request 或原生导航 API。
 - Query Core 只放服务端状态；Wevu Store 只放会话、偏好和其他短小客户端状态。
