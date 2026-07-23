@@ -12,9 +12,9 @@ definePageJson({
   navigationBarTitleText: '订单详情',
 })
 
-const id = ref('')
+const orderId = ref('')
 const cancelMutation = useCancelOrderMutation()
-const detailQuery = useOrderDetailQuery(id)
+const detailQuery = useOrderDetailQuery(orderId)
 const order = detailQuery.data
 const isPending = detailQuery.isPending
 const isError = detailQuery.isError
@@ -23,7 +23,7 @@ const errorMessage = computed(() => detailQuery.error.value?.message ?? '订单�
 const cancelErrorMessage = computed(() => cancelMutation.error.value?.message ?? '')
 
 onLoad((query) => {
-  id.value = readOrderId(query)
+  orderId.value = readOrderId(query)
 })
 
 async function goBack(): Promise<void> {
@@ -31,10 +31,10 @@ async function goBack(): Promise<void> {
 }
 
 async function cancel(): Promise<void> {
-  if (!id.value || !detailQuery.data.value?.canCancel) {
+  if (!orderId.value || !detailQuery.data.value?.canCancel) {
     return
   }
-  await cancelMutation.mutateAsync(id.value)
+  await cancelMutation.mutateAsync(orderId.value)
 }
 </script>
 
@@ -44,7 +44,7 @@ async function cancel(): Promise<void> {
     subtitle="详情缓存会在取消成功后同步更新"
   >
     <AppError
-      v-if="!id"
+      v-if="!orderId"
       title="缺少订单 ID"
       message="请从订单列表进入详情页。"
       @retry="goBack"
