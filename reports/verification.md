@@ -9,9 +9,13 @@ Date: 2026-07-23
 - `pnpm typecheck` — passed; app `vue-tsc` and server `tsc` both passed.
 - `pnpm lint` — passed.
 - `pnpm stylelint` — passed.
-- `pnpm test:coverage` — passed; 23 test files and 47 tests passed. Overall
-  statement coverage: 82.15%; line coverage: 82.55%.
-- `pnpm build` — passed; main package 534 KB and
+- `pnpm test:coverage` — passed before the icon change; 23 test files and 47
+  tests passed. Overall statement coverage: 82.15%; line coverage: 82.55%.
+- `pnpm verify` — passed after the icon change; 24 test files and 48 tests
+  passed.
+- `pnpm vitest run tests/unit/components/app-icon.test.ts` — passed; the
+  initial Reicon subset and both weights resolve to existing local SVG files.
+- `pnpm build` — passed after the icon change; main package 538 KB and
   `subpackages/order` 25.4 KB.
 - `pnpm build:server` — passed.
 - `pnpm analyze:budget` — passed.
@@ -42,6 +46,10 @@ the `subpackages/order` root with list/detail pages, and home/profile tab items.
   opened `/pages/login/index?returnTo=%2Fsubpackages%2Forder%2Fpages%2Flist%2Findex`.
 - Post-login route — passed; the observed page stack reached
   `/subpackages/order/pages/list/index` and loaded the four local fixture orders.
+- Reicon `AppIcon` — passed in the simulator: the Home, Login and Order List
+  page headers rendered the vendored SVG assets through the native `<image>`
+  component. Screenshots are available at `.tmp/runtime-icons-home.png`,
+  `.tmp/runtime-icons-login.png` and `.tmp/runtime-icons-orders.png`.
 - Detail/cancel flow — passed for fixture `order-1002`: the observed route was
   `/subpackages/order/pages/detail/index?id=order-1002`; the detail screen
   displayed the order number, status, amount and cancel action, then updated
