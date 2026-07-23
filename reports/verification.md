@@ -5,20 +5,25 @@ Date: 2026-07-23
 ## Commands
 
 - `pnpm install --frozen-lockfile` — passed; lockfile already up to date.
+- `pnpm --config.proxy=http://127.0.0.1:17897 --config.https-proxy=http://127.0.0.1:17897 install` — passed after updating `weapp-vite`, `wevu` and `@weapp-vite/dashboard` to `6.18.6`; pnpm also refreshed the generated release-age exclusions.
+- `./node_modules/.bin/wv prepare` — passed with `weapp-vite` `6.18.6`; managed `.weapp-vite` support files remained synchronized.
 - `pnpm prepare` — passed; generated `.weapp-vite` support files.
 - `pnpm typecheck` — passed; app `vue-tsc` and server `tsc` both passed.
 - `pnpm lint` — passed.
 - `pnpm stylelint` — passed.
 - `pnpm test:coverage` — passed before the icon change; 23 test files and 47
   tests passed. Overall statement coverage: 82.15%; line coverage: 82.55%.
-- `pnpm verify` — passed after the icon change; 24 test files and 48 tests
-  passed.
+- `pnpm verify` — passed after the `6.18.6` toolchain update; 24 test files
+  and 48 tests passed, with lint, stylelint, typecheck, build and budget
+  checks all passing.
 - `pnpm vitest run tests/unit/components/app-icon.test.ts` — passed; the
   initial Reicon subset and both weights resolve to existing local SVG files.
 - `pnpm build` — passed after the icon change; main package 538 KB and
   `subpackages/order` 25.4 KB.
 - `pnpm build:server` — passed.
 - `pnpm analyze:budget` — passed.
+- `pnpm mcp:print` — passed with the generated Codex stdio configuration for
+  this workspace.
 
 The generated `dist/app.json` was inspected and contains the four main pages,
 the `subpackages/order` root with list/detail pages, and home/profile tab items.
@@ -29,6 +34,8 @@ the `subpackages/order` root with list/detail pages, and home/profile tab items.
   smoke verification.
 - `curl -fsS http://127.0.0.1:8787/api/health` — passed with `code: SUCCESS`
   and `data.status: ok`.
+- Post-update Hono smoke — passed on `http://127.0.0.1:8787`; the same local
+  in-memory fixture backend served the DevTools login and order-list flow.
 - `curl` login using the local fixture account — returned `code: SUCCESS`; no
   token values are recorded here.
 - Vitest server tests cover login, refresh, profile authorization, order list
@@ -46,6 +53,11 @@ the `subpackages/order` root with list/detail pages, and home/profile tab items.
   opened `/pages/login/index?returnTo=%2Fsubpackages%2Forder%2Fpages%2Flist%2Findex`.
 - Post-login route — passed; the observed page stack reached
   `/subpackages/order/pages/list/index` and loaded the four local fixture orders.
+- `6.18.6` toolchain smoke — passed; the observed current page was
+  `/subpackages/order/pages/list/index`, and screenshots are available at
+  `.tmp/runtime-toolchain-6.18.6-home.png`,
+  `.tmp/runtime-toolchain-6.18.6-login.png` and
+  `.tmp/runtime-toolchain-6.18.6-orders.png`.
 - Reicon `AppIcon` — passed in the simulator: the Home, Login and Order List
   page headers rendered the vendored SVG assets through the native `<image>`
   component. Screenshots are available at `.tmp/runtime-icons-home.png`,
