@@ -1,0 +1,67 @@
+{
+  "name": "weapp-vite-wevu-template",
+  "type": "module",
+  "version": "1.0.5",
+  "private": true,
+  "description": "weapp-vite + wevu (Vue SFC) 模板",
+  "author": "ice breaker <1324318532@qq.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/weapp-vite/weapp-vite.git",
+    "directory": "templates/weapp-vite-wevu-template"
+  },
+  "bugs": {
+    "url": "https://github.com/weapp-vite/weapp-vite/issues"
+  },
+  "keywords": [],
+  "scripts": {
+    "dev": "node scripts/dev-all.mjs",
+    "dev:weapp": "wv dev -p weapp",
+    "dev:api": "tsx server/index.ts",
+    "dev:open": "wv dev -p weapp --open",
+    "dev:ui": "wv dev --ui",
+    "dev:open:ui": "wv dev --ui --open",
+    "prepare": "wv prepare",
+    "build": "wv build -p weapp",
+    "build:server": "tsc -p tsconfig.server.json --outDir dist/server",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "pnpm typecheck:app && pnpm typecheck:server",
+    "typecheck:app": "vue-tsc --noEmit -p .weapp-vite/tsconfig.app.json",
+    "typecheck:server": "tsc -p tsconfig.server.json --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "analyze:budget": "wv analyze -p weapp --budget-check",
+    "mcp:print": "wv mcp print codex",
+    "mcp:doctor": "wv mcp doctor codex",
+    "verify": "pnpm prepare && pnpm typecheck && pnpm lint && pnpm stylelint && pnpm test && pnpm build && pnpm analyze:budget",
+    "open": "wv open",
+    "stylelint": "stylelint \"src/**/*.{css,scss,vue,wxss}\" --allow-empty-input",
+    "stylelint:fix": "stylelint \"src/**/*.{css,scss,vue,wxss}\" --fix --allow-empty-input",
+    "postinstall": "wv prepare"
+  },
+  "devDependencies": {
+    "@icebreakers/eslint-config": "^7.0.1",
+    "@icebreakers/stylelint-config": "^5.0.2",
+    "@types/node": "^26.1.1",
+    "@vitest/coverage-v8": "4.1.10",
+    "@weapp-vite/dashboard": "6.18.4",
+    "eslint": "10.7.0",
+    "miniprogram-api-typings": "5.2.1",
+    "stylelint": "17.14.1",
+    "tsx": "4.23.1",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10",
+    "vue-tsc": "3.3.7",
+    "weapp-tailwindcss": "5.2.0",
+    "weapp-vite": "6.18.4",
+    "wevu": "6.18.4"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.0.11",
+    "@tanstack/query-core": "5.101.4",
+    "hono": "4.12.31",
+    "tdesign-miniprogram": "1.15.3"
+  }
+}
