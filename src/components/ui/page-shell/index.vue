@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import type { AppIconName } from '@/components/ui/app-icon/icons'
+import type { AppTabPath } from '@/components/ui/app-tab-bar/items'
 
 import AppIcon from '@/components/ui/app-icon/index.vue'
+import AppTabBar from '@/components/ui/app-tab-bar/index.vue'
 
 const props = defineProps<{
   title: string
   subtitle?: string
   icon?: AppIconName
+  tabBarPath?: AppTabPath
 }>()
 
 defineComponentJson({
@@ -15,7 +18,10 @@ defineComponentJson({
 </script>
 
 <template>
-  <view class="page-shell">
+  <view
+    class="page-shell"
+    :class="{ 'page-shell--with-tab-bar': props.tabBarPath }"
+  >
     <view class="page-shell__header">
       <view class="page-shell__heading">
         <AppIcon
@@ -41,6 +47,10 @@ defineComponentJson({
     <view class="page-shell__body">
       <slot />
     </view>
+    <AppTabBar
+      v-if="props.tabBarPath"
+      :active-path="props.tabBarPath"
+    />
   </view>
 </template>
 
@@ -51,6 +61,10 @@ defineComponentJson({
   min-height: 100vh;
   padding: $space-5 $space-4 $space-5;
   background: $color-page;
+}
+
+.page-shell--with-tab-bar {
+  padding-bottom: calc($space-5 + 132rpx);
 }
 
 .page-shell__header {

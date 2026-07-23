@@ -23,6 +23,12 @@ do not import `reicon-vue` directly into a Wevu SFC. Add an icon to the registry
 and commit its local asset when a feature needs one, instead of shipping the
 entire icon database to the first package.
 
+`AppTabBar` is the custom bottom navigation boundary. It is rendered by
+`PageShell` only when Home or Profile passes an explicit active tab path, uses
+`AppIcon` for the selected/outline states, and navigates through the typed
+router. Do not add a second native `tabBar` configuration or call
+`wx.switchTab` for these routes.
+
 `weapp-tailwindcss` is permitted for mini-program-compatible styling if a future
 feature needs it. Native Web TailwindCSS config, browser class scanning and a
 browser Tailwind runtime are intentionally out of scope.

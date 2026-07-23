@@ -33,22 +33,6 @@ defineAppJson({
     navigationBarBackgroundColor: '#ffffff',
     navigationBarTextStyle: 'black',
   },
-  tabBar: {
-    color: '#4e5969',
-    selectedColor: '#0052d9',
-    backgroundColor: '#ffffff',
-    borderStyle: 'white',
-    list: [
-      {
-        pagePath: 'pages/home/index',
-        text: '首页',
-      },
-      {
-        pagePath: 'pages/profile/index',
-        text: '我的',
-      },
-    ],
-  },
   style: 'v2',
   componentFramework: 'glass-easel',
   sitemapLocation: 'sitemap.json',

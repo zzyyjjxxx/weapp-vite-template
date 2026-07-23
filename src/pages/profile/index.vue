@@ -46,6 +46,7 @@ async function goLogin(): Promise<void> {
     title="个人资料"
     subtitle="受保护接口的 Query Core 示例"
     icon="user-circle"
+    tab-bar-path="/pages/profile/index"
   >
     <AppLoading v-if="isPending" />
     <AppError

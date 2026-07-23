@@ -1,8 +1,6 @@
-import type { AutoRoutesUrl } from 'weapp-vite/auto-routes'
 import type { RouteQuery } from './query'
 import type { AppRoutePath, RouteMeta } from './types'
 
-import { wxRouter } from 'weapp-vite/auto-routes'
 import { useRouter } from 'wevu/router'
 import { encodeQuery } from './query'
 import { routeMeta } from './route-meta'
@@ -18,7 +16,7 @@ let navigationAdapter: NavigationAdapter | undefined
 function createDefaultNavigationAdapter(): NavigationAdapter {
   return {
     switchTab: async (path) => {
-      await wxRouter.switchTab({ url: path as AutoRoutesUrl })
+      await useRouter().replace(path)
     },
     push: async (url) => {
       await useRouter().push(url)
