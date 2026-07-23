@@ -21,6 +21,12 @@ const isError = detailQuery.isError
 const isCancelPending = cancelMutation.isPending
 const errorMessage = computed(() => detailQuery.error.value?.message ?? '订单详情暂时不可用。')
 const cancelErrorMessage = computed(() => cancelMutation.error.value?.message ?? '')
+const orderNumber = computed(() => order.value?.number ?? '')
+const orderStatusLabel = computed(() => order.value?.statusLabel ?? '')
+const orderAmountText = computed(() => order.value ? `¥${order.value.amount.toFixed(2)}` : '')
+const orderIdText = computed(() => order.value?.id ?? '')
+const orderCreatedAt = computed(() => order.value?.createdAt ?? '')
+const canCancel = computed(() => Boolean(order.value?.canCancel))
 
 onLoad((query) => {
   orderId.value = readOrderId(query)
@@ -58,28 +64,28 @@ async function cancel(): Promise<void> {
     <view v-else-if="order" class="order-detail">
       <view class="order-detail__summary u-card">
         <text class="order-detail__number">
-          {{ order.number }}
+          {{ orderNumber }}
         </text>
         <text class="order-detail__status">
-          {{ order.statusLabel }}
+          {{ orderStatusLabel }}
         </text>
         <text class="order-detail__amount">
-          ¥{{ order.amount.toFixed(2) }}
+          {{ orderAmountText }}
         </text>
       </view>
 
       <view class="order-detail__info u-card">
         <view class="order-detail__row">
           <text>订单 ID</text>
-          <text>{{ order.id }}</text>
+          <text>{{ orderIdText }}</text>
         </view>
         <view class="order-detail__row">
           <text>创建时间</text>
-          <text>{{ order.createdAt }}</text>
+          <text>{{ orderCreatedAt }}</text>
         </view>
         <view class="order-detail__row">
           <text>状态</text>
-          <text>{{ order.statusLabel }}</text>
+          <text>{{ orderStatusLabel }}</text>
         </view>
       </view>
 
@@ -87,7 +93,7 @@ async function cancel(): Promise<void> {
         {{ cancelErrorMessage }}
       </text>
       <button
-        v-if="order.canCancel"
+        v-if="canCancel"
         class="order-detail__cancel"
         :disabled="isCancelPending"
         @tap="cancel"
