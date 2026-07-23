@@ -2,6 +2,7 @@
 import { focusManager } from '@tanstack/query-core'
 import autoRoutes from 'weapp-vite/auto-routes'
 import { onHide, onShow } from 'wevu'
+import { installAbortGlobals } from 'wevu/web-apis'
 
 import { createNetworkStatusAdapter } from '@/platform/network-status'
 import { setupRouter } from '@/router'
@@ -10,6 +11,7 @@ import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 import { setupStorePlugins } from '@/stores/plugins'
 
+installAbortGlobals()
 setupStorePlugins()
 setupRouter()
 setupQueryOnlineManager(createNetworkStatusAdapter())
