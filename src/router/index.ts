@@ -8,7 +8,7 @@ import { createRouter } from 'wevu/router'
 
 import { useAuthStore } from '@/stores/auth'
 import { buildLoginRedirect } from './navigation'
-import { routeMeta } from './route-meta'
+import { resolveRouteMeta } from './route-meta'
 
 let router: RouterNavigation | undefined
 
@@ -25,7 +25,7 @@ export function setupRouter(): RouterNavigation {
       return
     }
 
-    const meta: RouteMeta | undefined = routeMeta[to.path as keyof typeof routeMeta]
+    const meta: RouteMeta | undefined = resolveRouteMeta(to.path)
     const auth = useAuthStore()
     if (meta?.auth && !auth.isAuthenticated.value) {
       return buildLoginRedirect(to.fullPath)

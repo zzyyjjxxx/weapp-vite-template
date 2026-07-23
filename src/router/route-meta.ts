@@ -24,3 +24,8 @@ export const routeMeta = {
     analyticsName: 'order_detail',
   },
 } satisfies Partial<Record<AppRoutePath, RouteMeta>>
+
+export function resolveRouteMeta(path: string): RouteMeta | undefined {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  return routeMeta[normalizedPath as keyof typeof routeMeta]
+}
