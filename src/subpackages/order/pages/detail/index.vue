@@ -64,28 +64,28 @@ async function cancel(): Promise<void> {
     <view v-else-if="order" class="order-detail">
       <view class="order-detail__summary u-card">
         <text class="order-detail__number">
-          {{ orderNumber }}
+          {{ orderNumber.toString() }}
         </text>
         <text class="order-detail__status">
-          {{ orderStatusLabel }}
+          {{ orderStatusLabel.toString() }}
         </text>
         <text class="order-detail__amount">
-          {{ orderAmountText }}
+          {{ orderAmountText.toString() }}
         </text>
       </view>
 
       <view class="order-detail__info u-card">
         <view class="order-detail__row">
           <text>订单 ID</text>
-          <text>{{ orderIdText }}</text>
+          <text>{{ orderIdText.toString() }}</text>
         </view>
         <view class="order-detail__row">
           <text>创建时间</text>
-          <text>{{ orderCreatedAt }}</text>
+          <text>{{ orderCreatedAt.toString() }}</text>
         </view>
         <view class="order-detail__row">
           <text>状态</text>
-          <text>{{ orderStatusLabel }}</text>
+          <text>{{ orderStatusLabel.toString() }}</text>
         </view>
       </view>
 
