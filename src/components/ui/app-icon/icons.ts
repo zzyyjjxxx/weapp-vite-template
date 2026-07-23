@@ -11,7 +11,7 @@ export type AppIconWeight = 'Outline' | 'Filled'
 type AppIconSources = Record<AppIconName, Record<AppIconWeight, string>>
 
 const appIconSources: AppIconSources = {
-  home: {
+  'home': {
     Outline: '/assets/icons/reicon/home-outline.svg',
     Filled: '/assets/icons/reicon/home-filled.svg',
   },
@@ -23,7 +23,7 @@ const appIconSources: AppIconSources = {
     Outline: '/assets/icons/reicon/list-check-outline.svg',
     Filled: '/assets/icons/reicon/list-check-filled.svg',
   },
-  login: {
+  'login': {
     Outline: '/assets/icons/reicon/login-outline.svg',
     Filled: '/assets/icons/reicon/login-filled.svg',
   },

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'wevu'
-
 import type { AppIconName, AppIconWeight } from './icons'
+
+import { computed } from 'wevu'
 import { getAppIconSource } from './icons'
 
 const props = withDefaults(defineProps<{

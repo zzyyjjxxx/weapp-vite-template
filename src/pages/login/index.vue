@@ -67,6 +67,7 @@ async function submit(): Promise<void> {
   <PageShell
     title="登录"
     subtitle="演示账号：demo / demo123"
+    icon="login"
   >
     <view class="login__card u-card">
       <text class="login__label">

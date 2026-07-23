@@ -1,7 +1,12 @@
 <script setup lang="ts">
+import type { AppIconName } from '@/components/ui/app-icon/icons'
+
+import AppIcon from '@/components/ui/app-icon/index.vue'
+
 const props = defineProps<{
   title: string
   subtitle?: string
+  icon?: AppIconName
 }>()
 
 defineComponentJson({
@@ -12,15 +17,26 @@ defineComponentJson({
 <template>
   <view class="page-shell">
     <view class="page-shell__header">
-      <text class="page-shell__title">
-        {{ props.title }}
-      </text>
-      <text
-        v-if="props.subtitle"
-        class="page-shell__subtitle"
-      >
-        {{ props.subtitle }}
-      </text>
+      <view class="page-shell__heading">
+        <AppIcon
+          v-if="props.icon"
+          class="page-shell__icon"
+          :name="props.icon"
+          :size="48"
+          weight="Filled"
+        />
+        <view class="page-shell__heading-copy">
+          <text class="page-shell__title">
+            {{ props.title }}
+          </text>
+          <text
+            v-if="props.subtitle"
+            class="page-shell__subtitle"
+          >
+            {{ props.subtitle }}
+          </text>
+        </view>
+      </view>
     </view>
     <view class="page-shell__body">
       <slot />
@@ -39,6 +55,20 @@ defineComponentJson({
 
 .page-shell__header {
   padding: $space-2 0 $space-4;
+}
+
+.page-shell__heading {
+  display: flex;
+  align-items: center;
+}
+
+.page-shell__icon {
+  margin-right: $space-2;
+}
+
+.page-shell__heading-copy {
+  flex: 1;
+  min-width: 0;
 }
 
 .page-shell__title {

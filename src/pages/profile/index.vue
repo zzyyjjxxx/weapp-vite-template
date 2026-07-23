@@ -45,6 +45,7 @@ async function goLogin(): Promise<void> {
   <PageShell
     title="个人资料"
     subtitle="受保护接口的 Query Core 示例"
+    icon="user-circle"
   >
     <AppLoading v-if="isPending" />
     <AppError

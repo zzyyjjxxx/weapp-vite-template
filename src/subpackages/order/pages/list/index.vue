@@ -102,6 +102,7 @@ async function openDetail(order: Order): Promise<void> {
   <PageShell
     title="订单列表"
     subtitle="列表筛选、分页与 Query Core 缓存"
+    icon="list-check"
   >
     <view class="order-list__filters u-card">
       <input

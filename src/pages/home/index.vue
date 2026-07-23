@@ -32,6 +32,7 @@ async function openLogin(): Promise<void> {
   <PageShell
     title="业务工作台"
     subtitle="weapp-vite + Wevu + Hono 的最小可运行垂直切片"
+    icon="home"
   >
     <view class="home__hero">
       <text class="home__eyebrow">
