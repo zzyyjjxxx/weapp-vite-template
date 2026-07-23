@@ -42,3 +42,18 @@ reports/*
 !reports/.gitkeep
 !reports/verification.md
 .screenshots/current/
+
+# local AI and planning support files
+.agents/
+docs/superpowers/
+
+# local screenshot and visual regression output
+.screenshots/
+screenshots/
+**/screenshots/
+*.screenshot.png
+*.screenshot.jpg
+*-screenshot.png
+*-screenshot.jpg
+*.screen.png
+*.screen.jpg
