@@ -13,20 +13,26 @@ Date: 2026-07-23
 - `pnpm stylelint` — passed.
 - `pnpm test:coverage` — passed before the icon change; 23 test files and 47
   tests passed. Overall statement coverage: 82.15%; line coverage: 82.55%.
-- `pnpm verify` — passed after the `6.18.6` toolchain update; 24 test files
-  and 48 tests passed, with lint, stylelint, typecheck, build and budget
-  checks all passing.
+- `pnpm verify` — passed after the `6.18.6` toolchain update and component
+  tab-bar change; 25 test files and 50 tests passed, with lint, stylelint,
+  typecheck, build and budget checks all passing. Main package: 541 KB;
+  `subpackages/order`: 25.4 KB.
 - `pnpm vitest run tests/unit/components/app-icon.test.ts` — passed; the
   initial Reicon subset and both weights resolve to existing local SVG files.
 - `pnpm build` — passed after the icon change; main package 538 KB and
-  `subpackages/order` 25.4 KB.
+  `subpackages/order` 25.4 KB (the later component tab-bar build is recorded
+  in the `pnpm verify` entry above).
 - `pnpm build:server` — passed.
 - `pnpm analyze:budget` — passed.
 - `pnpm mcp:print` — passed with the generated Codex stdio configuration for
   this workspace.
+- `pnpm mcp:doctor` — passed after `wv mcp init codex --yes` wrote the
+  workspace MCP server block to `/Users/mang/.codex/config.toml`.
 
-The generated `dist/app.json` was inspected and contains the four main pages,
-the `subpackages/order` root with list/detail pages, and home/profile tab items.
+The generated `dist/app.json` was inspected and contains the four main pages
+and the `subpackages/order` root with list/detail pages. It no longer contains
+a native `tabBar`; the Home/Profile navigation is rendered by the component
+tab bar inside `PageShell`.
 
 ## Hono
 
@@ -46,7 +52,7 @@ the `subpackages/order` root with list/detail pages, and home/profile tab items.
 
 - `wechatide -c ide check_wechatide_status` — passed; the logged-in WeChat
   DevTools skill reported a valid session.
-- `open_project_window`, `debug_clear_cache --action clearSession`,
+- `open_project_window`, `debug_clear_cache --action cleanAll`,
   `simulator_refresh` and `simulator_open_page` — passed for the workspace
   project.
 - Login guard — passed in the simulator: tapping `查看订单` while logged out
@@ -66,6 +72,13 @@ the `subpackages/order` root with list/detail pages, and home/profile tab items.
   `/subpackages/order/pages/detail/index?id=order-1002`; the detail screen
   displayed the order number, status, amount and cancel action, then updated
   to `已取消` and hid the cancel action after cancellation.
+- Component tab bar — passed in the simulator: the Home screenshot shows the
+  filled Home icon and outline Profile icon; the authenticated Profile
+  screenshot shows the outline Home icon and filled Profile icon. The Login
+  screenshot has no bottom tab bar. Evidence is available at
+  `.tmp/runtime-component-tabbar-home-fixed.png`,
+  `.tmp/runtime-component-tabbar-profile-fixed.png` and
+  `.tmp/runtime-component-tabbar-login-fixed.png`.
 - DevTools Console — the error filter for `error|exception|unhandled|AbortController`
   returned no lines. The full buffer reported WeChatLib 3.17.0 and expected
   store lifecycle debug events only.
@@ -77,10 +90,10 @@ the `subpackages/order` root with list/detail pages, and home/profile tab items.
   on the order subpackage. Home/login buttons were tapped through the element
   automator; list-to-detail and cancel were invoked through the observed page
   methods, with the resulting route, state and screenshots verified separately.
-- `pnpm mcp:print` passed. `pnpm mcp:doctor` still reports that the generated
-  Codex block is absent from `/Users/mang/.codex/config.toml`; this report uses
-  the logged-in `wechatide` CLI runtime evidence above and does not claim that
-  user-level MCP configuration was modified.
+- The DevTools automator could not resolve the tab-bar child `view` selector
+  across the Wevu component boundary; page-level navigation and the Home/
+  Profile runtime screenshots were still verified in the same simulator
+  session.
 - Screenshot/diff — no baseline or diff claimed.
 
 ## Remaining risks
