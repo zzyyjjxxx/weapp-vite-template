@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import { computed, onLoad, ref } from 'wevu'
+import { computed } from 'wevu'
+import { useRoute } from 'wevu/router'
 
 import AppError from '@/components/ui/app-error/index.vue'
 import AppLoading from '@/components/ui/app-loading/index.vue'
 import PageShell from '@/components/ui/page-shell/index.vue'
 import { useCancelOrderMutation, useOrderDetailQuery } from '@/features/order/queries'
+import { readOrderId } from '@/features/order/route'
 import { getRouter } from '@/router'
 
 definePageJson({
   navigationBarTitleText: '订单详情',
 })
 
-const id = ref('')
+const route = useRoute()
+const id = computed(() => readOrderId(route.query))
 const cancelMutation = useCancelOrderMutation()
 const detailQuery = useOrderDetailQuery(id)
 const order = detailQuery.data
@@ -20,10 +23,6 @@ const isError = detailQuery.isError
 const isCancelPending = cancelMutation.isPending
 const errorMessage = computed(() => detailQuery.error.value?.message ?? '订单详情暂时不可用。')
 const cancelErrorMessage = computed(() => cancelMutation.error.value?.message ?? '')
-
-onLoad((query) => {
-  id.value = typeof query?.id === 'string' ? query.id : ''
-})
 
 async function goBack(): Promise<void> {
   await getRouter().back()
