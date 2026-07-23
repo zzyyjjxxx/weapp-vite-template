@@ -41,6 +41,12 @@
     "stylelint:fix": "stylelint \"src/**/*.{css,scss,vue,wxss}\" --fix --allow-empty-input",
     "postinstall": "wv prepare"
   },
+  "dependencies": {
+    "@hono/node-server": "2.0.11",
+    "@tanstack/query-core": "5.101.4",
+    "hono": "4.12.31",
+    "tdesign-miniprogram": "1.15.3"
+  },
   "devDependencies": {
     "@icebreakers/eslint-config": "^7.0.1",
     "@icebreakers/stylelint-config": "^5.0.2",
@@ -49,6 +55,7 @@
     "@weapp-vite/dashboard": "6.18.4",
     "eslint": "10.7.0",
     "miniprogram-api-typings": "5.2.1",
+    "sass-embedded": "1.100.0",
     "stylelint": "17.14.1",
     "tsx": "4.23.1",
     "typescript": "6.0.3",
@@ -57,11 +64,5 @@
     "weapp-tailwindcss": "5.2.0",
     "weapp-vite": "6.18.4",
     "wevu": "6.18.4"
-  },
-  "dependencies": {
-    "@hono/node-server": "2.0.11",
-    "@tanstack/query-core": "5.101.4",
-    "hono": "4.12.31",
-    "tdesign-miniprogram": "1.15.3"
   }
 }

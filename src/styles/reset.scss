@@ -1,0 +1,18 @@
+page {
+  box-sizing: border-box;
+  min-height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  color: #1d2129;
+  background: #f5f7fa;
+}
+
+view,
+text,
+button,
+input {
+  box-sizing: border-box;
+}
+
+button {
+  line-height: 1.4;
+}

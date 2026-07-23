@@ -63,6 +63,10 @@ export async function replace(path: AppRoutePath, query?: RouteQuery): Promise<v
   await getNavigationAdapter().replace(`${path}${queryString}`)
 }
 
+export async function replaceUrl(url: string): Promise<void> {
+  await getNavigationAdapter().replace(url)
+}
+
 export function buildLoginRedirect(returnTo: string): string {
   const loginPath = '/pages/login/index'
   if (returnTo === loginPath || returnTo.startsWith(`${loginPath}?`)) {
