@@ -5,6 +5,7 @@ import { computed, onLoad, ref } from 'wevu'
 import PageShell from '@/components/ui/page-shell/index.vue'
 import { useLoginMutation } from '@/features/auth/queries'
 import { replaceUrl } from '@/router/navigation'
+import { parseReturnTo } from '@/router/query'
 
 definePageJson({
   navigationBarTitleText: '登录',
@@ -19,10 +20,7 @@ const isPending = loginMutation.isPending
 const errorMessage = computed(() => formError.value || loginMutation.error.value?.message || '')
 
 onLoad((query) => {
-  const candidate = query?.returnTo
-  if (typeof candidate === 'string' && candidate.startsWith('/') && !candidate.startsWith('//') && !candidate.startsWith('/pages/login')) {
-    returnTo.value = candidate
-  }
+  returnTo.value = parseReturnTo(query?.returnTo)
 })
 
 function readInputValue(event: unknown): string {

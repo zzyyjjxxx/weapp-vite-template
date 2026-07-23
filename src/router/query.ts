@@ -1,6 +1,8 @@
 export type QueryValue = string | number | boolean | null | undefined
 export type RouteQuery = Record<string, QueryValue | QueryValue[]>
 
+const DEFAULT_RETURN_TO = '/pages/home/index'
+
 export function encodeQuery(query?: RouteQuery): string {
   if (!query) {
     return ''
@@ -25,6 +27,31 @@ export function parseRequiredString(value: unknown, name: string): string {
     throw new Error(`缺少有效的 ${name}`)
   }
   return value.trim()
+}
+
+export function parseReturnTo(value: unknown): string {
+  if (typeof value !== 'string' || value.trim() === '') {
+    return DEFAULT_RETURN_TO
+  }
+
+  let decoded = value.trim()
+  try {
+    decoded = decodeURIComponent(decoded)
+  }
+  catch {
+    return DEFAULT_RETURN_TO
+  }
+
+  if (
+    !decoded.startsWith('/')
+    || decoded.startsWith('//')
+    || decoded === '/pages/login/index'
+    || decoded.startsWith('/pages/login/index?')
+  ) {
+    return DEFAULT_RETURN_TO
+  }
+
+  return decoded
 }
 
 export function parseOptionalNumber(value: unknown, name: string): number | undefined {
