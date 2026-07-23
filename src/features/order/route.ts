@@ -1,5 +1,8 @@
-import type { LocationQuery } from 'wevu/router'
+export function readOrderId(query: unknown): string {
+  if (typeof query !== 'object' || query === null || !('id' in query)) {
+    return ''
+  }
 
-export function readOrderId(query: LocationQuery): string {
-  return typeof query.id === 'string' ? query.id : ''
+  const value = query.id
+  return typeof value === 'string' ? value : ''
 }
