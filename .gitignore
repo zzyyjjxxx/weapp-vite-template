@@ -38,5 +38,7 @@ dist-web
 dist-plugin
 dist/web
 .tmp/
-reports/
+reports/*
+!reports/.gitkeep
+!reports/verification.md
 .screenshots/current/

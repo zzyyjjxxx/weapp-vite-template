@@ -1,0 +1,62 @@
+# Project-scoped MCP policy. The exact client-specific command block is generated
+# by `pnpm mcp:print`; keep the user-level generated block managed by weapp-vite.
+
+[mcp_servers.weapp_vite]
+command = "pnpm"
+args = [
+  "exec",
+  "wv",
+  "mcp",
+  "--workspace-root",
+  "."
+]
+enabled = true
+required = true
+startup_timeout_sec = 20
+tool_timeout_sec = 120
+default_tools_approval_mode = "prompt"
+enabled_tools = [
+  "workspace_catalog",
+  "list_source_files",
+  "read_source_file",
+  "search_source_code",
+  "run_weapp_vite_cli",
+  "take_weapp_screenshot",
+  "compare_weapp_screenshot",
+  "weapp_devtools_connect",
+  "weapp_devtools_route",
+  "weapp_devtools_active_page",
+  "weapp_devtools_page_stack",
+  "weapp_devtools_capture",
+  "weapp_devtools_console",
+  "weapp_runtime_find_node",
+  "weapp_runtime_find_nodes",
+  "weapp_runtime_wait_node",
+  "weapp_runtime_wait",
+  "weapp_runtime_page_state",
+  "weapp_runtime_component_state",
+  "weapp_runtime_tap_node",
+  "weapp_runtime_input_node",
+  "weapp_runtime_node_markup",
+  "weapp_runtime_node_styles",
+  "weapp_runtime_node_attrs",
+  "weapp_runtime_measure_node",
+]
+
+[mcp_servers.weapp_vite.tools.run_weapp_vite_cli]
+approval_mode = "prompt"
+
+[mcp_servers.weapp_vite.tools.weapp_devtools_route]
+approval_mode = "prompt"
+
+[mcp_servers.weapp_vite.tools.weapp_runtime_tap_node]
+approval_mode = "prompt"
+
+[mcp_servers.weapp_vite.tools.weapp_runtime_input_node]
+approval_mode = "prompt"
+
+[mcp_servers.weapp_vite.tools.take_weapp_screenshot]
+approval_mode = "approve"
+
+[mcp_servers.weapp_vite.tools.compare_weapp_screenshot]
+approval_mode = "approve"

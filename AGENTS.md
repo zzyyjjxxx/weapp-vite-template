@@ -58,3 +58,41 @@
 - Prefer `ref`, `reactive`, `computed`, and explicit event contracts over large opaque state writes.
 - Use `storeToRefs` when destructuring store state/getters.
 - Treat mini-program runtime constraints as primary; do not assume Vue web-only behavior.
+
+## Repository contract
+
+- Read the nearest `AGENTS.md` or `AGENTS.override.md`, the matching Skill in
+  `.agents/skills`, and the relevant file under `docs/` before editing.
+- Keep pages and components on Wevu Vue SFC. Runtime APIs come from `wevu`,
+  not standard Vue, browser DOM APIs, or browser UI libraries.
+- Pages depend on domain Services/Queries/Mutations and typed navigation; they
+  do not call `fetch`, `wpi`, `wx.request`, or raw navigation APIs.
+- Server state belongs to `@tanstack/query-core` through
+  `src/shared/query`; auth, preferences, and small client state belong to
+  Wevu Store. Do not duplicate Query data into Store.
+- The local Hono server is an in-memory test backend only. Never add real
+  credentials, payment behavior, production data, or publishing workflows.
+- `weapp-tailwindcss` is allowed as a mini-program compatibility tool, but this
+  repository does not use native Web TailwindCSS configuration, class scanning,
+  or browser Tailwind runtime. Current UI styles use SCSS tokens.
+- Run `pnpm prepare` after route or generated-config changes. Do not manually
+  edit `.weapp-vite/` declarations.
+- Every implementation stage must have a focused test or build check and its
+  own Git commit. Do not stage `.DS_Store` or the user's original plan file.
+
+## Source-of-truth docs
+
+- `docs/architecture.md` — package boundaries and data flow
+- `docs/routing.md` — generated routes, guards, query parsing and navigation
+- `docs/http-client.md` — envelope, auth, errors, refresh and cancellation
+- `docs/query-state.md` — Query Core adapter and cache ownership
+- `docs/ui-guidelines.md` — tokens, primitives and styling boundary
+- `docs/testing.md` — static, API and conditional runtime verification
+- `docs/agent-workflow.md` — Skills, MCP and completion evidence
+
+## Completion evidence
+
+Before claiming a task is complete, run the commands relevant to the change,
+record their actual results, and state any unavailable DevTools/runtime checks.
+For runtime-visible work, use the project runtime-acceptance Skill and do not
+claim a screenshot, page-stack or Console result that was not observed.
