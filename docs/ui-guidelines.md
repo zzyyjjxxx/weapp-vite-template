@@ -17,6 +17,12 @@ they do not import domain code. Pages use native mini-program nodes and can use
 TDesign MiniProgram when a full component is needed. Do not add a second UI
 library or wrap every primitive without stable semantics/behavior to justify it.
 
+`AppIcon` is the runtime icon boundary. It uses a deliberately small, vendored
+subset of Reicon SVG files through the native mini-program `<image>` component;
+do not import `reicon-vue` directly into a Wevu SFC. Add an icon to the registry
+and commit its local asset when a feature needs one, instead of shipping the
+entire icon database to the first package.
+
 `weapp-tailwindcss` is permitted for mini-program-compatible styling if a future
 feature needs it. Native Web TailwindCSS config, browser class scanning and a
 browser Tailwind runtime are intentionally out of scope.
