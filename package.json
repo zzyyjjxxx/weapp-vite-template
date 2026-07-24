@@ -8,13 +8,17 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/weapp-vite/weapp-vite.git",
-    "directory": "templates/weapp-vite-wevu-template"
+    "url": "git+https://github.com/MangMax/weapp-vite-template.git"
   },
   "bugs": {
-    "url": "https://github.com/weapp-vite/weapp-vite/issues"
+    "url": "https://github.com/MangMax/weapp-vite-template/issues"
   },
-  "keywords": [],
+  "keywords": [
+    "hono",
+    "weapp-vite",
+    "wevu",
+    "wechat-mini-program"
+  ],
   "scripts": {
     "dev": "node scripts/dev-all.mjs",
     "dev:weapp": "wv dev -p weapp",
