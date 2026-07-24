@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "weapp-vite-weapp-vite-template": {
+      "command": "node",
+      "args": [
+        "node_modules/weapp-vite/bin/weapp-vite.js",
+        "mcp",
+        "--workspace-root",
+        "."
+      ]
+    }
+  }
+}

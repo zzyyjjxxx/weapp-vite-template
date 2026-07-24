@@ -39,6 +39,8 @@
     "analyze:budget": "wv analyze -p weapp --budget-check",
     "mcp:print": "wv mcp print codex",
     "mcp:doctor": "wv mcp doctor codex",
+    "mcp:print:claude-code": "wv mcp print claude-code",
+    "mcp:doctor:claude-code": "wv mcp doctor claude-code",
     "ide:logs": "wv ide logs --open",
     "verify": "pnpm prepare && pnpm typecheck && pnpm lint && pnpm stylelint && pnpm test && pnpm build && pnpm analyze:budget",
     "open": "wv open",

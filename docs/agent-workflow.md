@@ -34,6 +34,18 @@ pnpm mcp:print
 pnpm mcp:doctor
 ```
 
+Claude Code 使用项目根目录的 `.mcp.json`。该文件采用项目内相对路径指向
+`weapp-vite` CLI，避免把某台机器的绝对路径提交到仓库。请从项目根目录启动
+Claude Code，并先安装依赖；之后可用以下命令检查 Claude Code 配置：
+
+```bash
+pnpm mcp:print:claude-code
+pnpm mcp:doctor:claude-code
+```
+
+首次在 Claude Code 中打开仓库时，需要在 `/mcp` 面板中信任工作区并批准项目级
+MCP 服务。stdio MCP 由 Claude Code 按会话启动，不要求先运行 `pnpm dev`。
+
 The current observed `print` command emits a `weapp-vite-weapp-vite-template`
 server using the installed weapp-vite CLI and workspace root. In this
 environment `doctor` reported that the generated Codex configuration block was
