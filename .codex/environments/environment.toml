@@ -1,0 +1,20 @@
+# Project environment shortcuts for Codex.
+version = 1
+name = "weapp-vite-template"
+
+[setup]
+script = '''
+cd "$CODEX_WORKTREE_PATH"
+npx skills experimental_install
+pnpm install --frozen-lockfile --config.confirmModulesPurge=false
+'''
+
+[[actions]]
+name = "还原 skills"
+icon = "tool"
+command = "npx skills experimental_install"
+
+[[actions]]
+name = "安装项目依赖"
+icon = "tool"
+command = "pnpm install --frozen-lockfile --config.confirmModulesPurge=false"
