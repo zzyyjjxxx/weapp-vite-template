@@ -1,7 +1,7 @@
 import type { StorageAdapter } from '@/platform/storage'
-import type { AuthSession } from '@/shared/http/session'
+import type { AuthSession, EnterpriseProfile } from '@/features/auth/models'
 
-export const AUTH_STORAGE_KEY = 'weapp-vite-hono.auth'
+export const AUTH_STORAGE_KEY = 'land-demand.auth'
 
 export interface PersistedAuthStateV1 {
   version: 1
@@ -38,11 +38,27 @@ function isAuthSession(value: unknown): value is AuthSession {
   }
 
   return (
-    typeof value.accessToken === 'string'
-    && typeof value.refreshToken === 'string'
+    typeof value.token === 'string'
     && typeof value.expiresAt === 'number'
-    && typeof value.userId === 'string'
-    && (value.tenantId === undefined || typeof value.tenantId === 'string')
+    && isEnterpriseProfile(value.enterprise)
+  )
+}
+
+function isEnterpriseProfile(value: unknown): value is EnterpriseProfile {
+  if (!isRecord(value)) {
+    return false
+  }
+
+  return (
+    typeof value.id === 'string'
+    && typeof value.username === 'string'
+    && typeof value.businessname === 'string'
+    && typeof value.creditcode === 'string'
+    && typeof value.county === 'string'
+    && typeof value.region === 'string'
+    && typeof value.contact === 'string'
+    && typeof value.office === 'string'
+    && typeof value.phone === 'string'
   )
 }
 

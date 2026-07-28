@@ -1,4 +1,4 @@
-import type { AuthSession, AuthSessionStore } from '@/shared/http/session'
+import type { AuthSession, EnterpriseProfile } from '@/features/auth/models'
 
 import { computed, defineStore, ref } from 'wevu'
 
@@ -10,24 +10,22 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => Boolean(
     session.value
-    && session.value.accessToken
+    && session.value.token
     && session.value.expiresAt > Date.now(),
+  ))
+  const enterprise = computed<EnterpriseProfile | undefined>(() => (
+    isAuthenticated.value ? session.value?.enterprise : undefined
   ))
 
   function setSession(nextSession: AuthSession): void {
-    session.value = { ...nextSession }
+    session.value = {
+      ...nextSession,
+      enterprise: { ...nextSession.enterprise },
+    }
   }
 
   function clearSession(): void {
     session.value = null
-  }
-
-  function getAccessToken(): string | undefined {
-    return session.value?.accessToken
-  }
-
-  function getRefreshToken(): string | undefined {
-    return session.value?.refreshToken
   }
 
   function markInitialized(): void {
@@ -38,19 +36,9 @@ export const useAuthStore = defineStore('auth', () => {
     session,
     initialized,
     isAuthenticated,
+    enterprise,
     setSession,
     clearSession,
-    getAccessToken,
-    getRefreshToken,
     markInitialized,
   }
 })
-
-export function createAuthSessionStoreBridge(): AuthSessionStore {
-  return {
-    getAccessToken: () => useAuthStore().getAccessToken(),
-    getRefreshToken: () => useAuthStore().getRefreshToken(),
-    setSession: session => useAuthStore().setSession(session),
-    clearSession: () => useAuthStore().clearSession(),
-  }
-}

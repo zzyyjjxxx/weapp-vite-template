@@ -4,12 +4,7 @@ import {
   QueryClient,
 } from '@tanstack/query-core'
 
-import { ApiError } from '@/shared/http/errors'
 import { logger } from '@/shared/logger'
-
-function shouldRetryQuery(failureCount: number, error: unknown): boolean {
-  return error instanceof ApiError && error.retryable && failureCount < 2
-}
 
 export function createQueryClient(): QueryClient {
   const queryCache = new QueryCache({
@@ -36,7 +31,7 @@ export function createQueryClient(): QueryClient {
         gcTime: 300_000,
         refetchOnWindowFocus: false,
         refetchOnReconnect: true,
-        retry: shouldRetryQuery,
+        retry: 0,
       },
       mutations: {
         retry: 0,

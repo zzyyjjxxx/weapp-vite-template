@@ -1,5 +1,3 @@
-import { ApiError } from '@/shared/http/errors'
-
 export interface LogContext {
   route?: string
   traceId?: string
@@ -15,18 +13,6 @@ export interface LogContext {
 export type SanitizedError = Record<string, string | number | boolean | undefined>
 
 export function sanitizeError(error: unknown): SanitizedError {
-  if (error instanceof ApiError) {
-    return {
-      name: error.name,
-      message: error.message,
-      kind: error.kind,
-      status: error.status,
-      code: error.code,
-      traceId: error.traceId,
-      retryable: error.retryable,
-    }
-  }
-
   if (error instanceof Error) {
     return {
       name: error.name,
