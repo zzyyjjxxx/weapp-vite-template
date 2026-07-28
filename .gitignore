@@ -46,6 +46,8 @@ reports/*
 # local AI and planning support files
 .agents/
 docs/superpowers/
+.superpowers/
+.worktrees/
 
 # local screenshot and visual regression output
 .screenshots/
