@@ -7,7 +7,7 @@ describe('route metadata lookup', () => {
     const resolveRouteMeta = (routeMetaModule as Record<string, unknown>).resolveRouteMeta
 
     expect(resolveRouteMeta).toEqual(expect.any(Function))
-    expect((resolveRouteMeta as (path: string) => unknown)('subpackages/order/pages/list/index'))
-      .toMatchObject({ auth: true })
+    expect((resolveRouteMeta as (path: string) => unknown)('pages/home/index'))
+      .toMatchObject({ tab: true, analyticsName: 'home' })
   })
 })

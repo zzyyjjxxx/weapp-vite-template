@@ -18,7 +18,7 @@ export function setupRouter(): RouterNavigation {
   }
 
   router = createRouter({
-    tabBarEntries: ['/pages/home/index', '/pages/profile/index'],
+    tabBarEntries: ['/pages/home/index'],
   })
   router.beforeEach((to: RouteLocationNormalizedLoaded | undefined) => {
     if (!to) {

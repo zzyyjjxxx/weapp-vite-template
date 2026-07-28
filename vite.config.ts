@@ -1,9 +1,13 @@
 import { fileURLToPath, URL } from 'node:url'
 
+import { weappTailwindcss } from 'weapp-tailwindcss/vite'
 import { TDesignResolver } from 'weapp-vite/auto-import-components/resolvers'
 import { defineConfig } from 'weapp-vite/config'
 
+const tailwindEntry = fileURLToPath(new URL('./src/styles/tailwind.css', import.meta.url))
+
 export default defineConfig({
+  plugins: [weappTailwindcss({ cssEntries: [tailwindEntry] })],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -12,9 +16,6 @@ export default defineConfig({
   weapp: {
     srcRoot: 'src',
     autoRoutes: true,
-    subPackages: {
-      'subpackages/order': {},
-    },
     autoImportComponents: {
       resolvers: [TDesignResolver()],
       typedComponents: true,

@@ -13,8 +13,8 @@ describe('route query parsing', () => {
 
     expect(parseReturnTo).toEqual(expect.any(Function))
     expect((parseReturnTo as (value: unknown) => string)(
-      '%2Fsubpackages%2Forder%2Fpages%2Flist%2Findex',
-    )).toBe('/subpackages/order/pages/list/index')
+      '%2Fpages%2Ferror%2Findex',
+    )).toBe('/pages/error/index')
     expect((parseReturnTo as (value: unknown) => string)('https%3A%2F%2Fevil.example'))
       .toBe('/pages/home/index')
   })

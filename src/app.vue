@@ -10,6 +10,7 @@ import { setupQueryOnlineManager } from '@/shared/query/lifecycle'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 import { setupStorePlugins } from '@/stores/plugins'
+import '@/styles/tailwind.css'
 
 installAbortGlobals()
 setupStorePlugins()
@@ -27,7 +28,6 @@ focusManager.setEventListener((setFocused) => {
 
 defineAppJson({
   pages: autoRoutes.pages,
-  subPackages: autoRoutes.subPackages,
   window: {
     navigationBarTitleText: '业务工作台',
     navigationBarBackgroundColor: '#ffffff',

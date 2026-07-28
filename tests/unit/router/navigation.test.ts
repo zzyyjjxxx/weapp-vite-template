@@ -27,8 +27,8 @@ describe('typed navigation', () => {
   })
 
   it('encodes login returnTo once and avoids a login loop', () => {
-    expect(buildLoginRedirect('/subpackages/order/pages/detail/index?id=order-1'))
-      .toBe('/pages/login/index?returnTo=%2Fsubpackages%2Forder%2Fpages%2Fdetail%2Findex%3Fid%3Dorder-1')
+    expect(buildLoginRedirect('/pages/error/index?reason=unavailable'))
+      .toBe('/pages/login/index?returnTo=%2Fpages%2Ferror%2Findex%3Freason%3Dunavailable')
     expect(buildLoginRedirect('/pages/login/index')).toBe('/pages/login/index')
   })
 })
