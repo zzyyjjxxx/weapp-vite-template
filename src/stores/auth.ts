@@ -1,6 +1,7 @@
 import type { AuthSession, EnterpriseProfile } from '@/features/auth/models'
 
 import { computed, defineStore, ref } from 'wevu'
+import { clearPrivateQueryCaches } from '@/shared/query/private-cache'
 
 import './manager'
 
@@ -18,6 +19,18 @@ export const useAuthStore = defineStore('auth', () => {
   ))
 
   function setSession(nextSession: AuthSession): void {
+    const currentEnterprise = session.value?.enterprise
+    if (
+      currentEnterprise
+      && (
+        currentEnterprise.id !== nextSession.enterprise.id
+        || currentEnterprise.username !== nextSession.enterprise.username
+        || currentEnterprise.creditcode !== nextSession.enterprise.creditcode
+      )
+    ) {
+      clearPrivateQueryCaches()
+    }
+
     session.value = {
       ...nextSession,
       enterprise: { ...nextSession.enterprise },
@@ -25,6 +38,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function clearSession(): void {
+    clearPrivateQueryCaches()
     session.value = null
   }
 

@@ -1,6 +1,7 @@
 import type { AuthSession } from '@/features/auth/models'
 
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { queryClient } from '@/shared/query/client'
 import { useAuthStore } from '@/stores/auth'
 import { setupStorePlugins } from '@/stores/plugins'
 import { createMemoryStorage } from '../../helpers/memory-storage'
@@ -30,6 +31,7 @@ describe('auth store', () => {
 
   beforeEach(() => {
     storage.clear()
+    queryClient.clear()
     useAuthStore().$reset()
   })
 
@@ -52,6 +54,33 @@ describe('auth store', () => {
     expect(auth.enterprise.value).toBeUndefined()
   })
 
+  it('clears private query data on logout', async () => {
+    const auth = useAuthStore()
+    auth.setSession(session)
+    await seedPrivateQuery()
+
+    auth.clearSession()
+
+    expect(queryClient.getQueryData(['private', 'enterprise-record'])).toBeUndefined()
+  })
+
+  it('clears private query data before switching enterprises', async () => {
+    const auth = useAuthStore()
+    auth.setSession(session)
+    await seedPrivateQuery()
+
+    auth.setSession({
+      ...session,
+      enterprise: {
+        ...session.enterprise,
+        id: 'enterprise-other',
+        creditcode: '91330200MA2OTHER01',
+      },
+    })
+
+    expect(queryClient.getQueryData(['private', 'enterprise-record'])).toBeUndefined()
+  })
+
   it('tracks initialization separately from authentication', () => {
     const auth = useAuthStore()
 
@@ -61,3 +90,11 @@ describe('auth store', () => {
     expect(auth.isAuthenticated.value).toBe(false)
   })
 })
+
+async function seedPrivateQuery(): Promise<void> {
+  await queryClient.fetchQuery({
+    queryKey: ['private', 'enterprise-record'],
+    queryFn: async () => ({ creditcode: session.enterprise.creditcode }),
+    meta: { scope: 'private' },
+  })
+}
