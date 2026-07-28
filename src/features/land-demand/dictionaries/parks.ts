@@ -1,0 +1,17 @@
+export const PARK_OPTIONS = [
+  { value: '330200', label: '宁波市' },
+  { value: '330203', label: '海曙区' },
+  { value: '330205', label: '江北区' },
+  { value: '330206', label: '北仑区' },
+  { value: '330211', label: '镇海区' },
+  { value: '330212', label: '鄞州区' },
+  { value: '330213', label: '奉化区' },
+  { value: '330225', label: '象山县' },
+  { value: '330226', label: '宁海县' },
+  { value: '330262', label: '高新区' },
+  { value: '330281', label: '余姚市' },
+  { value: '330282', label: '慈溪市' },
+  { value: '3302821', label: '前湾新区' },
+] as const
+
+export const EXPECT_PARK_OPTIONS: typeof PARK_OPTIONS = PARK_OPTIONS
