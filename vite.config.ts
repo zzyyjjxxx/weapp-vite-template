@@ -21,6 +21,10 @@ export default defineConfig({
       vueComponents: true,
       vueComponentsModule: 'wevu',
     },
+    // The app uses Wevu's explicit fetch/AbortController adapters. Avoid
+    // the automatic Web Runtime prelude, which creates a circular vendor
+    // dependency in WeChat DevTools' CommonJS loader.
+    injectWebRuntimeGlobals: false,
     mcp: {
       enabled: true,
       autoStart: false,
