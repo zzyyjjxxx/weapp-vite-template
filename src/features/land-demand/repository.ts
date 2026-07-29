@@ -3,17 +3,13 @@ import type {
   LandDemandRecord,
   SaveLandDemandPayload,
   UpdateLandDemandPayload,
+  VerificationChallenge,
 } from './models'
 
 import type { StorageAdapter } from '@/platform/storage'
 import { createWpiStorageAdapter } from '@/platform/storage'
 
-export interface VerificationChallenge {
-  phone: string
-  expiresAt: number
-  retryAt: number
-  mockCode: string
-}
+export type { VerificationChallenge } from './models'
 
 export interface LandDemandRepository {
   get: (creditcode: string) => Promise<LandDemandRecord | undefined>
@@ -216,6 +212,7 @@ export function configureLandDemandRepository(repository?: LandDemandRepository)
 export function getLandDemandRepository(): LandDemandRepository {
   defaultRepository ??= createMockLandDemandRepository({
     storage: createWpiStorageAdapter(),
+    randomCode: () => '123456',
   })
   return configuredRepository ?? defaultRepository
 }

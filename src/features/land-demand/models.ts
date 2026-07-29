@@ -73,3 +73,10 @@ export interface FieldError {
   step: 1 | 2 | 3 | 4
   message: string
 }
+
+export interface VerificationChallenge {
+  phone: string
+  expiresAt: number
+  retryAt: number
+  mockCode: string
+}

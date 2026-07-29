@@ -14,18 +14,23 @@ import BasicInfoStep from '@/features/land-demand/components/basic-info-step.vue
 import FinanceContactStep from '@/features/land-demand/components/finance-contact-step.vue'
 import LandInfoStep from '@/features/land-demand/components/land-info-step.vue'
 import ProjectInfoStep from '@/features/land-demand/components/project-info-step.vue'
+import ReviewStep from '@/features/land-demand/components/review-step.vue'
+import VerificationDialog from '@/features/land-demand/components/verification-dialog.vue'
 import WizardActions from '@/features/land-demand/components/wizard-actions.vue'
 import WizardProgress from '@/features/land-demand/components/wizard-progress.vue'
 import {
   useLandDemandQuery,
   useSaveLandDemandMutation,
+  useSendVerificationCodeMutation,
   useUpdateLandDemandMutation,
+  useVerifyVerificationCodeMutation,
 } from '@/features/land-demand/queries'
 import {
   nextStep,
   previousStep,
   resolveSubmissionTarget,
 } from '@/features/land-demand/step-controller'
+import { createSubmitController } from '@/features/land-demand/submit'
 import { validateDraft } from '@/features/land-demand/validation'
 import {
   applyFinancingChoice,
@@ -33,6 +38,7 @@ import {
   applyTrackChoice,
   selectDeployPark,
 } from '@/features/land-demand/visibility'
+import { replace } from '@/router/navigation'
 import { useAuthStore } from '@/stores/auth'
 import { useLandDemandStore } from '@/stores/land-demand'
 
@@ -52,6 +58,8 @@ const creditcode = enterprise.value?.creditcode ?? ''
 const query = useLandDemandQuery(creditcode)
 const saveMutation = useSaveLandDemandMutation()
 const updateMutation = useUpdateLandDemandMutation()
+const sendCodeMutation = useSendVerificationCodeMutation()
+const verifyCodeMutation = useVerifyVerificationCodeMutation()
 const store = useLandDemandStore()
 const form = store.form
 const currentStep = store.currentStep
@@ -59,14 +67,25 @@ const errors = ref<FieldError[]>([])
 const ready = ref(false)
 const pendingClear = ref<PendingClear | null>(null)
 const feedback = ref('')
+const accepted = ref(false)
+const acceptanceError = ref('')
+const challenge = ref<NonNullable<typeof sendCodeMutation.data.value>>()
+const verificationCode = ref('')
+const verificationError = ref('')
 let initialized = false
 
 const saving = computed(() => saveMutation.isPending.value || updateMutation.isPending.value)
+const submitting = computed(() => (
+  sendCodeMutation.isPending.value
+  || verifyCodeMutation.isPending.value
+  || saving.value
+))
 const mutationError = computed(() => (
   saveMutation.error.value?.message ?? updateMutation.error.value?.message ?? ''
 ))
 const queryErrorMessage = computed(() => query.error.value?.message ?? '请稍后重试')
 const clearDialogVisible = computed(() => pendingClear.value !== null)
+const verificationVisible = computed(() => challenge.value !== undefined)
 const clearDialogContent = computed(() => {
   switch (pendingClear.value?.kind) {
     case 'deploy':
@@ -108,6 +127,13 @@ function patchStore(patch: Partial<LandDemandForm>): void {
   const fields = new Set(Object.keys(patch) as (keyof LandDemandForm)[])
   errors.value = errors.value.filter(error => !fields.has(error.field))
   feedback.value = ''
+}
+
+function setAccepted(value: boolean): void {
+  accepted.value = value
+  if (value) {
+    acceptanceError.value = ''
+  }
 }
 
 function applyDeployParkSnapshot(next: readonly string[]): void {
@@ -261,6 +287,83 @@ async function saveDraft(): Promise<void> {
     // The mutation exposes its sanitized error through mutationError.
   }
 }
+
+async function persistSubmission(status: '1'): Promise<Awaited<ReturnType<typeof saveMutation.mutateAsync>>> {
+  const variables = {
+    form: form.value,
+    status,
+    updateuser: enterprise.value?.username,
+  }
+  const original = query.data.value
+  return original
+    ? updateMutation.mutateAsync({ ...variables, original })
+    : saveMutation.mutateAsync(variables)
+}
+
+const submitController = createSubmitController({
+  sendCode: phone => sendCodeMutation.mutateAsync(phone),
+  verifyCode: (phone, code) => verifyCodeMutation.mutateAsync({ phone, code }),
+  persist: persistSubmission,
+})
+
+async function requestVerification(): Promise<void> {
+  feedback.value = ''
+  acceptanceError.value = ''
+  sendCodeMutation.reset()
+  try {
+    const result = await submitController.requestCode(form.value, accepted.value)
+    errors.value = result.errors
+    acceptanceError.value = result.acceptanceError ?? ''
+    const target = resolveSubmissionTarget(result.errors)
+    if (target) {
+      goToStep(target)
+      return
+    }
+    if (!result.challenge) {
+      return
+    }
+    challenge.value = result.challenge
+    verificationCode.value = ''
+    verificationError.value = ''
+  }
+  catch {
+    feedback.value = sendCodeMutation.error.value?.message ?? '验证码发送失败，请稍后重试'
+  }
+}
+
+function closeVerification(): void {
+  if (submitting.value) {
+    return
+  }
+  challenge.value = undefined
+  verificationCode.value = ''
+  verificationError.value = ''
+}
+
+async function submitVerificationCode(): Promise<void> {
+  const currentChallenge = challenge.value
+  if (!currentChallenge || submitting.value) {
+    return
+  }
+  verificationError.value = ''
+  verifyCodeMutation.reset()
+  saveMutation.reset()
+  updateMutation.reset()
+  try {
+    const record = await submitController.submitCode(
+      currentChallenge.phone,
+      verificationCode.value,
+    )
+    store.markPersisted(record)
+    challenge.value = undefined
+    await replace('/pages/land-demand/success')
+  }
+  catch (error) {
+    verificationError.value = error instanceof Error
+      ? error.message
+      : '提交失败，请稍后重试'
+  }
+}
 </script>
 
 <template>
@@ -298,10 +401,16 @@ async function saveDraft(): Promise<void> {
           :errors="errors"
           @change="changeForm"
         />
-        <view v-else class="land-demand-page__review u-card">
-          <text class="land-demand-page__review-title">确认提交</text>
-          <text class="land-demand-page__review-copy">请确认前四步信息。提交与核验将在下一阶段开放。</text>
-        </view>
+        <ReviewStep
+          v-else
+          :form="form"
+          :accepted="accepted"
+          :acceptance-error="acceptanceError"
+          :submitting="submitting"
+          @edit="goToStep"
+          @accept="setAccepted"
+          @submit="requestVerification"
+        />
       </scroll-view>
 
       <text v-if="feedback" class="land-demand-page__feedback">{{ feedback }}</text>
@@ -327,6 +436,16 @@ async function saveDraft(): Promise<void> {
       @close="cancelDestructiveClear"
       @confirm="confirmDestructiveClear"
     />
+    <VerificationDialog
+      :visible="verificationVisible"
+      :challenge="challenge"
+      :code="verificationCode"
+      :loading="submitting"
+      :error="verificationError"
+      @change="verificationCode = $event"
+      @close="closeVerification"
+      @submit="submitVerificationCode"
+    />
   </PageShell>
 </template>
 
@@ -337,28 +456,9 @@ async function saveDraft(): Promise<void> {
   max-height: calc(100vh - 420rpx);
 }
 
-.land-demand-page__review {
-  padding: $space-4;
-}
-
-.land-demand-page__review-title,
-.land-demand-page__review-copy,
 .land-demand-page__feedback,
 .land-demand-page__error {
   display: block;
-}
-
-.land-demand-page__review-title {
-  font-size: 34rpx;
-  font-weight: 700;
-  color: $color-text;
-}
-
-.land-demand-page__review-copy {
-  margin-top: $space-2;
-  font-size: 26rpx;
-  line-height: 1.6;
-  color: $color-text-secondary;
 }
 
 .land-demand-page__feedback,
