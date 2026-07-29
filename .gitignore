@@ -5,6 +5,8 @@ node_modules
 
 # testing
 coverage
+playwright-report/
+test-results/
 
 # next.js
 .next/
@@ -50,7 +52,10 @@ docs/superpowers/
 .worktrees/
 
 # local screenshot and visual regression output
-.screenshots/
+!.screenshots/
+.screenshots/*
+!.screenshots/baseline/
+!.screenshots/baseline/*.png
 screenshots/
 **/screenshots/
 *.screenshot.png

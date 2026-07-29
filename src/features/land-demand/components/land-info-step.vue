@@ -38,6 +38,12 @@ function fieldError(field: keyof LandDemandForm): string {
   return props.errors.find(error => error.field === field)?.message ?? ''
 }
 
+function selectedParkNames(): string {
+  return props.form.deploy_park
+    .map(value => parkOptions.find(option => option.value === value)?.label ?? value)
+    .join('、')
+}
+
 function changeText(field: keyof LandDemandForm, event: unknown): void {
   emit('change', { [field]: readStringDetail(event) })
 }
@@ -113,6 +119,9 @@ function changeSpecialUse(event: unknown): void {
         :options="parkOptions"
         @change="changeDeployParks"
       />
+      <text data-testid="deploy-park-selection" class="field__selection">
+        {{ selectedParkNames() }}
+      </text>
       <text v-if="fieldError('deploy_park')" class="field__error">{{ fieldError('deploy_park') }}</text>
     </view>
 
@@ -171,6 +180,7 @@ function changeSpecialUse(event: unknown): void {
 
 .step-card__title,
 .field__label,
+.field__selection,
 .field__error {
   display: block;
 }
@@ -197,5 +207,11 @@ function changeSpecialUse(event: unknown): void {
   margin-top: $space-1;
   font-size: 24rpx;
   color: $color-error;
+}
+
+.field__selection {
+  margin-top: $space-1;
+  font-size: 24rpx;
+  color: $color-text-secondary;
 }
 </style>

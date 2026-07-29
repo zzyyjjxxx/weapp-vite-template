@@ -281,6 +281,7 @@ async function saveDraft(): Promise<void> {
       ? await updateMutation.mutateAsync({ ...variables, original })
       : await saveMutation.mutateAsync(variables)
     store.markPersisted(record)
+    store.saveLocalDraft()
     feedback.value = '已暂存'
   }
   catch {
@@ -430,12 +431,21 @@ async function submitVerificationCode(): Promise<void> {
       title="确认清空已有内容"
       :content="clearDialogContent"
       cancel-btn="取消"
-      confirm-btn="继续"
+      :confirm-btn="false"
       :close-on-overlay-click="false"
       @cancel="cancelDestructiveClear"
       @close="cancelDestructiveClear"
-      @confirm="confirmDestructiveClear"
-    />
+    >
+      <template #confirm-btn>
+        <t-button
+          data-testid="destructive-clear-confirm"
+          theme="primary"
+          @tap="confirmDestructiveClear"
+        >
+          继续
+        </t-button>
+      </template>
+    </t-dialog>
     <VerificationDialog
       :visible="verificationVisible"
       :challenge="challenge"
