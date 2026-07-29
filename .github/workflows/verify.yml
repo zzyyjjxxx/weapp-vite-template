@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  verify:
+  static-verification:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,9 +18,13 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm prepare
-      - run: pnpm typecheck
+      - run: pnpm typecheck:app
+      - run: pnpm typecheck:e2e
       - run: pnpm lint
       - run: pnpm stylelint
       - run: pnpm test:coverage
       - run: pnpm build
       - run: pnpm analyze:budget
+
+  # Runtime E2E is a separate Windows acceptance job outside hosted CI:
+  # it requires a logged-in WeChat DevTools instance with the service port enabled.

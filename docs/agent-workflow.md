@@ -1,64 +1,34 @@
-# Agent workflow
+# 用地需求填报 Agent 工作流
 
-## Before editing
+## 开始前
 
-1. Check `git status --short --branch` and preserve user-owned changes.
-2. Read root and nearest override instructions.
-3. Load the matching project Skill and the relevant `docs/` source of truth.
-4. Inspect local weapp-vite/Wevu docs and generated types for version-sensitive
-   behavior.
-5. Write a focused failing test before production behavior changes where
-   practical.
+1. 查看 `git status --short --branch`，保留用户拥有的修改。
+2. 阅读根目录及最近的 `AGENTS.md`/override、匹配 Skill 和相关 `docs/` 来源。
+3. 命令行为不清楚时先读 `node_modules/weapp-vite/dist/docs/index.md`，再按需读包内 README/MCP 文档。
+4. 核对 Weapp-Vite 自动路由、Wevu 运行时、TDesign 组件解析与用地需求领域边界。
+5. 先写能观察到预期失败的聚焦测试，再实现最小变更。
 
-## During implementation
+## 实现约束
 
-- Keep changes scoped and commit each completed stage separately.
-- Run focused tests after each subsystem change.
-- Run `pnpm prepare` after routes/config changes.
-- Do not stage `.DS_Store` or `weapp-vite-wevu-codex-development-plan.md`.
+- 页面和步骤组件只依赖 Store、Query/Mutation 与类型化导航，不直接调用 Storage、Repository、`fetch`、`wx.request` 或原始导航。
+- 已持久化用地需求属于 Query Core；认证与正在编辑的表单属于 Store。
+- 所有业务接口保持 Mock，并明确 `demo / demo123` 只是测试账号。
+- 每个阶段独立验证和提交，不提交用户文件、规划辅助目录、`.DS_Store` 或临时截图。
+- 路由或生成配置变化后运行 `pnpm prepare`，不要手改 `.weapp-vite/`。
 
-Project Skills:
+## 产品审查清单
 
-- `wevu-page` — page/component and UI state
-- `mini-program-routing` — routes, subpackages, guards and query
-- `mini-program-api` — Hono endpoints and domain Services
-- `wevu-query-state` — Query Core keys, cache and adapter
-- `mini-program-runtime-acceptance` — DevTools/MCP runtime evidence
+- 五步顺序、状态 `1/2`、新增/修改判断正确。
+- `is_specialuse` 只控制单选用地形式；层高与承重始终可见且选填。
+- 融资默认没有，选择有时金额与时间才显示且正式提交必填。
+- 投资额、营收、税收、研发费用和单位能耗增加值单位及必填规则一致；项目建设内容无 UI 字数限制。
+- 国民行业保存编码、显示名称与编码，严格使用 `pid 181..439` 的 150/515 字典。
+- 私有 Query 缓存、Storage 键和退出登录隔离正确。
 
-## MCP
+## 验证与运行时证据
 
-The local source of truth for the client block is:
+先运行聚焦测试，再依次执行 `pnpm prepare`、app/E2E 类型检查、lint、stylelint、全量测试、coverage、build 和 budget。`pnpm lint` 若暴露未触及文件的历史 CRLF/排序问题，应区分基线与本次修改，同时保证所有本次修改文件定向 ESLint 通过。
 
-```bash
-pnpm mcp:print
-pnpm mcp:doctor
-```
+微信运行时通过 `pnpm test:e2e`、`wv screenshot` 和 `wv compare` 验收。运行前确认开发者工具已登录且服务端口启用；`re-login` 必须报告为受阻。托管 Linux CI 不运行 DevTools E2E，构建成功也不能当作运行时成功。
 
-Claude Code 使用项目根目录的 `.mcp.json`。该文件采用项目内相对路径指向
-`weapp-vite` CLI，避免把某台机器的绝对路径提交到仓库。请从项目根目录启动
-Claude Code，并先安装依赖；之后可用以下命令检查 Claude Code 配置：
-
-```bash
-pnpm mcp:print:claude-code
-pnpm mcp:doctor:claude-code
-```
-
-首次在 Claude Code 中打开仓库时，需要在 `/mcp` 面板中信任工作区并批准项目级
-MCP 服务。stdio MCP 由 Claude Code 按会话启动，不要求先运行 `pnpm dev`。
-
-The current observed `print` command emits a `weapp-vite-weapp-vite-template`
-server using the installed weapp-vite CLI and workspace root. In this
-environment `doctor` reported that the generated Codex configuration block was
-missing from `/Users/mang/.codex/config.toml`; therefore DevTools runtime
-acceptance is not claimed until that client configuration is connected.
-
-`.codex/config.toml` contains the project allowlist and approval policy. It
-allows source inspection, CLI, DevTools route/state/Console, node inspection,
-and approved screenshot tools. Navigation, tap and input are prompt-gated;
-screenshots are approval-gated. No upload or publish tool is enabled.
-
-## Completion report
-
-Report files, commands, commits, actual test/build output, route and runtime
-evidence, screenshots/diffs, and remaining unverified assumptions. Never infer
-runtime success from static checks.
+完成报告需列出提交、每条实际命令及退出码、测试数量、构建预算、DevTools 观察、截图/对比文件和尚未验证的风险，禁止伪造或沿用旧项目证据。

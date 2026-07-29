@@ -1,107 +1,48 @@
-# Verification report
+# 用地需求填报验证报告
 
-Date: 2026-07-23
+日期：2026-07-29
 
-## Commands
+## TDD 文档一致性
 
-- `pnpm install --frozen-lockfile` — passed; lockfile already up to date.
-- `pnpm --config.proxy=http://127.0.0.1:17897 --config.https-proxy=http://127.0.0.1:17897 install` — passed after updating `weapp-vite`, `wevu` and `@weapp-vite/dashboard` to `6.18.6`; pnpm also refreshed the generated release-age exclusions.
-- `./node_modules/.bin/wv prepare` — passed with `weapp-vite` `6.18.6`; managed `.weapp-vite` support files remained synchronized.
-- `pnpm prepare` — passed; generated `.weapp-vite` support files.
-- `pnpm typecheck` — passed; app `vue-tsc` and server `tsc` both passed.
-- `pnpm lint` — passed.
-- `pnpm stylelint` — passed.
-- `pnpm test:coverage` — passed before the icon change; 23 test files and 47
-  tests passed. Overall statement coverage: 82.15%; line coverage: 82.55%.
-- `pnpm verify` — passed after the `6.18.6` toolchain update and component
-  tab-bar change; 25 test files and 50 tests passed, with lint, stylelint,
-  typecheck, build and budget checks all passing. Main package: 541 KB;
-  `subpackages/order`: 25.4 KB.
-- `pnpm vitest run tests/unit/components/app-icon.test.ts` — passed; the
-  initial Reicon subset and both weights resolve to existing local SVG files.
-- `pnpm build` — passed after the icon change; main package 538 KB and
-  `subpackages/order` 25.4 KB (the later component tab-bar build is recorded
-  in the `pnpm verify` entry above).
-- `pnpm build:server` — passed.
-- `pnpm analyze:budget` — passed.
-- `pnpm mcp:print` — passed with the generated Codex stdio configuration for
-  this workspace.
-- `pnpm mcp:doctor` — passed after `wv mcp init codex --yes` wrote the
-  workspace MCP server block to `/Users/mang/.codex/config.toml`.
+| 命令 | 退出码 | 实际结果 |
+|---|---:|---|
+| `pnpm test tests/smoke/product-shape.test.ts`（RED） | 1 | 1 个文件中 1/3 测试失败；README 仍是模板文案且不含“用地需求”，证明测试能捕获旧文档。 |
+| `pnpm test tests/smoke/product-shape.test.ts`（文档 GREEN） | 0 | 1 个文件、3 个测试全部通过。 |
+| `pnpm test tests/smoke/product-shape.test.ts`（环境配置 RED） | 1 | 新增旧 HTTP 环境配置断言后 1/4 测试失败，定位到未使用的 `src/shared/env.ts`。 |
+| `pnpm test tests/smoke/product-shape.test.ts`（最终 GREEN） | 0 | 删除未使用的 HTTP 环境配置后，1 个文件、4 个测试全部通过。 |
 
-The generated `dist/app.json` was inspected and contains the four main pages
-and the `subpackages/order` root with list/detail pages. It no longer contains
-a native `tabBar`; the Home/Profile navigation is rendered by the component
-tab bar inside `PageShell`.
+## 静态、单元和构建门禁
 
-## Hono
+以下命令均在 `D:\WorkProject\weapp-vite-template\.worktrees\land-demand-mini-program` 中分别执行。
 
-- `pnpm dev:api` — started on `http://127.0.0.1:8787` and was stopped after
-  smoke verification.
-- `curl -fsS http://127.0.0.1:8787/api/health` — passed with `code: SUCCESS`
-  and `data.status: ok`.
-- Post-update Hono smoke — passed on `http://127.0.0.1:8787`; the same local
-  in-memory fixture backend served the DevTools login and order-list flow.
-- `curl` login using the local fixture account — returned `code: SUCCESS`; no
-  token values are recorded here.
-- Vitest server tests cover login, refresh, profile authorization, order list
-  pagination/filtering, detail not-found, cancellation success/conflict,
-  malformed JSON and missing authorization.
+| 命令 | 退出码 | 实际结果 |
+|---|---:|---|
+| `pnpm install --frozen-lockfile` | 0 | 锁文件无需更新，pnpm 11.17.0。 |
+| `pnpm prepare` | 0 | Weapp-TailwindCSS 识别 Tailwind CSS 4.3.3，生成 `.weapp-vite` 支持文件。 |
+| `pnpm typecheck:app` | 0 | `vue-tsc` 应用类型检查通过。 |
+| `pnpm typecheck:e2e` | 0 | `tsc -p e2e/tsconfig.json` 通过。 |
+| `pnpm typecheck`（最终复核） | 0 | 删除未使用的环境配置后，应用与 E2E 类型检查再次通过。 |
+| `pnpm lint` | 1 | 全仓基线未通过：182 个错误、5 个警告。主要是未触及文件的 CRLF 格式问题；另有既有认证模型 method-signature、生成行业字典 curly/if-newline、持久化 import 排序和测试链式格式问题。本任务未批量改写这些文件。 |
+| `pnpm exec eslint tests/smoke/product-shape.test.ts` | 0 | 本任务修改的可执行 TypeScript 文件定向 ESLint 通过。文档、YAML 与 JSON 不在当前 ESLint 代码规则覆盖范围内。 |
+| Node UTF-8 文档检查 | 0 | README、AGENTS、7 个来源文档和本报告共 10 个文件均可按 UTF-8 解码，包含“用地需求”且不含替换字符。 |
+| `pnpm stylelint` | 0 | `src/**/*.{css,scss,vue,wxss}` 样式检查通过。 |
+| `pnpm test` | 0 | 30 个测试文件、94 个测试全部通过。 |
+| `pnpm test:coverage` | 0 | 30 个测试文件、94 个测试全部通过；语句 83.27%、分支 76.16%、函数 79.82%、行 84.15%。 |
+| `pnpm build` | 0 | 微信小程序构建完成；主包 706 KB。 |
+| `pnpm analyze:budget` | 0 | 包体预算检查通过。 |
 
-## Runtime
+## 微信开发者工具运行时 E2E
 
-- `wechatide -c ide check_wechatide_status` — passed; the logged-in WeChat
-  DevTools skill reported a valid session.
-- `open_project_window`, `debug_clear_cache --action cleanAll`,
-  `simulator_refresh` and `simulator_open_page` — passed for the workspace
-  project.
-- Login guard — passed in the simulator: tapping `查看订单` while logged out
-  opened `/pages/login/index?returnTo=%2Fsubpackages%2Forder%2Fpages%2Flist%2Findex`.
-- Post-login route — passed; the observed page stack reached
-  `/subpackages/order/pages/list/index` and loaded the four local fixture orders.
-- `6.18.6` toolchain smoke — passed; the observed current page was
-  `/subpackages/order/pages/list/index`, and screenshots are available at
-  `.tmp/runtime-toolchain-6.18.6-home.png`,
-  `.tmp/runtime-toolchain-6.18.6-login.png` and
-  `.tmp/runtime-toolchain-6.18.6-orders.png`.
-- Reicon `AppIcon` — passed in the simulator: the Home, Login and Order List
-  page headers rendered the vendored SVG assets through the native `<image>`
-  component. Screenshots are available at `.tmp/runtime-icons-home.png`,
-  `.tmp/runtime-icons-login.png` and `.tmp/runtime-icons-orders.png`.
-- Detail/cancel flow — passed for fixture `order-1002`: the observed route was
-  `/subpackages/order/pages/detail/index?id=order-1002`; the detail screen
-  displayed the order number, status, amount and cancel action, then updated
-  to `已取消` and hid the cancel action after cancellation.
-- Component tab bar — passed in the simulator: the Home screenshot shows the
-  filled Home icon and outline Profile icon; the authenticated Profile
-  screenshot shows the outline Home icon and filled Profile icon. The Login
-  screenshot has no bottom tab bar. Evidence is available at
-  `.tmp/runtime-component-tabbar-home-fixed.png`,
-  `.tmp/runtime-component-tabbar-profile-fixed.png` and
-  `.tmp/runtime-component-tabbar-login-fixed.png`.
-- DevTools Console — the error filter for `error|exception|unhandled|AbortController`
-  returned no lines. The full buffer reported WeChatLib 3.17.0 and expected
-  store lifecycle debug events only.
-- Runtime screenshots are available at
-  `.tmp/runtime-home-final.png`, `.tmp/runtime-login-final.png`,
-  `.tmp/runtime-orders-final.png`, `.tmp/runtime-detail-final.png` and
-  `.tmp/runtime-cancelled-final.png`.
-- The DevTools automator could not resolve the Wevu scoped-slot `view` selector
-  on the order subpackage. Home/login buttons were tapped through the element
-  automator; list-to-detail and cancel were invoked through the observed page
-  methods, with the resulting route, state and screenshots verified separately.
-- The DevTools automator could not resolve the tab-bar child `view` selector
-  across the Wevu component boundary; page-level navigation and the Home/
-  Profile runtime screenshots were still verified in the same simulator
-  session.
-- Screenshot/diff — no baseline or diff claimed.
+| 命令 | 退出码 | 实际结果 |
+|---|---:|---|
+| `pnpm exec wv ide info`（Task 9 前置检查） | 1 | 非交互模式检测到登录失效，微信开发者工具返回 `message: re-login`。 |
+| `pnpm test:e2e` | 1 | 运行 7 个串行用例时，第一个用例在 `miniProgram` fixture 初始化 60 秒后超时；其余 6 个未运行。CLI 报告“无法连接到当前项目的微信开发者工具自动化 websocket”，并要求确认目标项目窗口、关闭多余 DevTools 窗口或结束残留 auto 进程后重试。 |
+| `pnpm exec wv screenshot --project ./dist --page pages/login/index --output .tmp/login.png --json`（Task 9） | 超时 | 34 秒边界后终止，没有产生 `.tmp/login.png`；只结束了该命令创建的两个孤立 Node 进程，没有关闭 DevTools 或修改用户配置。 |
 
-## Remaining risks
+因此运行时产品交互仍是**受环境前置条件阻塞、未通过**。Task 10 没有重复执行截图；由于 Task 9 没有得到可观察截图，`wv compare` 未执行，也没有生成、更新或声称任何登录页/确认页截图基线。重新验收前应只打开目标项目，确认微信开发者工具已登录且服务端口可用，再运行 `pnpm test:e2e`。
 
-- The local Hono server is an in-memory test backend; restarting it resets the
-  fixture data. No upload or publishing workflow was exercised.
-- Direct pointer-level automator coverage for Wevu scoped-slot nodes remains
-  limited by the installed DevTools automator selector bridge; screenshots and
-  runtime state were still observed through the same simulator session.
-- Production request legal domains, credentials and backend persistence are
-  intentionally outside this local scaffold.
+## 当前结论
+
+- 文档一致性、类型检查、样式、全部 Vitest、覆盖率、构建和包体预算通过。
+- 全仓 ESLint 因既有基线失败；本次 TypeScript 变更已定向通过。
+- DevTools E2E 因自动化 websocket 不可连接而未完成，不能用静态构建结果替代。

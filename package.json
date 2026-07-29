@@ -1,20 +1,13 @@
 {
-  "name": "weapp-vite-wevu-template",
+  "name": "enterprise-land-demand-mini-program",
   "type": "module",
   "version": "1.0.5",
   "private": true,
-  "description": "weapp-vite + wevu (Vue SFC) 模板",
-  "author": "ice breaker <1324318532@qq.com>",
+  "description": "企业用地需求填报微信小程序",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/MangMax/weapp-vite-template.git"
-  },
-  "bugs": {
-    "url": "https://github.com/MangMax/weapp-vite-template/issues"
-  },
   "keywords": [
-    "hono",
+    "land-demand",
+    "tdesign-miniprogram",
     "weapp-vite",
     "wevu",
     "wechat-mini-program"
