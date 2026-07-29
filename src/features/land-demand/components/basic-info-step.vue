@@ -1,20 +1,9 @@
 <script setup lang="ts">
 import type { FieldError, LandDemandForm } from '../models'
 
-import { readStringDetail } from '@/platform/event-detail'
-
 const props = defineProps<{ form: LandDemandForm, errors: readonly FieldError[] }>()
-const emit = defineEmits<{ change: [patch: Partial<LandDemandForm>] }>()
 
 defineComponentJson({ component: true })
-
-function changeCounty(detail: unknown): void {
-  emit('change', { county: readStringDetail(detail) })
-}
-
-function changeRegion(detail: unknown): void {
-  emit('change', { region: readStringDetail(detail) })
-}
 </script>
 
 <template>
@@ -23,8 +12,8 @@ function changeRegion(detail: unknown): void {
     <text class="step-card__description">企业名称和统一社会信用代码来自登录信息，不可修改。</text>
     <t-input label="企业名称" :value="props.form.businessname" readonly />
     <t-input label="统一社会信用代码" :value="props.form.creditcode" readonly />
-    <t-input label="所在区（县、市）" :value="props.form.county" @change="changeCounty" />
-    <t-input label="所在镇街" :value="props.form.region" @change="changeRegion" />
+    <t-input label="所在区（县、市）" :value="props.form.county" readonly />
+    <t-input label="所在镇街" :value="props.form.region" readonly />
   </view>
 </template>
 

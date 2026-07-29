@@ -10,6 +10,7 @@ import { getLandDemandRepository } from './repository'
 
 interface ServiceOptions {
   repository?: LandDemandRepository
+  signal?: AbortSignal
 }
 
 interface PersistOptions extends ServiceOptions {
@@ -20,11 +21,23 @@ function resolveRepository(repository?: LandDemandRepository): LandDemandReposit
   return repository ?? getLandDemandRepository()
 }
 
-export function getLandDemandInfo(
+function throwIfAborted(signal?: AbortSignal): void {
+  if (!signal?.aborted) {
+    return
+  }
+  const error = new Error('查询已取消')
+  error.name = 'AbortError'
+  throw error
+}
+
+export async function getLandDemandInfo(
   creditcode: string,
   options: ServiceOptions = {},
 ): Promise<LandDemandRecord | undefined> {
-  return resolveRepository(options.repository).get(creditcode)
+  throwIfAborted(options.signal)
+  const record = await resolveRepository(options.repository).get(creditcode)
+  throwIfAborted(options.signal)
+  return record
 }
 
 export function saveLandDemand(

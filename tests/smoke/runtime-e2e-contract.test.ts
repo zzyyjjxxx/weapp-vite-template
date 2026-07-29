@@ -30,6 +30,8 @@ describe('mini-program runtime E2E contract', () => {
       'keeps only Ningbo after selecting a district and then the whole city',
       'restores the selected national industry leaf',
       'resets direction when the industry track changes',
+      'restores an authenticated session after a cold relaunch',
+      'modifies and resaves an existing submitted record',
     ]) {
       expect(spec).toContain(`test('${title}'`)
     }
@@ -49,8 +51,13 @@ describe('mini-program runtime E2E contract', () => {
       'project-hydm-cascader',
       'keyindustry',
       'futureindustry',
+      'land-demand-edit',
+      'save-draft',
     ]) {
       expect(spec).toContain(`getByTestId('${id}')`)
     }
+
+    expect(spec).toContain('screenshot(\'.tmp/e2e-login.png\')')
+    expect(spec).toContain('screenshot(\'.tmp/e2e-review.png\')')
   })
 })

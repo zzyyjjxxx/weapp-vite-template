@@ -46,6 +46,10 @@ describe('land demand field visibility transitions', () => {
     expect(selectDeployPark(['330200'], '330205')).toEqual(['330205'])
   })
 
+  it('toggles an already selected whole-city choice off', () => {
+    expect(selectDeployPark(['330200'], '330200')).toEqual([])
+  })
+
   it('does not hide or clear optional height and weight with special use', () => {
     const next = applySpecialUseChoice({ ...form, deploy_height: '8', deploy_weight: '2' }, '否')
 

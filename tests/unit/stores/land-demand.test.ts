@@ -70,6 +70,49 @@ describe('land demand store', () => {
     expect(store.isDirty.value).toBe(true)
   })
 
+  it('reasserts authenticated identity over a tampered local draft', () => {
+    const store = useLandDemandStore()
+    store.initialize(enterprise, undefined, {
+      form: {
+        ...form,
+        businessname: '篡改企业',
+        creditcode: '91330200TAMPERED001',
+        county: '篡改区县',
+        region: '篡改乡镇',
+      },
+      currentStep: 2,
+      savedAt: 1_000,
+    })
+
+    expect(store.form.value).toMatchObject({
+      businessname: enterprise.businessname,
+      creditcode: enterprise.creditcode,
+      county: enterprise.county,
+      region: enterprise.region,
+      area: form.area,
+    })
+  })
+
+  it('does not allow patches to replace authenticated ownership identity', () => {
+    const store = useLandDemandStore()
+    store.initialize(enterprise)
+    store.patch({
+      businessname: '篡改企业',
+      creditcode: '91330200TAMPERED001',
+      county: '篡改区县',
+      region: '篡改乡镇',
+      area: '31',
+    })
+
+    expect(store.form.value).toMatchObject({
+      businessname: enterprise.businessname,
+      creditcode: enterprise.creditcode,
+      county: enterprise.county,
+      region: enterprise.region,
+      area: '31',
+    })
+  })
+
   it('loads the persisted local draft through the Store boundary', () => {
     repository.setDraft(enterprise.creditcode, {
       form: { ...form, area: '42' },

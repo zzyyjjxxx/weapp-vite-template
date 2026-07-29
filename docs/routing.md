@@ -6,8 +6,8 @@
 
 - `/pages/login/index`：公开的 Mock 企业登录页。
 - `/pages/home/index`：鉴权首页，展示用地需求状态与填报入口。
-- `/pages/land-demand/index`：鉴权的五步填报页。
-- `/pages/land-demand/success`：鉴权的提交成功页。
+- `/pages/land-demand/index`：鉴权的五步填报页；`mode=view` 为已持久化记录的只读详情，`mode=edit` 或缺省为编辑模式。
+- `/pages/land-demand/success`：鉴权的提交成功页；仅在 Query 返回当前企业的 `landusedemand=1` 记录后展示成功内容。
 - `/pages/error/index`：公开错误兜底页。
 
 项目没有业务分包或原生 `tabBar`。`src/app.vue` 将 `autoRoutes.pages` 写入生成的 `app.json`。
@@ -20,7 +20,9 @@
 
 ## Query 参数
 
-使用 `encodeQuery` 生成参数，使用 `parseRequiredString`、`parseOptionalNumber`、`parseEnum` 解析外部输入。当前用地需求主流程不依赖记录 ID Query：企业信用代码来自受信认证会话，并作为记录查询键和修改条件。
+使用 `encodeQuery` 生成参数，使用 `parseRequiredString`、`parseOptionalNumber`、`parseEnum` 解析外部输入。填报页通过 `parseLandDemandMode` 将不可信 `mode` 收敛为 `view|edit`，未知值默认编辑。当前用地需求主流程不依赖记录 ID Query：企业信用代码来自受信认证会话，并作为记录查询键和修改条件。
+
+首页对已提交记录显示两个稳定入口：`land-demand-view` 使用 `{ mode: 'view' }` 打开只读确认分组，`land-demand-edit` 使用 `{ mode: 'edit' }` 进入可编辑五步流程。成功页“查看填报信息”同样使用类型化导航进入只读模式；直接访问成功页但不存在已提交记录时返回首页，不显示虚假成功。
 ## 冷启动与直接访问保护
 
 `app.json` 的 `entryPagePath` 固定为 `pages/login/index`，且项目没有原生

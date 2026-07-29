@@ -4,7 +4,7 @@ const CITY_PARK = '330200'
 
 export function selectDeployPark(current: readonly string[], next: string): string[] {
   if (next === CITY_PARK) {
-    return [CITY_PARK]
+    return current.includes(CITY_PARK) ? [] : [CITY_PARK]
   }
 
   const withoutCity = current.filter(value => value !== CITY_PARK)

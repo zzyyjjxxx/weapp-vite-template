@@ -1,6 +1,7 @@
 import type { EnterpriseProfile } from '@/features/auth/models'
 import type { LandDemandForm } from '@/features/land-demand/models'
 
+import { readFileSync } from 'node:fs'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useLandDemandQuery, useSaveLandDemandMutation, useUpdateLandDemandMutation } from '@/features/land-demand/queries'
 import { landDemandKeys } from '@/features/land-demand/query-keys'
@@ -173,6 +174,23 @@ describe('land demand service and queries', () => {
     resetQueryLifecycleAdapter()
     client.clear()
     client.unmount()
+  })
+
+  it('propagates Query cancellation through the service boundary', async () => {
+    const controller = new AbortController()
+    controller.abort()
+
+    await expect(getLandDemandInfo(form.creditcode, {
+      repository,
+      signal: controller.signal,
+    })).rejects.toMatchObject({ name: 'AbortError' })
+  })
+
+  it('passes the Query function AbortSignal into the service', () => {
+    const source = readFileSync('src/features/land-demand/queries.ts', 'utf8')
+
+    expect(source).toContain('queryFn: ({ signal }) => getLandDemandInfo')
+    expect(source).toContain('signal,')
   })
 
   it('clears local draft metadata after saving and reloads the record through Query', async () => {

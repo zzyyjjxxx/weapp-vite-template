@@ -16,6 +16,19 @@ function cloneForm(form: LandDemandForm): LandDemandForm {
   }
 }
 
+function withAuthenticatedIdentity(
+  form: LandDemandForm,
+  enterprise: EnterpriseProfile,
+): LandDemandForm {
+  return {
+    ...form,
+    businessname: enterprise.businessname,
+    creditcode: enterprise.creditcode,
+    county: enterprise.county,
+    region: enterprise.region,
+  }
+}
+
 export const useLandDemandStore = defineStore('land-demand', () => {
   const form = ref<LandDemandForm>({} as LandDemandForm)
   const currentStep = ref<LandDemandStep>(1)
@@ -29,7 +42,10 @@ export const useLandDemandStore = defineStore('land-demand', () => {
     draft?: LandDemandDraft,
   ): void {
     enterprise = { ...nextEnterprise }
-    form.value = cloneForm(draft?.form ?? createLandDemandForm(nextEnterprise, record))
+    form.value = withAuthenticatedIdentity(
+      cloneForm(draft?.form ?? createLandDemandForm(nextEnterprise, record)),
+      nextEnterprise,
+    )
     currentStep.value = draft?.currentStep ?? 1
     hasRecord.value = Boolean(record)
     isDirty.value = false
@@ -47,13 +63,16 @@ export const useLandDemandStore = defineStore('land-demand', () => {
   }
 
   function patch(nextPatch: Partial<LandDemandForm>): void {
-    form.value = {
+    const nextForm = {
       ...form.value,
       ...nextPatch,
       deploy_park: nextPatch.deploy_park
         ? [...nextPatch.deploy_park]
         : [...form.value.deploy_park],
     }
+    form.value = enterprise
+      ? withAuthenticatedIdentity(nextForm, enterprise)
+      : nextForm
     isDirty.value = true
   }
 

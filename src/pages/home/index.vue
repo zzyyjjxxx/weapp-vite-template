@@ -16,6 +16,7 @@ const enterprise = auth.enterprise
 const creditcode = enterprise.value?.creditcode ?? ''
 const landDemandQuery = useLandDemandQuery(creditcode)
 const record = landDemandQuery.data
+const submitted = computed(() => record.value?.landusedemand === '1')
 const primaryLabel = computed(() => {
   if (!record.value) {
     return '开始填报'
@@ -31,6 +32,14 @@ const statusLabel = computed(() => {
 
 async function openLandDemand(): Promise<void> {
   await navigate('/pages/land-demand/index')
+}
+
+async function viewLandDemand(): Promise<void> {
+  await navigate('/pages/land-demand/index', { mode: 'view' })
+}
+
+async function editLandDemand(): Promise<void> {
+  await navigate('/pages/land-demand/index', { mode: 'edit' })
 }
 
 async function logout(): Promise<void> {
@@ -77,7 +86,28 @@ async function logout(): Promise<void> {
       <text class="home__product-copy">
         填写企业项目用地需求，提交后由相关部门跟进服务。
       </text>
+      <view v-if="submitted" class="home__product-actions">
+        <t-button
+          data-testid="land-demand-view"
+          theme="default"
+          block
+          :loading="landDemandQuery.isPending"
+          @tap="viewLandDemand"
+        >
+          查看详情
+        </t-button>
+        <t-button
+          data-testid="land-demand-edit"
+          theme="primary"
+          block
+          :loading="landDemandQuery.isPending"
+          @tap="editLandDemand"
+        >
+          修改填报
+        </t-button>
+      </view>
       <t-button
+        v-else
         data-testid="land-demand-primary"
         class="home__product-action"
         theme="primary"
@@ -141,6 +171,12 @@ async function logout(): Promise<void> {
 }
 
 .home__product-action {
+  margin-top: $space-4;
+}
+
+.home__product-actions {
+  display: flex;
+  gap: $space-2;
   margin-top: $space-4;
 }
 </style>

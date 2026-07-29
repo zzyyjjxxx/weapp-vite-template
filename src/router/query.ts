@@ -3,6 +3,12 @@ export type RouteQuery = Record<string, QueryValue | QueryValue[]>
 
 const DEFAULT_RETURN_TO = '/pages/home/index'
 
+export type LandDemandMode = 'edit' | 'view'
+
+export function parseLandDemandMode(value: unknown): LandDemandMode {
+  return value === 'view' ? 'view' : 'edit'
+}
+
 export function encodeQuery(query?: RouteQuery): string {
   if (!query) {
     return ''

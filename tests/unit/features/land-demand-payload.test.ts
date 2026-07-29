@@ -59,7 +59,12 @@ describe('land demand payload adapters', () => {
   })
 
   it('builds an update payload with the selected status', () => {
-    expect(buildUpdatePayload(validForm, original, '1')).toMatchObject({ landusedemand: '1', newproject: '1' })
+    expect(buildUpdatePayload(validForm, { ...original, creditcode: 'STALE-RECORD-OWNER' }, '1'))
+      .toMatchObject({
+        creditcode: validForm.creditcode,
+        landusedemand: '1',
+        newproject: '1',
+      })
   })
 
   it('preserves hidden original fields and empty optional numeric values on update', () => {

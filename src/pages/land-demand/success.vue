@@ -1,16 +1,40 @@
 <script setup lang="ts">
+import { computed, ref, watchEffect } from 'wevu'
+import AppError from '@/components/ui/app-error/index.vue'
+import AppLoading from '@/components/ui/app-loading/index.vue'
 import PageShell from '@/components/ui/page-shell/index.vue'
-import { replace } from '@/router/navigation'
+import { useLandDemandQuery } from '@/features/land-demand/queries'
+import { navigate, replace } from '@/router/navigation'
 import { useProtectedPage } from '@/router/protected-page'
+import { useAuthStore } from '@/stores/auth'
 
 definePageJson({
   navigationBarTitleText: '填报完成',
 })
 
+const auth = useAuthStore()
 const { authorized } = useProtectedPage('/pages/land-demand/success')
+const enterprise = auth.enterprise
+const creditcode = enterprise.value?.creditcode ?? ''
+const query = useLandDemandQuery(creditcode)
+const record = query.data
+const redirected = ref(false)
+const submitted = computed(() => record.value?.landusedemand === '1')
+
+watchEffect(() => {
+  if (!authorized.value || query.isPending.value || query.isError.value || submitted.value || redirected.value) {
+    return
+  }
+  redirected.value = true
+  void replace('/pages/home/index')
+})
 
 async function backHome(): Promise<void> {
   await replace('/pages/home/index')
+}
+
+async function viewDetail(): Promise<void> {
+  await navigate('/pages/land-demand/index', { mode: 'view' })
 }
 </script>
 
@@ -18,21 +42,37 @@ async function backHome(): Promise<void> {
   <PageShell
     v-if="authorized"
     title="填报完成"
-    subtitle="用地需求已提交"
+    :subtitle="submitted ? '用地需求已提交' : '正在核验提交结果'"
     icon="list-check"
   >
-    <view data-testid="submit-success" class="u-card land-demand-success__notice">
-      <text class="land-demand-success__status">提交成功</text>
-      <text class="land-demand-success__copy">感谢填报，相关部门将跟进服务。</text>
-      <view data-testid="success-back-home">
+    <AppLoading v-if="query.isPending" />
+    <AppError
+      v-else-if="query.isError"
+      title="提交结果加载失败"
+      :message="query.error.value?.message ?? '请返回首页后重试'"
+    />
+    <view v-else-if="submitted" data-testid="submit-success" class="u-card land-demand-success__notice">
+      <text class="land-demand-success__status">已提交</text>
+      <text class="land-demand-success__copy">企业名称：{{ record?.businessname }}</text>
+      <text class="land-demand-success__copy">提交时间：{{ record?.updatetime }}</text>
+      <view class="land-demand-success__actions">
+        <view data-testid="success-back-home" class="land-demand-success__action">
+          <t-button
+            data-testid="back-home"
+            theme="default"
+            block
+            @tap="backHome"
+          >
+            返回首页
+          </t-button>
+        </view>
         <t-button
-          data-testid="back-home"
-          class="land-demand-success__button"
+          data-testid="success-view-detail"
           theme="primary"
           block
-          @tap="backHome"
+          @tap="viewDetail"
         >
-          返回首页
+          查看填报信息
         </t-button>
       </view>
     </view>
@@ -64,7 +104,13 @@ async function backHome(): Promise<void> {
   color: $color-text-secondary;
 }
 
-.land-demand-success__button {
+.land-demand-success__actions {
+  display: flex;
+  gap: $space-2;
   margin-top: $space-4;
+}
+
+.land-demand-success__action {
+  flex: 1;
 }
 </style>

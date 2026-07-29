@@ -24,6 +24,8 @@
 
 `landusedemand=2` 表示暂存，`landusedemand=1` 表示正式提交。新增 Payload 包含企业基础信息；修改 Payload 使用信用代码并保留页面不展示的旧字段。`deploy_park` 在表单内为数组，接口层按逗号序列化；`deploy_landtype` 是单个名称。
 
+信用代码及企业名称、区县、乡镇来自当前认证企业，本地草稿不能替换。`decimal(20,6)` 字段最多 14 位整数，`decimal(10,2)` 字段最多 8 位整数；当前 UI 最多允许 2 位小数。可选数值空字符串表示未填写，不能在适配层擅自转换为 `0`。
+
 ## 替换为真实后端
 
 接入真实接口时新增实现同一 `AuthRepository` 与 `LandDemandRepository` 的适配器，并在应用初始化处配置，不改页面、Store、校验或 Payload 规则。真实适配器应负责：

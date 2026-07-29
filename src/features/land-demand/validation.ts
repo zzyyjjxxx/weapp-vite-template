@@ -47,6 +47,19 @@ const NUMERIC_FIELDS = new Set<Field>([
   'pred_unitenergy',
 ])
 const DATE_FIELDS = new Set<Field>(['expect_time', 'financing_time'])
+const DECIMAL_20_6_FIELDS = new Set<Field>([
+  'investment',
+  'financing_money',
+  'pred_ys',
+  'pred_tax',
+  'pred_rdex',
+  'pred_unitenergy',
+])
+const DECIMAL_10_2_FIELDS = new Set<Field>([
+  'building_area',
+  'deploy_height',
+  'deploy_weight',
+])
 
 function hasValue(value: string | readonly string[]): boolean {
   return typeof value === 'string' ? value.trim().length > 0 : value.length > 0
@@ -56,17 +69,23 @@ function error(field: Field, message: string): FieldError {
   return { field, step: STEPS[field], message }
 }
 
-function isValidNumber(value: string, maxDecimals: number): boolean {
+function isValidNumber(value: string, maxIntegerDigits: number, maxDecimals: number): boolean {
   if (!/^\d+(?:\.\d+)?$/.test(value)) {
     return false
   }
 
   const [integer, decimal = ''] = value.split('.')
-  return integer.length + decimal.length <= 20 && decimal.length <= maxDecimals
+  const significantInteger = integer.replace(/^0+(?=\d)/, '')
+  return significantInteger.length <= maxIntegerDigits && decimal.length <= maxDecimals
 }
 
 function validateValue(field: Field, value: string | readonly string[]): FieldError | undefined {
-  if (NUMERIC_FIELDS.has(field) && typeof value === 'string' && !isValidNumber(value, 2)) {
+  const maxIntegerDigits = DECIMAL_20_6_FIELDS.has(field)
+    ? 14
+    : DECIMAL_10_2_FIELDS.has(field)
+      ? 8
+      : 18
+  if (NUMERIC_FIELDS.has(field) && typeof value === 'string' && !isValidNumber(value, maxIntegerDigits, 2)) {
     return error(field, '请输入非负数字，最多两位小数')
   }
 

@@ -8,6 +8,7 @@ test.describe.serial('企业用地需求填报', () => {
   test('logs in, saves a draft and restores it', async ({ miniProgram }) => {
     await miniProgram.clearStorage()
     await miniProgram.relaunch('/pages/login/index')
+    await miniProgram.screenshot('.tmp/e2e-login.png')
     await miniProgram.getByTestId('username').fill('demo')
     await miniProgram.getByTestId('password').fill('demo123')
     await miniProgram.getByTestId('login-submit').tap()
@@ -20,6 +21,13 @@ test.describe.serial('企业用地需求填报', () => {
     await miniProgram.getByTestId('land-demand-primary').tap()
     await miniProgram.getByTestId('next-step').tap()
     expect(await miniProgram.getByTestId('area').text()).toContain('30')
+  })
+
+  test('restores an authenticated session after a cold relaunch', async ({ miniProgram }) => {
+    await miniProgram.relaunch('/pages/home/index')
+    await miniProgram.expectPath('/pages/home/index')
+    expect(await miniProgram.getByTestId('land-demand-status').text()).toContain('草稿')
+    await miniProgram.getByTestId('land-demand-primary').tap()
   })
 
   test('keeps height while changing other-land acceptance', async ({ miniProgram }) => {
@@ -83,6 +91,7 @@ test.describe.serial('企业用地需求填报', () => {
   })
 
   test('submits with the mock code and reopens the existing record', async ({ miniProgram }) => {
+    await miniProgram.screenshot('.tmp/e2e-review.png')
     await miniProgram.getByTestId('review-accept').tap()
     await miniProgram.getByTestId('review-submit').tap()
     expect(await miniProgram.getByTestId('mock-code').text()).toContain('123456')
@@ -91,8 +100,20 @@ test.describe.serial('企业用地需求填报', () => {
     await miniProgram.expectPath('/pages/land-demand/success')
     await miniProgram.getByTestId('back-home').tap()
     expect(await miniProgram.getByTestId('land-demand-status').text()).toContain('已提交')
+    await miniProgram.getByTestId('land-demand-view').tap()
+    await miniProgram.getByTestId('detail-back-home').expectVisible()
+    await miniProgram.getByTestId('detail-back-home').tap()
+  })
+
+  test('modifies and resaves an existing submitted record', async ({ miniProgram }) => {
+    await miniProgram.getByTestId('land-demand-edit').tap()
+    await miniProgram.getByTestId('next-step').tap()
+    await miniProgram.getByTestId('area').fill('31')
+    await miniProgram.getByTestId('save-draft').tap()
+    await miniProgram.relaunch('/pages/home/index')
+    expect(await miniProgram.getByTestId('land-demand-status').text()).toContain('草稿')
     await miniProgram.getByTestId('land-demand-primary').tap()
     await miniProgram.getByTestId('next-step').tap()
-    expect(await miniProgram.getByTestId('area').text()).not.toBe('')
+    expect(await miniProgram.getByTestId('area').text()).toContain('31')
   })
 })

@@ -9,4 +9,37 @@ describe('product navigation source contract', () => {
     expect(readFileSync('src/pages/home/index.vue', 'utf8'))
       .toContain('data-testid="land-demand-primary"')
   })
+
+  it('keeps all authenticated enterprise identity fields read-only', () => {
+    const source = readFileSync('src/features/land-demand/components/basic-info-step.vue', 'utf8')
+
+    expect(source.match(/<t-input[^>]+readonly/g)).toHaveLength(4)
+    expect(source).not.toContain('@change=')
+    expect(source).not.toContain('emit(\'change\'')
+  })
+
+  it('offers distinct submitted detail and edit actions with typed view navigation', () => {
+    const home = readFileSync('src/pages/home/index.vue', 'utf8')
+    const form = readFileSync('src/pages/land-demand/index.vue', 'utf8')
+
+    expect(home).toContain('data-testid="land-demand-view"')
+    expect(home).toContain('data-testid="land-demand-edit"')
+    expect(home).toContain('{ mode: \'view\' }')
+    expect(form).toContain('parseLandDemandMode(query?.mode)')
+    expect(form).toContain('!routeReady.value')
+    expect(form).toContain('data-testid="detail-back-home"')
+    expect(form).toContain('data-testid="detail-edit"')
+    expect(form).toContain(':readonly="viewOnly"')
+  })
+
+  it('loads a submitted Query record before rendering the success state', () => {
+    const source = readFileSync('src/pages/land-demand/success.vue', 'utf8')
+
+    expect(source).toContain('useLandDemandQuery(creditcode)')
+    expect(source).toContain('record.value?.landusedemand === \'1\'')
+    expect(source).toContain('{{ record?.businessname }}')
+    expect(source).toContain('{{ record?.updatetime }}')
+    expect(source).toContain('data-testid="success-view-detail"')
+    expect(source).toContain('{ mode: \'view\' }')
+  })
 })

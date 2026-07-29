@@ -54,7 +54,10 @@ export function useLandDemandQuery(
 ): UseQueryResult<LandDemandRecord | undefined, Error> {
   return useQuery(() => ({
     queryKey: landDemandKeys.detail(creditcode),
-    queryFn: () => getLandDemandInfo(creditcode, { repository: options.repository }),
+    queryFn: ({ signal }) => getLandDemandInfo(creditcode, {
+      repository: options.repository,
+      signal,
+    }),
     enabled: Boolean(creditcode),
     meta: { scope: 'private' },
   }), options.client ?? queryClient)

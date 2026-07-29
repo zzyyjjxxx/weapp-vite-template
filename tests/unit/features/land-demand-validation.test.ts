@@ -42,6 +42,34 @@ describe('land demand validation', () => {
     expect(validateDraft({ ...validForm, pred_tax: '1.123' })[0]?.field).toBe('pred_tax')
   })
 
+  it('enforces backend integer precision while keeping two UI decimals', () => {
+    for (const field of [
+      'investment',
+      'financing_money',
+      'pred_ys',
+      'pred_tax',
+      'pred_rdex',
+      'pred_unitenergy',
+    ] as const) {
+      expect(validateDraft({ ...validForm, [field]: '99999999999999.99' }))
+        .not
+        .toEqual(expect.arrayContaining([expect.objectContaining({ field })]))
+      expect(validateDraft({ ...validForm, [field]: '100000000000000' }))
+        .toEqual(expect.arrayContaining([expect.objectContaining({ field })]))
+    }
+
+    for (const field of ['building_area', 'deploy_height', 'deploy_weight'] as const) {
+      expect(validateDraft({ ...validForm, [field]: '99999999.99' }))
+        .not
+        .toEqual(expect.arrayContaining([expect.objectContaining({ field })]))
+      expect(validateDraft({ ...validForm, [field]: '100000000' }))
+        .toEqual(expect.arrayContaining([expect.objectContaining({ field })]))
+    }
+
+    expect(validateDraft({ ...validForm, investment: '' })).toEqual([])
+    expect(validateDraft({ ...validForm, investment: '0' })).toEqual([])
+  })
+
   it('makes all four project metrics required for submission', () => {
     const errors = validateSubmission({ ...validForm, pred_rdex: '', pred_unitenergy: '' })
 

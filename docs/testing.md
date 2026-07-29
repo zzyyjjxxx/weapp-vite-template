@@ -27,9 +27,11 @@ pnpm analyze:budget
 - `tests/unit/stores/`：认证和表单 Store、Storage 持久化、私有 Query 缓存。
 - `tests/unit/components/`：五步组件字段、稳定 test ID、预览分组。
 - `tests/unit/e2e/`：Playwright 到小程序 Automator Driver 的映射。
-- `e2e/land-demand.spec.ts`：真实微信开发者工具内的登录、暂存恢复、联动校验和验证码提交主流程。
+- `e2e/land-demand.spec.ts`：真实微信开发者工具内的登录、冷启动会话恢复、暂存恢复、联动校验、验证码提交、已提交记录修改再暂存和登录/确认页截图主流程。
 
 单元测试使用可注入内存 Storage、时钟和验证码，不依赖生产数据。字典测试固定验证国民行业 150 个父节点/515 个叶子项、13 个宁波区域和完整 22 组产业赛道映射。
+
+业务边界测试还覆盖：篡改草稿不能改变认证企业四个归属字段；`decimal(20,6)`/`decimal(10,2)` 的最大整数位边界；空值与零值区分；`330200` 已选时再次选择可取消；Query `AbortSignal` 传入 Service 并在服务边界终止；只读详情不暴露保存或提交动作；成功页不在缺少已提交记录时显示成功。
 
 ## 运行时 E2E
 
@@ -38,7 +40,7 @@ pnpm build
 pnpm test:e2e
 ```
 
-运行前必须满足：Windows、微信开发者工具已登录、服务端口已启用、`dist` 可打开。配置固定 `workers: 1` 且共享一个 Automator 会话。若 CLI 返回 `re-login`，这是开发者工具登录前置条件未满足，应记录为“未执行/受阻”，不能标记为通过。
+运行前必须满足：Windows、微信开发者工具已登录、服务端口已启用、`dist` 可打开。配置固定 `workers: 1` 且共享一个 Automator 会话。用例会调用 Driver 的 `screenshot` 生成工作区 `.tmp/e2e-login.png` 与 `.tmp/e2e-review.png`，它们不是基线。若 CLI 返回 `re-login`，这是开发者工具登录前置条件未满足，应记录为“未执行/受阻”，不能标记为通过。
 
 托管 Linux CI 没有微信开发者工具，因此 CI 只运行静态门禁；运行时 E2E 是单独的 Windows DevTools 验收工作。截图使用 `wv screenshot`，对比使用 `wv compare`；只有实际生成并检查过的文件才能作为证据，不能从构建结果推断截图通过。
 

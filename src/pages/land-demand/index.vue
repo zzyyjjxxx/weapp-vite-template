@@ -6,7 +6,7 @@ import type {
   YesNo,
 } from '@/features/land-demand/models'
 
-import { computed, ref, watchEffect } from 'wevu'
+import { computed, onLoad, ref, watchEffect } from 'wevu'
 import AppError from '@/components/ui/app-error/index.vue'
 import AppLoading from '@/components/ui/app-loading/index.vue'
 import PageShell from '@/components/ui/page-shell/index.vue'
@@ -41,6 +41,7 @@ import {
 import { readPatchDetail } from '@/platform/event-detail'
 import { replace } from '@/router/navigation'
 import { runProtectedAction, useProtectedPage } from '@/router/protected-page'
+import { parseLandDemandMode } from '@/router/query'
 import { useAuthStore } from '@/stores/auth'
 import { useLandDemandStore } from '@/stores/land-demand'
 
@@ -75,6 +76,8 @@ const acceptanceError = ref('')
 const challenge = ref<NonNullable<typeof sendCodeMutation.data.value>>()
 const verificationCode = ref('')
 const verificationError = ref('')
+const mode = ref<'edit' | 'view'>('edit')
+const routeReady = ref(false)
 let initialized = false
 
 const saving = computed(() => saveMutation.isPending.value || updateMutation.isPending.value)
@@ -89,6 +92,7 @@ const mutationError = computed(() => (
 const queryErrorMessage = computed(() => query.error.value?.message ?? '请稍后重试')
 const clearDialogVisible = computed(() => pendingClear.value !== null)
 const verificationVisible = computed(() => challenge.value !== undefined)
+const viewOnly = computed(() => mode.value === 'view')
 const clearDialogContent = computed(() => {
   switch (pendingClear.value?.kind) {
     case 'deploy':
@@ -104,13 +108,30 @@ const clearDialogContent = computed(() => {
   }
 })
 
+onLoad((query) => {
+  mode.value = parseLandDemandMode(query?.mode)
+  routeReady.value = true
+})
+
 watchEffect(() => {
   const profile = enterprise.value
-  if (initialized || !profile || query.isPending.value) {
+  if (initialized || !routeReady.value || !profile || query.isPending.value) {
     return
   }
 
-  store.initializeFromLocalDraft(profile, query.data.value)
+  if (viewOnly.value && !query.data.value) {
+    initialized = true
+    void replace('/pages/home/index')
+    return
+  }
+
+  if (viewOnly.value) {
+    store.initialize(profile, query.data.value)
+    store.goToStep(5)
+  }
+  else {
+    store.initializeFromLocalDraft(profile, query.data.value)
+  }
   initialized = true
   ready.value = true
 })
@@ -393,6 +414,14 @@ async function submitVerificationCode(): Promise<void> {
     submitVerificationCodeAuthorized,
   )
 }
+
+async function backToHome(): Promise<void> {
+  await replace('/pages/home/index')
+}
+
+async function editDetail(): Promise<void> {
+  await replace('/pages/land-demand/index', { mode: 'edit' })
+}
 </script>
 
 <template>
@@ -409,7 +438,7 @@ async function submitVerificationCode(): Promise<void> {
       :message="queryErrorMessage"
     />
     <view v-else class="land-demand-page">
-      <WizardProgress :current-step="currentStep" />
+      <WizardProgress v-if="!viewOnly" :current-step="currentStep" />
       <scroll-view class="land-demand-page__form" scroll-y>
         <BasicInfoStep
           v-if="currentStep === 1"
@@ -441,15 +470,35 @@ async function submitVerificationCode(): Promise<void> {
           :accepted="accepted"
           :acceptance-error="acceptanceError"
           :submitting="submitting"
+          :readonly="viewOnly"
           @edit="goToStep"
           @accept="setAccepted"
           @submit="requestVerification"
         />
+        <view v-if="viewOnly" class="land-demand-page__detail-actions">
+          <t-button
+            data-testid="detail-back-home"
+            theme="default"
+            block
+            @tap="backToHome"
+          >
+            返回首页
+          </t-button>
+          <t-button
+            data-testid="detail-edit"
+            theme="primary"
+            block
+            @tap="editDetail"
+          >
+            修改填报
+          </t-button>
+        </view>
       </scroll-view>
 
       <text v-if="feedback" class="land-demand-page__feedback">{{ feedback }}</text>
       <text v-if="mutationError" class="land-demand-page__error">{{ mutationError }}</text>
       <WizardActions
+        v-if="!viewOnly"
         :current-step="currentStep"
         :saving="saving"
         @previous="goPrevious"
@@ -502,6 +551,12 @@ async function submitVerificationCode(): Promise<void> {
 .land-demand-page__feedback,
 .land-demand-page__error {
   display: block;
+}
+
+.land-demand-page__detail-actions {
+  display: flex;
+  gap: $space-2;
+  margin-top: $space-3;
 }
 
 .land-demand-page__feedback,

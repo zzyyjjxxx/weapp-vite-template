@@ -3,11 +3,19 @@ import { describe, expect, it } from 'vitest'
 import * as queryModule from '@/router/query'
 import {
   parseEnum,
+  parseLandDemandMode,
   parseOptionalNumber,
   parseRequiredString,
 } from '@/router/query'
 
 describe('route query parsing', () => {
+  it('parses land-demand mode and defaults untrusted values to edit', () => {
+    expect(parseLandDemandMode('view')).toBe('view')
+    expect(parseLandDemandMode('edit')).toBe('edit')
+    expect(parseLandDemandMode('other')).toBe('edit')
+    expect(parseLandDemandMode(undefined)).toBe('edit')
+  })
+
   it('decodes and validates an encoded login return path', () => {
     const parseReturnTo = (queryModule as Record<string, unknown>).parseReturnTo
 

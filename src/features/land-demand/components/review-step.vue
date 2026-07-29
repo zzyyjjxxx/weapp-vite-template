@@ -9,6 +9,7 @@ const props = defineProps<{
   accepted: boolean
   acceptanceError?: string
   submitting?: boolean
+  readonly?: boolean
 }>()
 const emit = defineEmits<{
   edit: [step: 1 | 2 | 3 | 4]
@@ -28,6 +29,7 @@ defineComponentJson({ component: true })
       <view class="review-step__heading">
         <text class="review-step__title">{{ group.title }}</text>
         <t-button
+          v-if="!props.readonly"
           size="small"
           theme="primary"
           variant="text"
@@ -42,7 +44,7 @@ defineComponentJson({ component: true })
       </view>
     </view>
 
-    <view class="review-step__promise u-card">
+    <view v-if="!props.readonly" class="review-step__promise u-card">
       <t-checkbox
         data-testid="review-accept"
         :checked="props.accepted"
