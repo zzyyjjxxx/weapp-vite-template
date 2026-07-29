@@ -41,6 +41,8 @@ pnpm test:e2e
 
 `pnpm verify` 执行静态项目门禁。运行时 E2E 需要 Windows 上已登录的微信开发者工具、已启用服务端口以及可用的 `dist` 构建；托管 Linux CI 无法提供这些条件，因此不会把构建成功当成运行时通过。若开发者工具返回 `re-login`，应先在开发者工具中重新登录，再重试 E2E。实际验证结果见 [reports/verification.md](reports/verification.md)。
 
+E2E 的冷启动恢复用例通过 Automator `callWxMethod('restartMiniProgram', { path })` 调用真实 `wx.restartMiniProgram` 重建小程序运行时，再验证持久化会话；普通页面跳转仍使用 `reLaunch`，两者不是同一种验收。
+
 ## 文档
 
 - [架构](docs/architecture.md)

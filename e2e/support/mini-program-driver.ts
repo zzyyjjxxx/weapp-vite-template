@@ -3,6 +3,11 @@ import type {
   MiniProgramLike,
 } from 'weapp-ide-cli'
 
+import {
+  isAutomatorProtocolTimeoutError,
+  isDevtoolsExtensionContextInvalidatedError,
+} from 'weapp-ide-cli'
+
 const DEFAULT_WAIT_MS = 8_000
 const POLL_INTERVAL_MS = 100
 
@@ -24,6 +29,7 @@ export interface MiniProgramLocator {
 
 export interface MiniProgramDriver {
   relaunch: (path: string) => Promise<void>
+  restart: (path: string) => Promise<void>
   getByTestId: (id: string) => MiniProgramLocator
   expectPath: (path: string) => Promise<void>
   screenshot: (path: string) => Promise<void>
@@ -36,6 +42,11 @@ type InputCapableElement = MiniProgramElement & {
 
 function normalizePath(path: string): string {
   return `/${path.replace(/^\/+/, '')}`
+}
+
+function isExpectedRestartTransition(error: unknown): boolean {
+  return isAutomatorProtocolTimeoutError(error)
+    || isDevtoolsExtensionContextInvalidatedError(error)
 }
 
 function parseControlValue(value: string): string | string[] {
@@ -146,9 +157,29 @@ class AutomatorLocator implements MiniProgramLocator {
 }
 
 export function createMiniProgramDriver(miniProgram: MiniProgramLike): MiniProgramDriver {
+  async function waitForPath(path: string): Promise<void> {
+    const expected = normalizePath(path)
+    await waitFor(async () => {
+      const page = await miniProgram.currentPage()
+      return normalizePath(page.path) === expected ? true : undefined
+    }, `page path ${expected}`)
+  }
+
   return {
     async relaunch(path) {
       await miniProgram.reLaunch(normalizePath(path))
+    },
+    async restart(path) {
+      const expected = normalizePath(path)
+      try {
+        await miniProgram.callWxMethod('restartMiniProgram', { path: expected })
+      }
+      catch (error) {
+        if (!isExpectedRestartTransition(error)) {
+          throw error
+        }
+      }
+      await waitForPath(expected)
     },
     getByTestId(id) {
       if (!/^[a-z0-9-]+$/.test(id)) {
@@ -157,11 +188,7 @@ export function createMiniProgramDriver(miniProgram: MiniProgramLike): MiniProgr
       return new AutomatorLocator(miniProgram, id)
     },
     async expectPath(path) {
-      const expected = normalizePath(path)
-      await waitFor(async () => {
-        const page = await miniProgram.currentPage()
-        return normalizePath(page.path) === expected ? true : undefined
-      }, `page path ${expected}`)
+      await waitForPath(path)
     },
     async screenshot(path) {
       await miniProgram.screenshot({ path })

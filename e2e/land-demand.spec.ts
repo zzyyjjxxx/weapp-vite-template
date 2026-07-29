@@ -24,7 +24,7 @@ test.describe.serial('企业用地需求填报', () => {
   })
 
   test('restores an authenticated session after a cold relaunch', async ({ miniProgram }) => {
-    await miniProgram.relaunch('/pages/home/index')
+    await miniProgram.restart('/pages/home/index')
     await miniProgram.expectPath('/pages/home/index')
     expect(await miniProgram.getByTestId('land-demand-status').text()).toContain('草稿')
     await miniProgram.getByTestId('land-demand-primary').tap()

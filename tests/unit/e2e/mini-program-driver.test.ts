@@ -18,6 +18,9 @@ function createDriverHarness() {
     path: 'pages/login/index',
   }
   const miniProgram = {
+    callWxMethod: vi.fn(async (_method: string, options: { path: string }) => {
+      page.path = options.path
+    }),
     currentPage: vi.fn(async () => page),
     evaluate: vi.fn(async () => {}),
     reLaunch: vi.fn(async (path: string) => {
@@ -47,6 +50,36 @@ describe('mini-program E2E driver', () => {
 
     expect(miniProgram.reLaunch).toHaveBeenCalledWith('/pages/home/index')
     expect(page.$).toHaveBeenCalledWith('[data-testid="login-submit"]')
+  })
+
+  it('restarts the app runtime through wx.restartMiniProgram and waits for its route', async () => {
+    const { driver, miniProgram, page } = createDriverHarness()
+    page.path = 'pages/land-demand/index'
+
+    await driver.restart('pages/home/index')
+
+    expect(miniProgram.callWxMethod).toHaveBeenCalledWith(
+      'restartMiniProgram',
+      { path: '/pages/home/index' },
+    )
+    expect(page.path).toBe('/pages/home/index')
+  })
+
+  it('waits for the restarted route when the protocol response is invalidated', async () => {
+    const { driver, miniProgram, page } = createDriverHarness()
+    vi.mocked(miniProgram.callWxMethod).mockImplementationOnce(async () => {
+      page.path = '/pages/home/index'
+      throw new Error('DevTools did not respond to protocol method App.callWxMethod within 3000ms')
+    })
+
+    await expect(driver.restart('/pages/home/index')).resolves.toBeUndefined()
+  })
+
+  it('does not hide unsupported restart failures', async () => {
+    const { driver, miniProgram } = createDriverHarness()
+    vi.mocked(miniProgram.callWxMethod).mockRejectedValueOnce(new Error('restartMiniProgram is not supported'))
+
+    await expect(driver.restart('/pages/home/index')).rejects.toThrow('not supported')
   })
 
   it('fills native descendants and emits typed values for TDesign groups', async () => {

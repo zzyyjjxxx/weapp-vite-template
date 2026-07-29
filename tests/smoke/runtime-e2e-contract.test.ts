@@ -59,5 +59,9 @@ describe('mini-program runtime E2E contract', () => {
 
     expect(spec).toContain('screenshot(\'.tmp/e2e-login.png\')')
     expect(spec).toContain('screenshot(\'.tmp/e2e-review.png\')')
+    expect(spec).toContain('miniProgram.restart(\'/pages/home/index\')')
+    expect(spec).not.toContain(
+      'restores an authenticated session after a cold relaunch\', async ({ miniProgram }) => {\n    await miniProgram.relaunch',
+    )
   })
 })

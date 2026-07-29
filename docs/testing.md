@@ -40,7 +40,7 @@ pnpm build
 pnpm test:e2e
 ```
 
-运行前必须满足：Windows、微信开发者工具已登录、服务端口已启用、`dist` 可打开。配置固定 `workers: 1` 且共享一个 Automator 会话。用例会调用 Driver 的 `screenshot` 生成工作区 `.tmp/e2e-login.png` 与 `.tmp/e2e-review.png`，它们不是基线。若 CLI 返回 `re-login`，这是开发者工具登录前置条件未满足，应记录为“未执行/受阻”，不能标记为通过。
+运行前必须满足：Windows、微信开发者工具已登录、服务端口已启用、`dist` 可打开。配置固定 `workers: 1` 且共享一个 Automator 会话。冷启动场景调用 Driver `restart`，由 Automator `callWxMethod('restartMiniProgram', { path })` 触发真实 `wx.restartMiniProgram`，等待新运行时页面就绪后验证 Storage 会话恢复；它不使用同一运行时内的 `reLaunch` 冒充冷启动。用例还会调用 Driver 的 `screenshot` 生成工作区 `.tmp/e2e-login.png` 与 `.tmp/e2e-review.png`，它们不是基线。若 CLI 返回 `re-login`，这是开发者工具登录前置条件未满足，应记录为“未执行/受阻”，不能标记为通过。
 
 托管 Linux CI 没有微信开发者工具，因此 CI 只运行静态门禁；运行时 E2E 是单独的 Windows DevTools 验收工作。截图使用 `wv screenshot`，对比使用 `wv compare`；只有实际生成并检查过的文件才能作为证据，不能从构建结果推断截图通过。
 
