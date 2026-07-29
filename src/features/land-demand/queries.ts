@@ -1,0 +1,104 @@
+import type { QueryClient } from '@tanstack/query-core'
+import type {
+  LandDemandForm,
+  LandDemandRecord,
+  LandDemandStatus,
+} from './models'
+import type { LandDemandRepository, VerificationChallenge } from './repository'
+import type { UseMutationResult, UseQueryResult } from '@/shared/query/types'
+
+import { queryClient } from '@/shared/query/client'
+import { useMutation } from '@/shared/query/use-mutation'
+import { useQuery } from '@/shared/query/use-query'
+import { landDemandKeys } from './query-keys'
+import {
+  getLandDemandInfo,
+  saveLandDemand,
+  sendVerificationCode,
+  updateLandDemand,
+  verifyVerificationCode,
+} from './service'
+
+interface QueryOptions {
+  client?: QueryClient
+  repository?: LandDemandRepository
+}
+
+export interface SaveLandDemandVariables {
+  form: LandDemandForm
+  status: LandDemandStatus
+  updateuser?: string
+}
+
+export interface UpdateLandDemandVariables extends SaveLandDemandVariables {
+  original: LandDemandRecord
+}
+
+export interface VerificationCodeVariables {
+  phone: string
+  code: string
+}
+
+export function useLandDemandQuery(
+  creditcode: string,
+  options: QueryOptions = {},
+): UseQueryResult<LandDemandRecord | undefined, Error> {
+  return useQuery(() => ({
+    queryKey: landDemandKeys.detail(creditcode),
+    queryFn: () => getLandDemandInfo(creditcode, { repository: options.repository }),
+    enabled: Boolean(creditcode),
+    meta: { scope: 'private' },
+  }), options.client ?? queryClient)
+}
+
+export function useSaveLandDemandMutation(
+  options: QueryOptions = {},
+): UseMutationResult<LandDemandRecord, Error, SaveLandDemandVariables, unknown> {
+  const client = options.client ?? queryClient
+  return useMutation(() => ({
+    mutationKey: [...landDemandKeys.all, 'save'],
+    mutationFn: variables => saveLandDemand(variables.form, variables.status, {
+      repository: options.repository,
+      updateuser: variables.updateuser,
+    }),
+    onSuccess: record => client.setQueryData(landDemandKeys.detail(record.creditcode), record),
+    retry: 0,
+  }), client)
+}
+
+export function useUpdateLandDemandMutation(
+  options: QueryOptions = {},
+): UseMutationResult<LandDemandRecord, Error, UpdateLandDemandVariables, unknown> {
+  const client = options.client ?? queryClient
+  return useMutation(() => ({
+    mutationKey: [...landDemandKeys.all, 'update'],
+    mutationFn: variables => updateLandDemand(variables.form, variables.original, variables.status, {
+      repository: options.repository,
+      updateuser: variables.updateuser,
+    }),
+    onSuccess: record => client.setQueryData(landDemandKeys.detail(record.creditcode), record),
+    retry: 0,
+  }), client)
+}
+
+export function useSendVerificationCodeMutation(
+  options: QueryOptions = {},
+): UseMutationResult<VerificationChallenge, Error, string, unknown> {
+  return useMutation(() => ({
+    mutationKey: [...landDemandKeys.all, 'send-verification-code'],
+    mutationFn: phone => sendVerificationCode(phone, { repository: options.repository }),
+    retry: 0,
+  }), options.client ?? queryClient)
+}
+
+export function useVerifyVerificationCodeMutation(
+  options: QueryOptions = {},
+): UseMutationResult<void, Error, VerificationCodeVariables, unknown> {
+  return useMutation(() => ({
+    mutationKey: [...landDemandKeys.all, 'verify-verification-code'],
+    mutationFn: variables => verifyVerificationCode(variables.phone, variables.code, {
+      repository: options.repository,
+    }),
+    retry: 0,
+  }), options.client ?? queryClient)
+}
