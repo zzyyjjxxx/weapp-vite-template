@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { FieldError, LandDemandForm } from '../models'
 
+import { ref } from 'wevu'
 import { getDirections, INDUSTRY_TRACK_DIRECTIONS } from '../dictionaries/industry-tracks'
+import { getIndustryDisplay, NATIONAL_INDUSTRY_OPTIONS } from '../industry-selector'
 
 const props = defineProps<{ form: LandDemandForm, errors: readonly FieldError[] }>()
 const emit = defineEmits<{ change: [patch: Partial<LandDemandForm>] }>()
@@ -9,6 +11,7 @@ const emit = defineEmits<{ change: [patch: Partial<LandDemandForm>] }>()
 defineComponentJson({ component: true })
 
 const trackOptions = Object.keys(INDUSTRY_TRACK_DIRECTIONS)
+const industrySelectorVisible = ref(false)
 
 function readStringDetail(event: unknown): string {
   if (typeof event !== 'object' || event === null || !('detail' in event)) {
@@ -28,6 +31,19 @@ function fieldError(field: keyof LandDemandForm): string {
 function changeText(field: keyof LandDemandForm, event: unknown): void {
   emit('change', { [field]: readStringDetail(event) })
 }
+
+function openIndustrySelector(): void {
+  industrySelectorVisible.value = true
+}
+
+function closeIndustrySelector(): void {
+  industrySelectorVisible.value = false
+}
+
+function changeIndustry(event: unknown): void {
+  emit('change', { project_hydm: readStringDetail(event) })
+  closeIndustrySelector()
+}
 </script>
 
 <template>
@@ -42,14 +58,27 @@ function changeText(field: keyof LandDemandForm, event: unknown): void {
       :tips="fieldError('investment')"
       @change="changeText('investment', $event)"
     />
-    <t-input
-      data-testid="project-hydm"
-      label="国民经济行业代码"
-      :value="props.form.project_hydm"
-      :status="fieldError('project_hydm') ? 'error' : 'default'"
-      :tips="fieldError('project_hydm')"
-      @change="changeText('project_hydm', $event)"
-    />
+    <view class="field field--selector">
+      <t-cell
+        data-testid="project-hydm"
+        title="国民经济行业"
+        :note="getIndustryDisplay(props.form.project_hydm) || '请选择行业'"
+        arrow
+        @tap="openIndustrySelector"
+      />
+      <text v-if="fieldError('project_hydm')" class="field__error">{{ fieldError('project_hydm') }}</text>
+      <t-cascader
+        data-testid="project-hydm-cascader"
+        :visible="industrySelectorVisible"
+        :value="props.form.project_hydm"
+        :options="NATIONAL_INDUSTRY_OPTIONS"
+        :filterable="true"
+        title="选择国民经济行业"
+        placeholder="请选择"
+        @change="changeIndustry"
+        @close="closeIndustrySelector"
+      />
+    </view>
     <view class="field">
       <text class="field__label">重点产业赛道</text>
       <t-radio-group
@@ -143,6 +172,10 @@ function changeText(field: keyof LandDemandForm, event: unknown): void {
 .field {
   padding: $space-3 0;
   border-bottom: 1rpx solid $color-border;
+}
+
+.field--selector {
+  padding-top: 0;
 }
 
 .field__label {

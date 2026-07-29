@@ -35,6 +35,17 @@ export const useLandDemandStore = defineStore('land-demand', () => {
     isDirty.value = false
   }
 
+  function initializeFromLocalDraft(
+    nextEnterprise: EnterpriseProfile,
+    record?: LandDemandRecord,
+  ): void {
+    initialize(
+      nextEnterprise,
+      record,
+      getLandDemandRepository().getDraft(nextEnterprise.creditcode),
+    )
+  }
+
   function patch(nextPatch: Partial<LandDemandForm>): void {
     form.value = {
       ...form.value,
@@ -79,6 +90,7 @@ export const useLandDemandStore = defineStore('land-demand', () => {
     hasRecord,
     isDirty,
     initialize,
+    initializeFromLocalDraft,
     patch,
     goToStep,
     saveLocalDraft,

@@ -140,9 +140,11 @@ function changeSpecialUse(event: unknown): void {
       <t-radio-group
         data-testid="is-specialuse"
         :value="props.form.is_specialuse"
-        :options="yesNoOptions"
         @change="changeSpecialUse"
-      />
+      >
+        <t-radio value="是">是</t-radio>
+        <t-radio data-testid="is-specialuse-no" value="否">否</t-radio>
+      </t-radio-group>
       <text v-if="fieldError('is_specialuse')" class="field__error">{{ fieldError('is_specialuse') }}</text>
     </view>
     <view v-if="props.form.is_specialuse === '是'" class="field">

@@ -6,8 +6,6 @@ const emit = defineEmits<{ change: [patch: Partial<LandDemandForm>] }>()
 
 defineComponentJson({ component: true })
 
-const financingOptions = ['有', '没有']
-
 function readStringDetail(event: unknown): string {
   if (typeof event !== 'object' || event === null || !('detail' in event)) {
     return ''
@@ -40,9 +38,11 @@ function changeFinancing(event: unknown): void {
       <t-radio-group
         data-testid="is-financing"
         :value="props.form.is_financing"
-        :options="financingOptions"
         @change="changeFinancing"
-      />
+      >
+        <t-radio data-testid="is-financing-yes" value="有">有</t-radio>
+        <t-radio value="没有">没有</t-radio>
+      </t-radio-group>
       <text v-if="fieldError('is_financing')" class="field__error">{{ fieldError('is_financing') }}</text>
     </view>
     <view v-if="props.form.is_financing === '有'">
@@ -52,17 +52,29 @@ function changeFinancing(event: unknown): void {
         type="digit"
         :value="props.form.financing_money"
         :status="fieldError('financing_money') ? 'error' : 'default'"
-        :tips="fieldError('financing_money')"
         @change="changeText('financing_money', $event)"
       />
+      <text
+        v-if="fieldError('financing_money')"
+        data-testid="financing-money-error"
+        class="field__error"
+      >
+        {{ fieldError('financing_money') }}
+      </text>
       <t-input
         data-testid="financing-time"
         label="融资时间（YYYY-MM）"
         :value="props.form.financing_time"
         :status="fieldError('financing_time') ? 'error' : 'default'"
-        :tips="fieldError('financing_time')"
         @change="changeText('financing_time', $event)"
       />
+      <text
+        v-if="fieldError('financing_time')"
+        data-testid="financing-time-error"
+        class="field__error"
+      >
+        {{ fieldError('financing_time') }}
+      </text>
     </view>
     <t-input
       data-testid="contact"

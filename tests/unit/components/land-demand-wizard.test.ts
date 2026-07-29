@@ -68,4 +68,42 @@ describe('land demand wizard component contract', () => {
     expect(source).toContain('<t-dialog')
     expect(source).toContain('destructive-clear-dialog')
   })
+
+  it('exposes every Task 7 control used by the Task 9 runtime contract', () => {
+    const sources = [
+      ...stepFiles,
+      `${componentRoot}/wizard-actions.vue`,
+    ].map(file => readFileSync(file, 'utf8')).join('\n')
+
+    for (const id of [
+      'next-step',
+      'save-draft',
+      'area',
+      'deploy-height',
+      'is-specialuse-no',
+      'is-financing-yes',
+      'financing-money-error',
+      'financing-time-error',
+    ]) {
+      expect(sources).toContain(`data-testid="${id}"`)
+    }
+  })
+
+  it('uses a searchable national-industry cascader instead of a free input', () => {
+    const source = readFileSync(`${componentRoot}/project-info-step.vue`, 'utf8')
+
+    expect(source).toContain('<t-cascader')
+    expect(source).toContain(':filterable="true"')
+    expect(source).toContain('NATIONAL_INDUSTRY_OPTIONS')
+    expect(source).toContain('getIndustryDisplay')
+    expect(source).not.toMatch(/<t-input[^>]+data-testid="project-hydm"/)
+  })
+
+  it('loads local drafts through the Store boundary instead of the page repository', () => {
+    const source = readFileSync('src/pages/land-demand/index.vue', 'utf8')
+
+    expect(source).toContain('store.initializeFromLocalDraft')
+    expect(source).not.toContain('@/features/land-demand/repository')
+    expect(source).not.toContain('getLandDemandRepository')
+  })
 })

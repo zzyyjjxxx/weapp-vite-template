@@ -29,7 +29,7 @@ defineComponentJson({ component: true })
       上一步
     </t-button>
     <t-button
-      data-testid="wizard-save"
+      data-testid="save-draft"
       class="wizard-actions__button"
       theme="default"
       :loading="props.saving"
@@ -40,7 +40,7 @@ defineComponentJson({ component: true })
     </t-button>
     <t-button
       v-if="props.currentStep < 5"
-      data-testid="wizard-next"
+      data-testid="next-step"
       class="wizard-actions__button"
       theme="primary"
       :disabled="props.saving"

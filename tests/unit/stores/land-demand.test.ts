@@ -70,6 +70,20 @@ describe('land demand store', () => {
     expect(store.isDirty.value).toBe(true)
   })
 
+  it('loads the persisted local draft through the Store boundary', () => {
+    repository.setDraft(enterprise.creditcode, {
+      form: { ...form, area: '42' },
+      currentStep: 2,
+      savedAt: 2_000,
+    })
+
+    const store = useLandDemandStore()
+    store.initializeFromLocalDraft(enterprise)
+
+    expect(store.form.value.area).toBe('42')
+    expect(store.currentStep.value).toBe(2)
+  })
+
   it('persists and discards only local draft metadata', () => {
     const store = useLandDemandStore()
     store.initialize(enterprise)

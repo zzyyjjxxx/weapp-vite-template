@@ -22,7 +22,6 @@ import {
   useSaveLandDemandMutation,
   useUpdateLandDemandMutation,
 } from '@/features/land-demand/queries'
-import { getLandDemandRepository } from '@/features/land-demand/repository'
 import {
   nextStep,
   previousStep,
@@ -92,11 +91,7 @@ watchEffect(() => {
   }
 
   originalRecord.value = query.data.value
-  store.initialize(
-    profile,
-    query.data.value,
-    getLandDemandRepository().getDraft(profile.creditcode),
-  )
+  store.initializeFromLocalDraft(profile, query.data.value)
   initialized = true
   ready.value = true
 })
