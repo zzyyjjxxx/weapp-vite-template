@@ -109,6 +109,34 @@ describe('land demand service and queries', () => {
     client.unmount()
   })
 
+  it('uses the Query detail value as the original record on a second draft save', async () => {
+    const client = createQueryClient()
+    const lifecycle = createLifecycle()
+    configureQueryLifecycleAdapter(lifecycle)
+    const query = useLandDemandQuery(form.creditcode, { client, repository })
+    await query.refetch()
+
+    const saveMutation = useSaveLandDemandMutation({ client, repository })
+    const saved = await saveMutation.mutateAsync({ form, status: '2' })
+    expect(query.data.value).toEqual(saved)
+
+    const original = query.data.value
+    expect(original).toBeDefined()
+    const updateMutation = useUpdateLandDemandMutation({ client, repository })
+    const updated = await updateMutation.mutateAsync({
+      form: { ...form, area: '32' },
+      original: original!,
+      status: '2',
+    })
+
+    expect(updated.area).toBe('32')
+    expect(query.data.value).toEqual(updated)
+    lifecycle.dispose()
+    resetQueryLifecycleAdapter()
+    client.clear()
+    client.unmount()
+  })
+
   it('marks mutation-created detail cache entries as private', async () => {
     const client = createQueryClient()
     const lifecycle = createLifecycle()

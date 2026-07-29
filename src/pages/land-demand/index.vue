@@ -3,7 +3,6 @@ import type {
   FieldError,
   FinancingChoice,
   LandDemandForm,
-  LandDemandRecord,
   YesNo,
 } from '@/features/land-demand/models'
 
@@ -58,7 +57,6 @@ const form = store.form
 const currentStep = store.currentStep
 const errors = ref<FieldError[]>([])
 const ready = ref(false)
-const originalRecord = ref<LandDemandRecord>()
 const pendingClear = ref<PendingClear | null>(null)
 const feedback = ref('')
 let initialized = false
@@ -90,7 +88,6 @@ watchEffect(() => {
     return
   }
 
-  originalRecord.value = query.data.value
   store.initializeFromLocalDraft(profile, query.data.value)
   initialized = true
   ready.value = true
@@ -253,10 +250,10 @@ async function saveDraft(): Promise<void> {
       status: '2' as const,
       updateuser: enterprise.value?.username,
     }
-    const record = originalRecord.value
-      ? await updateMutation.mutateAsync({ ...variables, original: originalRecord.value })
+    const original = query.data.value
+    const record = original
+      ? await updateMutation.mutateAsync({ ...variables, original })
       : await saveMutation.mutateAsync(variables)
-    originalRecord.value = record
     store.markPersisted(record)
     feedback.value = '已暂存'
   }

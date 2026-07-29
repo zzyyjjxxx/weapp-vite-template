@@ -103,7 +103,9 @@ describe('land demand wizard component contract', () => {
     const source = readFileSync('src/pages/land-demand/index.vue', 'utf8')
 
     expect(source).toContain('store.initializeFromLocalDraft')
+    expect(source).toContain('const original = query.data.value')
     expect(source).not.toContain('@/features/land-demand/repository')
     expect(source).not.toContain('getLandDemandRepository')
+    expect(source).not.toContain('originalRecord')
   })
 })
