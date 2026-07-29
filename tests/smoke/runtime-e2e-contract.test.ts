@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 describe('mini-program runtime E2E contract', () => {
-  it('serializes one shared WeChat DevTools project with a bounded timeout', () => {
+  it('serializes one opened WeChat DevTools project with a bounded timeout', () => {
     const config = readFileSync('playwright.config.ts', 'utf8')
     const fixture = readFileSync('e2e/fixtures/mini-program.ts', 'utf8')
 
@@ -11,12 +11,12 @@ describe('mini-program runtime E2E contract', () => {
     expect(config).toContain('workers: 1')
     expect(config).toContain('timeout: 60_000')
     expect(config).toContain('name: \'weapp\'')
-    expect(fixture).toContain('withMiniProgram(SESSION_OPTIONS')
-    expect(fixture).toContain('projectPath: PROJECT_PATH')
-    expect(fixture).toContain('preferOpenedSession: true')
-    expect(fixture).toContain('trustProject: true')
-    expect(fixture).toContain('sharedSession: true')
-    expect(fixture).toContain('closeSharedMiniProgram(PROJECT_PATH)')
+    expect(fixture).toContain('resolveProjectAutomatorPort(PROJECT_PATH)')
+    expect(fixture).toContain('wsEndpoint: AUTOMATOR_ENDPOINT')
+    expect(fixture).toContain('timeout: 90_000')
+    expect(fixture).toContain('scope: \'worker\'')
+    expect(fixture).toContain('miniProgram.disconnect()')
+    expect(fixture).toContain('quitWechatIde()')
   })
 
   it('covers every required land-demand runtime scenario and hook', () => {

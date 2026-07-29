@@ -90,6 +90,7 @@ const mutationError = computed(() => (
   saveMutation.error.value?.message ?? updateMutation.error.value?.message ?? ''
 ))
 const queryErrorMessage = computed(() => query.error.value?.message ?? '请稍后重试')
+const enterpriseName = computed(() => enterprise.value?.businessname ?? '')
 const clearDialogVisible = computed(() => pendingClear.value !== null)
 const verificationVisible = computed(() => challenge.value !== undefined)
 const viewOnly = computed(() => mode.value === 'view')
@@ -428,7 +429,7 @@ async function editDetail(): Promise<void> {
   <PageShell
     v-if="authorized"
     title="用地需求填报"
-    :subtitle="enterprise?.businessname"
+    :subtitle="enterpriseName"
     icon="list-check"
   >
     <AppLoading v-if="query.isPending || !ready" />

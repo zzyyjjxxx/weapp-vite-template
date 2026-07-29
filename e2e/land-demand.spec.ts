@@ -6,6 +6,7 @@ const ROBOT_DIRECTION = '具身大模型（大脑与小脑）'
 
 test.describe.serial('企业用地需求填报', () => {
   test('logs in, saves a draft and restores it', async ({ miniProgram }) => {
+    await miniProgram.relaunch('/pages/login/index')
     await miniProgram.clearStorage()
     await miniProgram.relaunch('/pages/login/index')
     await miniProgram.screenshot('.tmp/e2e-login.png')

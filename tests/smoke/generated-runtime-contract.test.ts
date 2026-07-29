@@ -24,4 +24,18 @@ describe('generated mini-program runtime contract', () => {
 
     expect(sources).not.toContain('event.detail')
   })
+
+  it('keeps optional chaining out of generated WXML expressions', () => {
+    const templates = [
+      'src/pages/home/index.vue',
+      'src/pages/land-demand/index.vue',
+      'src/pages/land-demand/success.vue',
+      'src/features/land-demand/components/verification-dialog.vue',
+    ].map((file) => {
+      const source = readFileSync(file, 'utf8')
+      return source.match(/<template>[\s\S]*<\/template>/)?.[0] ?? ''
+    }).join('\n')
+
+    expect(templates).not.toContain('?.')
+  })
 })

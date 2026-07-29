@@ -37,8 +37,10 @@ describe('product navigation source contract', () => {
 
     expect(source).toContain('useLandDemandQuery(creditcode)')
     expect(source).toContain('record.value?.landusedemand === \'1\'')
-    expect(source).toContain('{{ record?.businessname }}')
-    expect(source).toContain('{{ record?.updatetime }}')
+    expect(source).toContain('recordBusinessName = computed')
+    expect(source).toContain('recordUpdateTime = computed')
+    expect(source).toContain('{{ recordBusinessName }}')
+    expect(source).toContain('{{ recordUpdateTime }}')
     expect(source).toContain('data-testid="success-view-detail"')
     expect(source).toContain('{ mode: \'view\' }')
   })

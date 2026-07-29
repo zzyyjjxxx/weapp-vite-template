@@ -111,6 +111,7 @@ describe('land demand review', () => {
 
     expect(source).toContain(':disabled="props.loading"')
     expect(source).toContain(':loading="props.loading"')
-    expect(source).toContain(':disabled="props.loading || props.code.length !== 6"')
+    expect(source).toContain('submitDisabled = computed')
+    expect(source).toContain(':disabled="submitDisabled"')
   })
 })

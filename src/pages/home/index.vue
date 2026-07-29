@@ -17,6 +17,9 @@ const creditcode = enterprise.value?.creditcode ?? ''
 const landDemandQuery = useLandDemandQuery(creditcode)
 const record = landDemandQuery.data
 const submitted = computed(() => record.value?.landusedemand === '1')
+const enterpriseName = computed(() => enterprise.value?.businessname ?? '企业信息加载中')
+const enterpriseSubtitle = computed(() => enterprise.value?.businessname ?? '企业服务')
+const enterpriseCreditcode = computed(() => enterprise.value?.creditcode ?? '--')
 const primaryLabel = computed(() => {
   if (!record.value) {
     return '开始填报'
@@ -52,7 +55,7 @@ async function logout(): Promise<void> {
   <PageShell
     v-if="authorized"
     title="用地需求"
-    :subtitle="enterprise?.businessname ?? '企业服务'"
+    :subtitle="enterpriseSubtitle"
     icon="home"
   >
     <template #actions>
@@ -69,10 +72,10 @@ async function logout(): Promise<void> {
 
     <view class="home__enterprise u-card">
       <text class="home__enterprise-name">
-        {{ enterprise?.businessname ?? '企业信息加载中' }}
+        {{ enterpriseName }}
       </text>
       <text class="home__enterprise-creditcode">
-        统一社会信用代码：{{ enterprise?.creditcode ?? '--' }}
+        统一社会信用代码：{{ enterpriseCreditcode }}
       </text>
     </view>
 

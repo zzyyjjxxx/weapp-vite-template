@@ -20,6 +20,9 @@ const query = useLandDemandQuery(creditcode)
 const record = query.data
 const redirected = ref(false)
 const submitted = computed(() => record.value?.landusedemand === '1')
+const queryErrorMessage = computed(() => query.error.value?.message ?? '请返回首页后重试')
+const recordBusinessName = computed(() => record.value?.businessname ?? '--')
+const recordUpdateTime = computed(() => record.value?.updatetime ?? '--')
 
 watchEffect(() => {
   if (!authorized.value || query.isPending.value || query.isError.value || submitted.value || redirected.value) {
@@ -49,12 +52,12 @@ async function viewDetail(): Promise<void> {
     <AppError
       v-else-if="query.isError"
       title="提交结果加载失败"
-      :message="query.error.value?.message ?? '请返回首页后重试'"
+      :message="queryErrorMessage"
     />
     <view v-else-if="submitted" data-testid="submit-success" class="u-card land-demand-success__notice">
       <text class="land-demand-success__status">已提交</text>
-      <text class="land-demand-success__copy">企业名称：{{ record?.businessname }}</text>
-      <text class="land-demand-success__copy">提交时间：{{ record?.updatetime }}</text>
+      <text class="land-demand-success__copy">企业名称：{{ recordBusinessName }}</text>
+      <text class="land-demand-success__copy">提交时间：{{ recordUpdateTime }}</text>
       <view class="land-demand-success__actions">
         <view data-testid="success-back-home" class="land-demand-success__action">
           <t-button

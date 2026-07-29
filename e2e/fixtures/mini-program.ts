@@ -1,17 +1,61 @@
-import type { AutomatorSessionOptions } from 'weapp-ide-cli'
+import type { MiniProgramLike } from 'weapp-ide-cli'
 import type { MiniProgramDriver } from '../support/mini-program-driver'
 
+import { fileURLToPath } from 'node:url'
 import { test as base } from '@playwright/test'
-import { closeSharedMiniProgram, withMiniProgram } from 'weapp-ide-cli'
+import {
+  quitWechatIde,
+  resolveProjectAutomatorPort,
+} from 'weapp-ide-cli'
 import { createMiniProgramDriver } from '../support/mini-program-driver'
 
-const PROJECT_PATH = 'dist'
-const SESSION_OPTIONS = {
-  projectPath: PROJECT_PATH,
-  preferOpenedSession: true,
-  sharedSession: true,
-  trustProject: true,
-} satisfies AutomatorSessionOptions & { trustProject: boolean }
+const PROJECT_PATH = fileURLToPath(new URL('../../', import.meta.url))
+const AUTOMATOR_PORT = resolveProjectAutomatorPort(PROJECT_PATH)
+const AUTOMATOR_ENDPOINT = `ws://127.0.0.1:${AUTOMATOR_PORT}`
+
+const VERSION_COMPATIBILITY_PATCH = Symbol.for('land-demand.e2e.automator-version-compatibility')
+
+interface AutomatorMiniProgramPrototype {
+  [VERSION_COMPATIBILITY_PATCH]?: boolean
+  checkVersion: () => Promise<void>
+  connection: {
+    configureToolInfo: (toolInfo: unknown) => void
+  }
+  send: (method: string) => Promise<{ SDKVersion?: unknown }>
+}
+
+interface AutomatorModule {
+  Launcher: new () => {
+    connect: (options: { timeout: number, wsEndpoint: string }) => Promise<MiniProgramLike>
+  }
+  MiniProgram: { prototype: AutomatorMiniProgramPrototype }
+}
+
+async function loadCompatibleAutomator(): Promise<AutomatorModule> {
+  const ideCliEntry = import.meta.resolve('weapp-ide-cli')
+  const automatorEntry = new URL('../../@weapp-vite/miniprogram-automator/dist/index.mjs', ideCliEntry)
+  const automator = await import(automatorEntry.href) as AutomatorModule
+  const prototype = automator.MiniProgram.prototype
+
+  if (prototype[VERSION_COMPATIBILITY_PATCH]) {
+    return automator
+  }
+
+  const originalCheckVersion = prototype.checkVersion
+  prototype.checkVersion = async function checkVersionWithMissingSdkCompatibility() {
+    const toolInfo = await this.send('Tool.getInfo')
+
+    if (typeof toolInfo.SDKVersion === 'string' && toolInfo.SDKVersion) {
+      return originalCheckVersion.call(this)
+    }
+
+    // Some current Windows DevTools builds omit SDKVersion from Tool.getInfo.
+    // The connection is still valid; only the automator's version comparison fails.
+    this.connection.configureToolInfo(toolInfo)
+  }
+  Object.defineProperty(prototype, VERSION_COMPATIBILITY_PATCH, { value: true })
+  return automator
+}
 
 interface WorkerFixtures {
   miniProgram: MiniProgramDriver
@@ -19,35 +63,20 @@ interface WorkerFixtures {
 
 export const test = base.extend<Record<never, never>, WorkerFixtures>({
   miniProgram: [async ({ playwright: _playwright }, use) => {
-    let finishSession!: () => void
-    const sessionFinished = new Promise<void>((resolve) => {
-      finishSession = resolve
-    })
-    let exposeDriver!: (driver: MiniProgramDriver) => void
-    const driverReady = new Promise<MiniProgramDriver>((resolve) => {
-      exposeDriver = resolve
-    })
-
-    const session = withMiniProgram(SESSION_OPTIONS, async (miniProgram) => {
-      exposeDriver(createMiniProgramDriver(miniProgram))
-      await sessionFinished
+    const automator = await loadCompatibleAutomator()
+    const miniProgram = await new automator.Launcher().connect({
+      timeout: 90_000,
+      wsEndpoint: AUTOMATOR_ENDPOINT,
     })
 
     try {
-      const driver = await Promise.race([
-        driverReady,
-        session.then(() => {
-          throw new Error('Mini-program session ended before the driver became ready')
-        }),
-      ])
-      await use(driver)
+      await use(createMiniProgramDriver(miniProgram))
     }
     finally {
-      finishSession()
-      await Promise.allSettled([session])
-      await closeSharedMiniProgram(PROJECT_PATH)
+      miniProgram.disconnect()
+      await quitWechatIde().catch(() => undefined)
     }
-  }, { scope: 'worker' }],
+  }, { scope: 'worker', timeout: 120_000 }],
 })
 
 export { expect } from '@playwright/test'

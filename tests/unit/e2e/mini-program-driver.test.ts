@@ -18,8 +18,10 @@ function createDriverHarness() {
     path: 'pages/login/index',
   }
   const miniProgram = {
-    callWxMethod: vi.fn(async (_method: string, options: { path: string }) => {
-      page.path = options.path
+    callWxMethod: vi.fn(async (_method: string, options?: { path: string }) => {
+      if (options) {
+        page.path = options.path
+      }
     }),
     currentPage: vi.fn(async () => page),
     evaluate: vi.fn(async () => {}),
@@ -50,6 +52,22 @@ describe('mini-program E2E driver', () => {
 
     expect(miniProgram.reLaunch).toHaveBeenCalledWith('/pages/home/index')
     expect(page.$).toHaveBeenCalledWith('[data-testid="login-submit"]')
+  })
+
+  it('falls back to the app-service component tree for nested step controls', async () => {
+    const { driver, element, page } = createDriverHarness()
+    page.$.mockResolvedValueOnce(null).mockResolvedValueOnce(element)
+
+    await driver.getByTestId('next-step').tap()
+
+    expect(page.$).toHaveBeenNthCalledWith(
+      2,
+      '[data-testid="next-step"]',
+      expect.objectContaining({
+        componentSelectors: expect.arrayContaining(['WizardActions', 'scoped-slots-default']),
+        routeOnly: true,
+      }),
+    )
   })
 
   it('restarts the app runtime through wx.restartMiniProgram and waits for its route', async () => {
@@ -92,14 +110,32 @@ describe('mini-program E2E driver', () => {
     expect(trigger).toHaveBeenCalledWith('change', { value: ['330203', '330200'] })
   })
 
-  it('reads control values before rendered copy and clears storage through app evaluate', async () => {
+  it('waits for a TDesign control to stop loading before tapping', async () => {
+    const { driver, element } = createDriverHarness()
+    let loadingReads = 0
+    element.property.mockImplementation(async (name: string) => {
+      if (name === 'loading') {
+        loadingReads += 1
+        return loadingReads === 1
+      }
+      return undefined
+    })
+
+    await driver.getByTestId('land-demand-primary').tap()
+
+    expect(element.property).toHaveBeenCalledWith('disabled')
+    expect(element.property).toHaveBeenCalledWith('loading')
+    expect(element.tap).toHaveBeenCalledOnce()
+  })
+
+  it('reads control values before rendered copy and clears storage through the wx bridge', async () => {
     const { driver, element, miniProgram } = createDriverHarness()
     element.property.mockResolvedValueOnce('1811')
 
     await expect(driver.getByTestId('project-hydm-cascader').text()).resolves.toBe('1811')
     await driver.clearStorage()
 
-    expect(miniProgram.evaluate).toHaveBeenCalledWith('() => wx.clearStorageSync()')
+    expect(miniProgram.callWxMethod).toHaveBeenCalledWith('clearStorageSync')
   })
 
   it('rejects selector injection through test IDs', () => {

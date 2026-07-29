@@ -11,6 +11,26 @@ import {
 const DEFAULT_WAIT_MS = 8_000
 const POLL_INTERVAL_MS = 100
 
+const COMPONENT_TREE_SELECTORS = [
+  'weapp-layout-default',
+  'PageShell',
+  'scoped-slots-default',
+  'scoped-slot-5rfeus-default-0',
+  'BasicInfoStep',
+  'LandInfoStep',
+  'ProjectInfoStep',
+  'FinanceContactStep',
+  'ReviewStep',
+  'WizardActions',
+  'VerificationDialog',
+  't-button',
+  't-cascader',
+  't-checkbox',
+  't-input',
+  't-radio-group',
+  't-textarea',
+] as const
+
 const CHANGE_EVENT_TEST_IDS = new Set([
   'deploy-park',
   'expect-park',
@@ -116,12 +136,23 @@ class AutomatorLocator implements MiniProgramLocator {
   private async element(): Promise<MiniProgramElement> {
     return waitFor(async () => {
       const page = await this.miniProgram.currentPage()
-      return (await page.$(`[data-testid="${this.id}"]`)) ?? undefined
+      const selector = `[data-testid="${this.id}"]`
+      const direct = await page.$(selector)
+      return direct ?? (await page.$(selector, {
+        componentSelectors: [...COMPONENT_TREE_SELECTORS],
+        routeOnly: true,
+      })) ?? undefined
     }, `data-testid=${this.id}`)
   }
 
   async tap(): Promise<void> {
-    await (await this.element()).tap()
+    const element = await waitFor(async () => {
+      const candidate = await this.element()
+      const disabled = await candidate.property('disabled')
+      const loading = await candidate.property('loading')
+      return disabled === true || loading === true ? undefined : candidate
+    }, `actionable data-testid=${this.id}`)
+    await element.tap()
   }
 
   async fill(value: string): Promise<void> {
@@ -194,7 +225,7 @@ export function createMiniProgramDriver(miniProgram: MiniProgramLike): MiniProgr
       await miniProgram.screenshot({ path })
     },
     async clearStorage() {
-      await miniProgram.evaluate('() => wx.clearStorageSync()')
+      await miniProgram.callWxMethod('clearStorageSync')
     },
   }
 }

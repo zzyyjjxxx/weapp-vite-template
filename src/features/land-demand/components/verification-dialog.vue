@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { VerificationChallenge } from '../models'
 
+import { computed } from 'wevu'
 import { readStringDetail } from '@/platform/event-detail'
 
 const props = defineProps<{
@@ -15,6 +16,9 @@ const emit = defineEmits<{
   close: []
   submit: []
 }>()
+const challengePhone = computed(() => props.challenge?.phone ?? '')
+const challengeMockCode = computed(() => props.challenge?.mockCode ?? '')
+const submitDisabled = computed(() => Boolean(props.loading) || props.code.length !== 6)
 
 defineComponentJson({ component: true })
 
@@ -36,7 +40,7 @@ function close(): void {
   >
     <view class="verification-dialog">
       <text class="verification-dialog__copy">
-        验证码已发送至 {{ props.challenge?.phone ?? '' }}
+        验证码已发送至 {{ challengePhone }}
       </text>
       <t-input
         data-testid="verification-code"
@@ -49,7 +53,7 @@ function close(): void {
       />
       <view data-testid="mock-code" class="verification-dialog__mock">
         <text>Mock 测试验证码</text>
-        <text>{{ props.challenge?.mockCode ?? '' }}</text>
+        <text>{{ challengeMockCode }}</text>
       </view>
       <text v-if="props.error" class="verification-dialog__error">{{ props.error }}</text>
       <view class="verification-dialog__actions">
@@ -65,7 +69,7 @@ function close(): void {
           data-testid="verification-submit"
           theme="primary"
           :loading="props.loading"
-          :disabled="props.loading || props.code.length !== 6"
+          :disabled="submitDisabled"
           @tap="emit('submit')"
         >
           确认提交
