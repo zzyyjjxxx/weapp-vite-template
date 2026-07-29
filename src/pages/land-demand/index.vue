@@ -40,7 +40,7 @@ import {
 } from '@/features/land-demand/visibility'
 import { readPatchDetail } from '@/platform/event-detail'
 import { replace } from '@/router/navigation'
-import { useProtectedPage } from '@/router/protected-page'
+import { runProtectedAction, useProtectedPage } from '@/router/protected-page'
 import { useAuthStore } from '@/stores/auth'
 import { useLandDemandStore } from '@/stores/land-demand'
 
@@ -251,7 +251,7 @@ function goNext(): void {
   goToStep(nextStep(currentStep.value))
 }
 
-async function saveDraft(): Promise<void> {
+async function saveDraftAuthorized(): Promise<void> {
   feedback.value = ''
   saveMutation.reset()
   updateMutation.reset()
@@ -281,7 +281,15 @@ async function saveDraft(): Promise<void> {
   }
 }
 
-async function persistSubmission(status: '1'): Promise<Awaited<ReturnType<typeof saveMutation.mutateAsync>>> {
+async function saveDraft(): Promise<void> {
+  await runProtectedAction(
+    auth,
+    '/pages/land-demand/index',
+    saveDraftAuthorized,
+  )
+}
+
+async function persistSubmissionAuthorized(status: '1'): Promise<Awaited<ReturnType<typeof saveMutation.mutateAsync>>> {
   const variables = {
     form: form.value,
     status,
@@ -293,13 +301,25 @@ async function persistSubmission(status: '1'): Promise<Awaited<ReturnType<typeof
     : saveMutation.mutateAsync(variables)
 }
 
+async function persistSubmission(status: '1'): Promise<Awaited<ReturnType<typeof saveMutation.mutateAsync>>> {
+  const record = await runProtectedAction(
+    auth,
+    '/pages/land-demand/index',
+    () => persistSubmissionAuthorized(status),
+  )
+  if (!record) {
+    throw new Error('登录状态已失效，请重新登录')
+  }
+  return record
+}
+
 const submitController = createSubmitController({
   sendCode: phone => sendCodeMutation.mutateAsync(phone),
   verifyCode: (phone, code) => verifyCodeMutation.mutateAsync({ phone, code }),
   persist: persistSubmission,
 })
 
-async function requestVerification(): Promise<void> {
+async function requestVerificationAuthorized(): Promise<void> {
   feedback.value = ''
   acceptanceError.value = ''
   sendCodeMutation.reset()
@@ -324,6 +344,14 @@ async function requestVerification(): Promise<void> {
   }
 }
 
+async function requestVerification(): Promise<void> {
+  await runProtectedAction(
+    auth,
+    '/pages/land-demand/index',
+    requestVerificationAuthorized,
+  )
+}
+
 function closeVerification(): void {
   if (submitting.value) {
     return
@@ -333,7 +361,7 @@ function closeVerification(): void {
   verificationError.value = ''
 }
 
-async function submitVerificationCode(): Promise<void> {
+async function submitVerificationCodeAuthorized(): Promise<void> {
   const currentChallenge = challenge.value
   if (!currentChallenge || submitting.value) {
     return
@@ -356,6 +384,14 @@ async function submitVerificationCode(): Promise<void> {
       ? error.message
       : '提交失败，请稍后重试'
   }
+}
+
+async function submitVerificationCode(): Promise<void> {
+  await runProtectedAction(
+    auth,
+    '/pages/land-demand/index',
+    submitVerificationCodeAuthorized,
+  )
 }
 </script>
 

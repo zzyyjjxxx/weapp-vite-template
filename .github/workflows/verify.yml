@@ -24,6 +24,7 @@ jobs:
       - run: pnpm stylelint
       - run: pnpm test:coverage
       - run: pnpm build
+      - run: pnpm verify:generated-runtime
       - run: pnpm analyze:budget
 
   # Runtime E2E is a separate Windows acceptance job outside hosted CI:

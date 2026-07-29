@@ -96,6 +96,20 @@ describe('mock land demand repository', () => {
     expect(repository.getDraft(form.creditcode)).toMatchObject({ currentStep: 3 })
   })
 
+  it('does not overwrite a record when storage cannot determine whether it exists', async () => {
+    let writes = 0
+    const repository = createMockLandDemandRepository({
+      storage: {
+        get: () => { throw new Error('storage unreadable') },
+        set: () => { writes += 1 },
+        remove: () => undefined,
+      },
+    })
+
+    await expect(repository.save(savePayload)).rejects.toThrow('storage unreadable')
+    expect(writes).toBe(0)
+  })
+
   it('preserves hidden fields while updating the mutable record fields', async () => {
     const repository = createMockLandDemandRepository({
       storage: createMemoryStorage(),

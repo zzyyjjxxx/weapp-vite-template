@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 
-import { guardProtectedPage } from '@/router/protected-page'
+import { guardProtectedPage, runProtectedAction } from '@/router/protected-page'
 
 describe('direct protected page guard', () => {
   it('allows an active session without navigating', async () => {
@@ -36,5 +36,29 @@ describe('direct protected page guard', () => {
       expect(source).toContain(`useProtectedPage('${path}')`)
       expect(source).toContain('v-if="authorized"')
     }
+  })
+
+  it('does not invoke a sensitive action after the session expires', async () => {
+    const action = vi.fn(async () => 'persisted')
+    const redirect = vi.fn(async () => undefined)
+
+    await expect(runProtectedAction(
+      { ensureActiveSession: () => false },
+      '/pages/land-demand/index',
+      action,
+      redirect,
+    )).resolves.toBeUndefined()
+    expect(action).not.toHaveBeenCalled()
+    expect(redirect).toHaveBeenCalledOnce()
+  })
+
+  it('wires every sensitive land-demand action through the foreground guard', () => {
+    const source = readFileSync('src/pages/land-demand/index.vue', 'utf8')
+
+    expect(source.match(/runProtectedAction/g)?.length).toBeGreaterThanOrEqual(4)
+    expect(source).toMatch(/saveDraft[\s\S]*runProtectedAction/)
+    expect(source).toMatch(/persistSubmission[\s\S]*runProtectedAction/)
+    expect(source).toMatch(/requestVerification[\s\S]*runProtectedAction/)
+    expect(source).toMatch(/submitVerificationCode[\s\S]*runProtectedAction/)
   })
 })

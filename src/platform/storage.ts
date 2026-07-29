@@ -17,12 +17,7 @@ export function createWpiStorageAdapter(
 ): StorageAdapter {
   return {
     get<T>(key: string) {
-      try {
-        return storageApi.getStorageSync(key) as T | undefined
-      }
-      catch {
-        return undefined
-      }
+      return storageApi.getStorageSync(key) as T | undefined
     },
     set<T>(key: string, value: T) {
       storageApi.setStorageSync(key, value)

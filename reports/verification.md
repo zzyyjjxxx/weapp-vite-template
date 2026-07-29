@@ -89,3 +89,16 @@
   生成脚本不再读取 `.detail`。
 - 本轮没有重试微信开发者工具 E2E；此前记录的 `re-login`/websocket
   环境阻塞仍有效，不将静态或构建结果冒充运行时验收。
+
+## 运行时审查加固（2026-07-29）
+
+- Storage 键不存在仍返回空值，但真正的读取异常会向 Repository/Mutation
+  传播；保存无法确认旧记录是否存在时不会执行任何写入。
+- 暂存、发送验证码、校验验证码和最终持久化均通过前台会话操作守卫；过期
+  会话不会调用动作回调，并跳转携带 `returnTo` 的登录页。
+- 托管 CI 在 `pnpm build` 后执行 `pnpm verify:generated-runtime`，再执行
+  `pnpm analyze:budget`；对应顺序受 smoke 测试保护。
+- 聚焦 RED 捕获 4 个失败，最终 GREEN 为 4 个文件/22 个测试通过；`pnpm verify`
+  退出 0，依次通过 prepare、应用与 E2E 类型检查、零警告 lint、stylelint、
+  34 个文件/113 个测试、707 KB 构建、生成产物契约及包体预算。
+- 本轮未重试 DevTools E2E，继续记录为外部 `re-login`/websocket 前置条件阻塞。

@@ -3,14 +3,24 @@ import { describe, expect, it, vi } from 'vitest'
 import { createWpiStorageAdapter } from '@/platform/storage'
 
 describe('WPI storage adapter', () => {
-  it('returns undefined when a storage read is unavailable', () => {
+  it('keeps a missing key as an empty result', () => {
+    const adapter = createWpiStorageAdapter({
+      getStorageSync: () => undefined,
+      setStorageSync: vi.fn(),
+      removeStorageSync: vi.fn(),
+    })
+
+    expect(adapter.get('missing')).toBeUndefined()
+  })
+
+  it('propagates genuine storage read failures', () => {
     const adapter = createWpiStorageAdapter({
       getStorageSync: () => { throw new Error('missing') },
       setStorageSync: vi.fn(),
       removeStorageSync: vi.fn(),
     })
 
-    expect(adapter.get('missing')).toBeUndefined()
+    expect(() => adapter.get('record')).toThrow('missing')
   })
 
   it('propagates write and remove failures to repository callers', () => {

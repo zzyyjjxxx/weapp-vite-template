@@ -22,6 +22,18 @@ export async function guardProtectedPage(
   return false
 }
 
+export async function runProtectedAction<T>(
+  auth: ActiveSessionGate,
+  returnTo: AppRoutePath,
+  action: () => Promise<T>,
+  redirect: Redirect = replaceUrl,
+): Promise<T | undefined> {
+  if (!await guardProtectedPage(auth, returnTo, redirect)) {
+    return undefined
+  }
+  return action()
+}
+
 export function useProtectedPage(path: AppRoutePath) {
   const auth = useAuthStore()
   const authorized = ref(auth.ensureActiveSession())
