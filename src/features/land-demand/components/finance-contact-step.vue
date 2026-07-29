@@ -1,32 +1,23 @@
 <script setup lang="ts">
 import type { FieldError, FinancingChoice, LandDemandForm } from '../models'
 
+import { readStringDetail } from '@/platform/event-detail'
+
 const props = defineProps<{ form: LandDemandForm, errors: readonly FieldError[] }>()
 const emit = defineEmits<{ change: [patch: Partial<LandDemandForm>] }>()
 
 defineComponentJson({ component: true })
 
-function readStringDetail(event: unknown): string {
-  if (typeof event !== 'object' || event === null || !('detail' in event)) {
-    return ''
-  }
-  const detail = event.detail
-  if (typeof detail !== 'object' || detail === null || !('value' in detail)) {
-    return ''
-  }
-  return typeof detail.value === 'string' ? detail.value : ''
-}
-
 function fieldError(field: keyof LandDemandForm): string {
   return props.errors.find(error => error.field === field)?.message ?? ''
 }
 
-function changeText(field: keyof LandDemandForm, event: unknown): void {
-  emit('change', { [field]: readStringDetail(event) })
+function changeText(field: keyof LandDemandForm, detail: unknown): void {
+  emit('change', { [field]: readStringDetail(detail) })
 }
 
-function changeFinancing(event: unknown): void {
-  emit('change', { is_financing: readStringDetail(event) as FinancingChoice })
+function changeFinancing(detail: unknown): void {
+  emit('change', { is_financing: readStringDetail(detail) as FinancingChoice })
 }
 </script>
 

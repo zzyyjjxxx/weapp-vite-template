@@ -1,28 +1,19 @@
 <script setup lang="ts">
 import type { FieldError, LandDemandForm } from '../models'
 
+import { readStringDetail } from '@/platform/event-detail'
+
 const props = defineProps<{ form: LandDemandForm, errors: readonly FieldError[] }>()
 const emit = defineEmits<{ change: [patch: Partial<LandDemandForm>] }>()
 
 defineComponentJson({ component: true })
 
-function readStringDetail(event: unknown): string {
-  if (typeof event !== 'object' || event === null || !('detail' in event)) {
-    return ''
-  }
-  const detail = event.detail
-  if (typeof detail !== 'object' || detail === null || !('value' in detail)) {
-    return ''
-  }
-  return typeof detail.value === 'string' ? detail.value : ''
+function changeCounty(detail: unknown): void {
+  emit('change', { county: readStringDetail(detail) })
 }
 
-function changeCounty(event: unknown): void {
-  emit('change', { county: readStringDetail(event) })
-}
-
-function changeRegion(event: unknown): void {
-  emit('change', { region: readStringDetail(event) })
+function changeRegion(detail: unknown): void {
+  emit('change', { region: readStringDetail(detail) })
 }
 </script>
 

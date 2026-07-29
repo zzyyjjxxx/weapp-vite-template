@@ -42,3 +42,10 @@ pnpm test:e2e
 托管 Linux CI 没有微信开发者工具，因此 CI 只运行静态门禁；运行时 E2E 是单独的 Windows DevTools 验收工作。截图使用 `wv screenshot`，对比使用 `wv compare`；只有实际生成并检查过的文件才能作为证据，不能从构建结果推断截图通过。
 
 当前命令的真实状态、退出码和运行时阻塞见 `reports/verification.md`。
+## 生成产物运行时契约
+
+静态回归测试在构建后检查 `dist/app.json` 的登录入口和无 `tabBar` 状态，
+并检查生成 WXML 的 `data-wd-change="1"` 标记令 Wevu dispatcher 负责唯一
+一次 `event.detail` 解包。页面与
+组件处理器接收的已经是 detail 对象（例如 `{ value }`），自定义组件事件
+接收的已经是补丁本身；业务生成脚本不得再次读取 `.detail`。

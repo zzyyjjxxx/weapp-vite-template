@@ -17,9 +17,7 @@ export function setupRouter(): RouterNavigation {
     return router
   }
 
-  router = createRouter({
-    tabBarEntries: ['/pages/home/index'],
-  })
+  router = createRouter()
   router.beforeEach((to: RouteLocationNormalizedLoaded | undefined) => {
     if (!to) {
       return
@@ -27,7 +25,7 @@ export function setupRouter(): RouterNavigation {
 
     const meta: RouteMeta | undefined = resolveRouteMeta(to.path)
     const auth = useAuthStore()
-    if (meta?.auth && !auth.isAuthenticated.value) {
+    if (meta?.auth && !auth.ensureActiveSession()) {
       return buildLoginRedirect(to.fullPath)
     }
   })

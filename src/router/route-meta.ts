@@ -3,7 +3,6 @@ import type { AppRoutePath, RouteMeta } from './types'
 export const routeMeta = {
   '/pages/home/index': {
     auth: true,
-    tab: true,
     analyticsName: 'home',
   },
   '/pages/login/index': {

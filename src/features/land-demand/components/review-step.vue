@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { LandDemandForm } from '../models'
 
+import { readBooleanDetail } from '@/platform/event-detail'
 import { buildReviewGroups } from '../review'
 
 const props = defineProps<{
@@ -14,25 +15,7 @@ const emit = defineEmits<{
   accept: [value: boolean]
   submit: []
 }>()
-
 defineComponentJson({ component: true })
-
-function readChecked(event: unknown): boolean {
-  if (typeof event !== 'object' || event === null || !('detail' in event)) {
-    return false
-  }
-  const detail = event.detail
-  if (typeof detail === 'boolean') {
-    return detail
-  }
-  if (typeof detail !== 'object' || detail === null) {
-    return false
-  }
-  if ('checked' in detail) {
-    return Boolean(detail.checked)
-  }
-  return 'value' in detail ? Boolean(detail.value) : false
-}
 </script>
 
 <template>
@@ -63,7 +46,7 @@ function readChecked(event: unknown): boolean {
       <t-checkbox
         data-testid="review-accept"
         :checked="props.accepted"
-        @change="emit('accept', readChecked($event))"
+        @change="emit('accept', readBooleanDetail($event))"
       >
         本企业承诺所填写的信息真实、准确、完整，并同意相关部门根据项目服务需要使用以上信息。
       </t-checkbox>

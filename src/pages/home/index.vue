@@ -3,6 +3,7 @@ import { computed } from 'wevu'
 import PageShell from '@/components/ui/page-shell/index.vue'
 import { useLandDemandQuery } from '@/features/land-demand/queries'
 import { navigate, replace } from '@/router/navigation'
+import { useProtectedPage } from '@/router/protected-page'
 import { useAuthStore } from '@/stores/auth'
 
 definePageJson({
@@ -10,6 +11,7 @@ definePageJson({
 })
 
 const auth = useAuthStore()
+const { authorized } = useProtectedPage('/pages/home/index')
 const enterprise = auth.enterprise
 const creditcode = enterprise.value?.creditcode ?? ''
 const landDemandQuery = useLandDemandQuery(creditcode)
@@ -39,6 +41,7 @@ async function logout(): Promise<void> {
 
 <template>
   <PageShell
+    v-if="authorized"
     title="用地需求"
     :subtitle="enterprise?.businessname ?? '企业服务'"
     icon="home"

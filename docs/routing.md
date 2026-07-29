@@ -21,3 +21,12 @@
 ## Query 参数
 
 使用 `encodeQuery` 生成参数，使用 `parseRequiredString`、`parseOptionalNumber`、`parseEnum` 解析外部输入。当前用地需求主流程不依赖记录 ID Query：企业信用代码来自受信认证会话，并作为记录查询键和修改条件。
+## 冷启动与直接访问保护
+
+`app.json` 的 `entryPagePath` 固定为 `pages/login/index`，且项目没有原生
+`tabBar`。首页使用普通 `push/replace` 导航，不使用 `switchTab`。
+
+Router Guard 在每次鉴权决策时调用 `ensureActiveSession()`，以当前时间检查
+会话是否过期。首页、填报页和提交成功页还通过共享的 `useProtectedPage`
+在 `onLoad` 与 `onShow` 再次校验，覆盖绕过 Router 的原生直接启动；未授权
+页面在跳转登录前不渲染受保护内容。

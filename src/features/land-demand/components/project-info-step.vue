@@ -2,6 +2,7 @@
 import type { FieldError, LandDemandForm } from '../models'
 
 import { ref } from 'wevu'
+import { readStringDetail } from '@/platform/event-detail'
 import { getDirections, INDUSTRY_TRACK_DIRECTIONS } from '../dictionaries/industry-tracks'
 import { getIndustryDisplay, NATIONAL_INDUSTRY_OPTIONS } from '../industry-selector'
 
@@ -13,23 +14,12 @@ defineComponentJson({ component: true })
 const trackOptions = Object.keys(INDUSTRY_TRACK_DIRECTIONS)
 const industrySelectorVisible = ref(false)
 
-function readStringDetail(event: unknown): string {
-  if (typeof event !== 'object' || event === null || !('detail' in event)) {
-    return ''
-  }
-  const detail = event.detail
-  if (typeof detail !== 'object' || detail === null || !('value' in detail)) {
-    return ''
-  }
-  return typeof detail.value === 'string' ? detail.value : ''
-}
-
 function fieldError(field: keyof LandDemandForm): string {
   return props.errors.find(error => error.field === field)?.message ?? ''
 }
 
-function changeText(field: keyof LandDemandForm, event: unknown): void {
-  emit('change', { [field]: readStringDetail(event) })
+function changeText(field: keyof LandDemandForm, detail: unknown): void {
+  emit('change', { [field]: readStringDetail(detail) })
 }
 
 function openIndustrySelector(): void {
@@ -40,8 +30,8 @@ function closeIndustrySelector(): void {
   industrySelectorVisible.value = false
 }
 
-function changeIndustry(event: unknown): void {
-  emit('change', { project_hydm: readStringDetail(event) })
+function changeIndustry(detail: unknown): void {
+  emit('change', { project_hydm: readStringDetail(detail) })
   closeIndustrySelector()
 }
 </script>

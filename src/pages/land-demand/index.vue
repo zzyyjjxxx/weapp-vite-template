@@ -38,7 +38,9 @@ import {
   applyTrackChoice,
   selectDeployPark,
 } from '@/features/land-demand/visibility'
+import { readPatchDetail } from '@/platform/event-detail'
 import { replace } from '@/router/navigation'
+import { useProtectedPage } from '@/router/protected-page'
 import { useAuthStore } from '@/stores/auth'
 import { useLandDemandStore } from '@/stores/land-demand'
 
@@ -53,6 +55,7 @@ type PendingClear
     | { kind: 'financing', value: FinancingChoice }
 
 const auth = useAuthStore()
+const { authorized } = useProtectedPage('/pages/land-demand/index')
 const enterprise = auth.enterprise
 const creditcode = enterprise.value?.creditcode ?? ''
 const query = useLandDemandQuery(creditcode)
@@ -112,16 +115,6 @@ watchEffect(() => {
   ready.value = true
 })
 
-function readPatchDetail(event: unknown): Partial<LandDemandForm> {
-  if (typeof event !== 'object' || event === null || !('detail' in event)) {
-    return {}
-  }
-  const detail = event.detail
-  return typeof detail === 'object' && detail !== null
-    ? detail as Partial<LandDemandForm>
-    : {}
-}
-
 function patchStore(patch: Partial<LandDemandForm>): void {
   store.patch(patch)
   const fields = new Set(Object.keys(patch) as (keyof LandDemandForm)[])
@@ -173,8 +166,8 @@ function applyFinancing(value: FinancingChoice): void {
   })
 }
 
-function changeForm(event: unknown): void {
-  const patch = readPatchDetail(event)
+function changeForm(detail: unknown): void {
+  const patch = readPatchDetail<LandDemandForm>(detail)
 
   if (patch.deploy_park) {
     applyDeployParkSnapshot(patch.deploy_park)
@@ -367,7 +360,12 @@ async function submitVerificationCode(): Promise<void> {
 </script>
 
 <template>
-  <PageShell title="用地需求填报" :subtitle="enterprise?.businessname" icon="list-check">
+  <PageShell
+    v-if="authorized"
+    title="用地需求填报"
+    :subtitle="enterprise?.businessname"
+    icon="list-check"
+  >
     <AppLoading v-if="query.isPending || !ready" />
     <AppError
       v-else-if="query.isError"

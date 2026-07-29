@@ -73,6 +73,29 @@ describe('mock land demand repository', () => {
     })).rejects.toThrow('填报记录不存在')
   })
 
+  it('reports storage write failures and keeps the recoverable local draft', async () => {
+    const memory = createMemoryStorage()
+    memory.set('draft:land-demand:91330200MA2DEMO001', {
+      form,
+      currentStep: 3,
+      savedAt: 1_000,
+    })
+    const repository = createMockLandDemandRepository({
+      storage: {
+        ...memory,
+        set: (key, value) => {
+          if (key.startsWith('mock:land-demand:')) {
+            throw new Error('storage full')
+          }
+          memory.set(key, value)
+        },
+      },
+    })
+
+    await expect(repository.save(savePayload)).rejects.toThrow('storage full')
+    expect(repository.getDraft(form.creditcode)).toMatchObject({ currentStep: 3 })
+  })
+
   it('preserves hidden fields while updating the mutable record fields', async () => {
     const repository = createMockLandDemandRepository({
       storage: createMemoryStorage(),

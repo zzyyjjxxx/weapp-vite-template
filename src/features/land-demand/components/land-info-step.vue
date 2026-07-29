@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { FieldError, LandDemandForm, YesNo } from '../models'
 
+import { readStringArrayDetail, readStringDetail } from '@/platform/event-detail'
 import { LAND_TYPE_OPTIONS } from '../dictionaries/land-types'
 import { PARK_OPTIONS } from '../dictionaries/parks'
 
@@ -13,27 +14,6 @@ const yesNoOptions = ['是', '否']
 const parkOptions = PARK_OPTIONS.map(option => ({ ...option }))
 const landTypeOptions = [...LAND_TYPE_OPTIONS]
 
-function readDetailValue(event: unknown): unknown {
-  if (typeof event !== 'object' || event === null || !('detail' in event)) {
-    return undefined
-  }
-  const detail = event.detail
-  if (typeof detail !== 'object' || detail === null || !('value' in detail)) {
-    return undefined
-  }
-  return detail.value
-}
-
-function readStringDetail(event: unknown): string {
-  const value = readDetailValue(event)
-  return typeof value === 'string' ? value : ''
-}
-
-function readStringArrayDetail(event: unknown): string[] {
-  const value = readDetailValue(event)
-  return Array.isArray(value) ? value.filter(item => typeof item === 'string') : []
-}
-
 function fieldError(field: keyof LandDemandForm): string {
   return props.errors.find(error => error.field === field)?.message ?? ''
 }
@@ -44,20 +24,20 @@ function selectedParkNames(): string {
     .join('、')
 }
 
-function changeText(field: keyof LandDemandForm, event: unknown): void {
-  emit('change', { [field]: readStringDetail(event) })
+function changeText(field: keyof LandDemandForm, detail: unknown): void {
+  emit('change', { [field]: readStringDetail(detail) })
 }
 
-function changeDeployChoice(event: unknown): void {
-  emit('change', { is_deploy: readStringDetail(event) as YesNo })
+function changeDeployChoice(detail: unknown): void {
+  emit('change', { is_deploy: readStringDetail(detail) as YesNo })
 }
 
-function changeDeployParks(event: unknown): void {
-  emit('change', { deploy_park: readStringArrayDetail(event) })
+function changeDeployParks(detail: unknown): void {
+  emit('change', { deploy_park: readStringArrayDetail(detail) })
 }
 
-function changeSpecialUse(event: unknown): void {
-  emit('change', { is_specialuse: readStringDetail(event) as YesNo })
+function changeSpecialUse(detail: unknown): void {
+  emit('change', { is_specialuse: readStringDetail(detail) as YesNo })
 }
 </script>
 

@@ -27,6 +27,7 @@ focusManager.setEventListener((setFocused) => {
 })
 
 defineAppJson({
+  entryPagePath: 'pages/login/index',
   pages: autoRoutes.pages,
   window: {
     navigationBarTitleText: '业务工作台',

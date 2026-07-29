@@ -97,4 +97,15 @@ describe('auth store', () => {
     expect(auth.initialized.value).toBe(true)
     expect(auth.isAuthenticated.value).toBe(false)
   })
+
+  it('checks expiration against a fresh clock value and clears private state', async () => {
+    const auth = useAuthStore()
+    auth.setSession({ ...session, expiresAt: 2_000 })
+    await seedPrivateQuery()
+
+    expect(auth.isSessionActive(1_999)).toBe(true)
+    expect(auth.ensureActiveSession(2_000)).toBe(false)
+    expect(auth.session.value).toBeNull()
+    expect(queryClient.getQueryData(['private', 'enterprise-record'])).toBeUndefined()
+  })
 })

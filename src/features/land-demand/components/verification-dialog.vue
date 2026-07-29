@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { VerificationChallenge } from '../models'
 
+import { readStringDetail } from '@/platform/event-detail'
+
 const props = defineProps<{
   visible: boolean
   challenge?: VerificationChallenge
@@ -15,17 +17,6 @@ const emit = defineEmits<{
 }>()
 
 defineComponentJson({ component: true })
-
-function readCode(event: unknown): string {
-  if (typeof event !== 'object' || event === null || !('detail' in event)) {
-    return ''
-  }
-  const detail = event.detail
-  if (typeof detail !== 'object' || detail === null || !('value' in detail)) {
-    return ''
-  }
-  return typeof detail.value === 'string' ? detail.value : ''
-}
 
 function close(): void {
   if (!props.loading) {
@@ -54,7 +45,7 @@ function close(): void {
         :maxlength="6"
         :value="props.code"
         :disabled="props.loading"
-        @change="emit('change', readCode($event))"
+        @change="emit('change', readStringDetail($event))"
       />
       <view data-testid="mock-code" class="verification-dialog__mock">
         <text>Mock 测试验证码</text>

@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import PageShell from '@/components/ui/page-shell/index.vue'
 import { replace } from '@/router/navigation'
+import { useProtectedPage } from '@/router/protected-page'
 
 definePageJson({
   navigationBarTitleText: '填报完成',
 })
+
+const { authorized } = useProtectedPage('/pages/land-demand/success')
 
 async function backHome(): Promise<void> {
   await replace('/pages/home/index')
@@ -12,7 +15,12 @@ async function backHome(): Promise<void> {
 </script>
 
 <template>
-  <PageShell title="填报完成" subtitle="用地需求已提交" icon="list-check">
+  <PageShell
+    v-if="authorized"
+    title="填报完成"
+    subtitle="用地需求已提交"
+    icon="list-check"
+  >
     <view data-testid="submit-success" class="u-card land-demand-success__notice">
       <text class="land-demand-success__status">提交成功</text>
       <text class="land-demand-success__copy">感谢填报，相关部门将跟进服务。</text>

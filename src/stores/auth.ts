@@ -9,11 +9,9 @@ export const useAuthStore = defineStore('auth', () => {
   const session = ref<AuthSession | null>(null)
   const initialized = ref(false)
 
-  const isAuthenticated = computed(() => Boolean(
-    session.value
-    && session.value.token
-    && session.value.expiresAt > Date.now(),
-  ))
+  // Reactive presentation state only. Authorization decisions must call
+  // ensureActiveSession(), which evaluates expiration against a fresh clock.
+  const isAuthenticated = computed(() => Boolean(session.value?.token))
   const enterprise = computed<EnterpriseProfile | undefined>(() => (
     isAuthenticated.value ? session.value?.enterprise : undefined
   ))
@@ -42,6 +40,21 @@ export const useAuthStore = defineStore('auth', () => {
     session.value = null
   }
 
+  function isSessionActive(now = Date.now()): boolean {
+    const current = session.value
+    return Boolean(current && current.token && current.expiresAt > now)
+  }
+
+  function ensureActiveSession(now = Date.now()): boolean {
+    if (isSessionActive(now)) {
+      return true
+    }
+    if (session.value) {
+      clearSession()
+    }
+    return false
+  }
+
   function markInitialized(): void {
     initialized.value = true
   }
@@ -51,6 +64,8 @@ export const useAuthStore = defineStore('auth', () => {
     initialized,
     isAuthenticated,
     enterprise,
+    isSessionActive,
+    ensureActiveSession,
     setSession,
     clearSession,
     markInitialized,

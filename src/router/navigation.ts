@@ -1,9 +1,8 @@
 import type { RouteQuery } from './query'
-import type { AppRoutePath, RouteMeta } from './types'
+import type { AppRoutePath } from './types'
 
 import { useRouter } from 'wevu/router'
 import { encodeQuery } from './query'
-import { routeMeta } from './route-meta'
 
 export interface NavigationAdapter {
   switchTab: (path: AppRoutePath) => Promise<void>
@@ -35,45 +34,17 @@ export function configureNavigationAdapter(adapter: NavigationAdapter | undefine
   navigationAdapter = adapter
 }
 
-function isTabRoute(path: AppRoutePath): boolean {
-  const meta: RouteMeta | undefined = routeMeta[path as keyof typeof routeMeta]
-  return meta?.tab === true
-}
-
 export async function navigate(path: AppRoutePath, query?: RouteQuery): Promise<void> {
   const queryString = encodeQuery(query)
-  if (isTabRoute(path)) {
-    if (queryString) {
-      throw new Error('Tab 路由不支持 Query 参数')
-    }
-    await getNavigationAdapter().switchTab(path)
-    return
-  }
-
   await getNavigationAdapter().push(`${path}${queryString}`)
 }
 
 export async function replace(path: AppRoutePath, query?: RouteQuery): Promise<void> {
   const queryString = encodeQuery(query)
-  if (isTabRoute(path)) {
-    if (queryString) {
-      throw new Error('Tab 路由不支持 Query 参数')
-    }
-    await getNavigationAdapter().switchTab(path)
-    return
-  }
   await getNavigationAdapter().replace(`${path}${queryString}`)
 }
 
 export async function replaceUrl(url: string): Promise<void> {
-  const path = url.split('?')[0] as AppRoutePath
-  if (isTabRoute(path)) {
-    if (url.includes('?')) {
-      throw new Error('Tab 路由不支持 Query 参数')
-    }
-    await getNavigationAdapter().switchTab(path)
-    return
-  }
   await getNavigationAdapter().replace(url)
 }
 

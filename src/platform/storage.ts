@@ -6,31 +6,29 @@ export interface StorageAdapter {
   remove: (key: string) => void
 }
 
-export function createWpiStorageAdapter(): StorageAdapter {
+export interface WpiStorageApi {
+  getStorageSync: (key: string) => unknown
+  setStorageSync: (key: string, value: unknown) => unknown
+  removeStorageSync: (key: string) => unknown
+}
+
+export function createWpiStorageAdapter(
+  storageApi: WpiStorageApi = wpi as unknown as WpiStorageApi,
+): StorageAdapter {
   return {
     get<T>(key: string) {
       try {
-        return wpi.getStorageSync(key) as T | undefined
+        return storageApi.getStorageSync(key) as T | undefined
       }
       catch {
         return undefined
       }
     },
     set<T>(key: string, value: T) {
-      try {
-        wpi.setStorageSync(key, value)
-      }
-      catch {
-        // Storage is optional for the local test scaffold.
-      }
+      storageApi.setStorageSync(key, value)
     },
     remove(key) {
-      try {
-        wpi.removeStorageSync(key)
-      }
-      catch {
-        // Storage is optional for the local test scaffold.
-      }
+      storageApi.removeStorageSync(key)
     },
   }
 }

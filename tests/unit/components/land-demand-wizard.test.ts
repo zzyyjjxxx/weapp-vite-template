@@ -54,12 +54,20 @@ describe('land demand wizard component contract', () => {
     expect(source).not.toMatch(/v-if="[^"]*is_specialuse[^"]*"[\s\S]*data-testid="deploy-height"/)
   })
 
-  it('reads component event details and emits partial patches without mutating props', () => {
+  it('consumes already-unwrapped event details and emits partial patches without mutating props', () => {
     const sources = stepFiles.map(file => readFileSync(file, 'utf8')).join('\n')
 
-    expect(sources).toContain('event.detail')
+    expect(sources).toContain('readStringDetail')
+    expect(sources).not.toContain('event.detail')
     expect(sources).toContain('emit(\'change\', {')
     expect(sources).not.toMatch(/props\.form\.\w+\s*=(?!=)/)
+  })
+
+  it('passes child component patches directly to the page controller', () => {
+    const source = readFileSync('src/pages/land-demand/index.vue', 'utf8')
+
+    expect(source).toContain('readPatchDetail<LandDemandForm>(detail)')
+    expect(source).not.toContain('event.detail')
   })
 
   it('uses an explicit TDesign dialog for destructive clears', () => {

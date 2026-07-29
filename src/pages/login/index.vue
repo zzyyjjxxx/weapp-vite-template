@@ -4,6 +4,7 @@ import type { LoginInput } from '@/features/auth/models'
 import { computed, onLoad, ref } from 'wevu'
 import PageShell from '@/components/ui/page-shell/index.vue'
 import { useLoginMutation } from '@/features/auth/queries'
+import { readStringDetail } from '@/platform/event-detail'
 import { replaceUrl } from '@/router/navigation'
 import { parseReturnTo } from '@/router/query'
 
@@ -25,24 +26,13 @@ onLoad((query) => {
   returnTo.value = parseReturnTo(query?.returnTo)
 })
 
-function readInputValue(event: unknown): string {
-  if (typeof event !== 'object' || event === null || !('detail' in event)) {
-    return ''
-  }
-  const detail = event.detail
-  if (typeof detail !== 'object' || detail === null || !('value' in detail)) {
-    return ''
-  }
-  return typeof detail.value === 'string' ? detail.value : ''
-}
-
-function updateUsername(event: unknown): void {
-  username.value = readInputValue(event)
+function updateUsername(detail: unknown): void {
+  username.value = readStringDetail(detail)
   usernameError.value = ''
 }
 
-function updatePassword(event: unknown): void {
-  password.value = readInputValue(event)
+function updatePassword(detail: unknown): void {
+  password.value = readStringDetail(detail)
   passwordError.value = ''
 }
 

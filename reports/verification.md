@@ -71,3 +71,21 @@
 - 审查修复开始时的 HEAD 为 `5177332 docs: align repository with land demand product`。
 - 运行时 E2E 证据来自 `1b70044 test: add land demand runtime e2e`，其草稿所有权修复为 `7d4222a fix: keep persisted drafts query-owned`。
 - 本报告不能在提交自身之前记录审查修复提交的最终 SHA；提交后由根任务独立运行 `git status --short` 和 `git log -1` 复核。
+## 运行时阻塞修复（2026-07-29）
+
+- RED：8 个聚焦测试文件按预期失败，分别捕获事件二次解包、首页误标
+  tab、缺少固定入口、Storage 写删异常被吞、会话过期判断缓存和原生直接
+  启动未守卫。
+- GREEN：事件 detail、Storage、导航、直接页面守卫、认证及 Repository
+  聚焦测试共 9 个文件/41 个测试通过。
+- `pnpm prepare`、`pnpm typecheck:app`、`pnpm build` 均退出 0；构建主包
+  706 KB。
+- `pnpm verify` 退出 0：类型检查、零警告 lint、stylelint、34 个测试文件/
+  110 个测试、构建、生成产物契约和包体预算全部通过。
+- `pnpm test:coverage` 退出 0：34 个测试文件/110 个测试通过；语句
+  85.33%、分支 77.41%、函数 80.85%、行 86.26%。
+- 构建后 `dist/app.json` 的 `entryPagePath` 为 `pages/login/index` 且没有
+  `tabBar`；生成 dispatcher 包含单次 `return e.detail`，业务页面和表单组件
+  生成脚本不再读取 `.detail`。
+- 本轮没有重试微信开发者工具 E2E；此前记录的 `re-login`/websocket
+  环境阻塞仍有效，不将静态或构建结果冒充运行时验收。

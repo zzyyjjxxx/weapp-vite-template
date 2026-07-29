@@ -4,6 +4,7 @@ import {
   buildLoginRedirect,
   configureNavigationAdapter,
   navigate,
+  replace,
 } from '@/router/navigation'
 
 describe('typed navigation', () => {
@@ -11,7 +12,7 @@ describe('typed navigation', () => {
     configureNavigationAdapter(undefined)
   })
 
-  it('uses switchTab for tab routes and rejects tab query parameters', async () => {
+  it('uses ordinary push and replace navigation because the app has no tab bar', async () => {
     const calls: string[] = []
     configureNavigationAdapter({
       switchTab: async (path) => { calls.push(`tab:${path}`) },
@@ -20,10 +21,11 @@ describe('typed navigation', () => {
     })
 
     await navigate('/pages/home/index')
-    expect(calls).toEqual(['tab:/pages/home/index'])
-    await expect(navigate('/pages/home/index', { id: 'order-1' }))
-      .rejects
-      .toThrow('Tab')
+    await replace('/pages/home/index', { source: 'login' })
+    expect(calls).toEqual([
+      'push:/pages/home/index',
+      'replace:/pages/home/index?source=login',
+    ])
   })
 
   it('encodes login returnTo once and avoids a login loop', () => {
