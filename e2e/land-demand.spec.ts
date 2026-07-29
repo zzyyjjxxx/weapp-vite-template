@@ -18,6 +18,7 @@ test.describe.serial('企业用地需求填报', () => {
     await miniProgram.getByTestId('save-draft').tap()
     await miniProgram.relaunch('/pages/home/index')
     await miniProgram.getByTestId('land-demand-primary').tap()
+    await miniProgram.getByTestId('next-step').tap()
     expect(await miniProgram.getByTestId('area').text()).toContain('30')
   })
 
@@ -54,6 +55,8 @@ test.describe.serial('企业用地需求填报', () => {
     await miniProgram.getByTestId('save-draft').tap()
     await miniProgram.relaunch('/pages/home/index')
     await miniProgram.getByTestId('land-demand-primary').tap()
+    await miniProgram.getByTestId('next-step').tap()
+    await miniProgram.getByTestId('next-step').tap()
 
     expect(await miniProgram.getByTestId('project-hydm').text()).toContain('运动机织服装制造（1811）')
   })

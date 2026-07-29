@@ -281,7 +281,6 @@ async function saveDraft(): Promise<void> {
       ? await updateMutation.mutateAsync({ ...variables, original })
       : await saveMutation.mutateAsync(variables)
     store.markPersisted(record)
-    store.saveLocalDraft()
     feedback.value = '已暂存'
   }
   catch {

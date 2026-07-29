@@ -70,10 +70,11 @@ describe('land demand wizard component contract', () => {
     expect(source).toContain('data-testid="destructive-clear-confirm"')
   })
 
-  it('keeps the current step locally after an explicit draft save', () => {
+  it('does not recreate a local draft after an explicit server save', () => {
     const source = readFileSync('src/pages/land-demand/index.vue', 'utf8')
 
-    expect(source).toMatch(/store\.markPersisted\(record\)\s+store\.saveLocalDraft\(\)/)
+    expect(source).toContain('store.markPersisted(record)')
+    expect(source).not.toMatch(/store\.markPersisted\(record\)\s+store\.saveLocalDraft\(\)/)
   })
 
   it('exposes every Task 7 control used by the Task 9 runtime contract', () => {

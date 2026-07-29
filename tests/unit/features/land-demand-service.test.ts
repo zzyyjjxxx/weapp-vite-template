@@ -4,11 +4,12 @@ import type { LandDemandForm } from '@/features/land-demand/models'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useLandDemandQuery, useSaveLandDemandMutation, useUpdateLandDemandMutation } from '@/features/land-demand/queries'
 import { landDemandKeys } from '@/features/land-demand/query-keys'
-import { createMockLandDemandRepository } from '@/features/land-demand/repository'
+import { configureLandDemandRepository, createMockLandDemandRepository } from '@/features/land-demand/repository'
 import { getLandDemandInfo, saveLandDemand, updateLandDemand } from '@/features/land-demand/service'
 import { createQueryClient } from '@/shared/query/client'
 import { configureQueryLifecycleAdapter, resetQueryLifecycleAdapter } from '@/shared/query/lifecycle'
 import { clearPrivateQueryCaches, PRIVATE_QUERY_SCOPE } from '@/shared/query/private-cache'
+import { useLandDemandStore } from '@/stores/land-demand'
 import { createMemoryStorage } from '../../helpers/memory-storage'
 
 const enterprise: EnterpriseProfile = {
@@ -168,6 +169,44 @@ describe('land demand service and queries', () => {
     await query.refetch()
     expect(query.data.value?.creditcode).toBe(form.creditcode)
 
+    lifecycle.dispose()
+    resetQueryLifecycleAdapter()
+    client.clear()
+    client.unmount()
+  })
+
+  it('clears local draft metadata after saving and reloads the record through Query', async () => {
+    const client = createQueryClient()
+    const lifecycle = createLifecycle()
+    configureQueryLifecycleAdapter(lifecycle)
+    configureLandDemandRepository(repository)
+    const store = useLandDemandStore()
+    store.$reset()
+    store.initialize(enterprise)
+    store.patch({ area: '41' })
+    store.goToStep(2)
+    store.saveLocalDraft()
+    expect(repository.getDraft(form.creditcode)).toBeDefined()
+
+    const mutation = useSaveLandDemandMutation({ client, repository })
+    const saved = await mutation.mutateAsync({
+      form: store.form.value,
+      status: '2',
+      updateuser: enterprise.username,
+    })
+    store.markPersisted(saved)
+    expect(repository.getDraft(form.creditcode)).toBeUndefined()
+
+    client.removeQueries({ queryKey: landDemandKeys.detail(form.creditcode), exact: true })
+    const query = useLandDemandQuery(form.creditcode, { client, repository })
+    await query.refetch()
+    store.$reset()
+    store.initialize(enterprise, query.data.value)
+
+    expect(store.form.value.area).toBe('41')
+    expect(store.currentStep.value).toBe(1)
+
+    configureLandDemandRepository()
     lifecycle.dispose()
     resetQueryLifecycleAdapter()
     client.clear()

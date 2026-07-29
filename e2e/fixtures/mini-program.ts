@@ -9,6 +9,7 @@ const PROJECT_PATH = 'dist'
 const SESSION_OPTIONS = {
   projectPath: PROJECT_PATH,
   preferOpenedSession: true,
+  sharedSession: true,
   trustProject: true,
 } satisfies AutomatorSessionOptions & { trustProject: boolean }
 

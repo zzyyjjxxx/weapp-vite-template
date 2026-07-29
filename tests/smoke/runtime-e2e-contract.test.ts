@@ -15,6 +15,7 @@ describe('mini-program runtime E2E contract', () => {
     expect(fixture).toContain('projectPath: PROJECT_PATH')
     expect(fixture).toContain('preferOpenedSession: true')
     expect(fixture).toContain('trustProject: true')
+    expect(fixture).toContain('sharedSession: true')
     expect(fixture).toContain('closeSharedMiniProgram(PROJECT_PATH)')
   })
 
