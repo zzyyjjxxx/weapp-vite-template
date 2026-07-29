@@ -39,6 +39,7 @@ describe('land demand validation', () => {
   it('validates only populated values in a draft', () => {
     expect(validateDraft({ ...validForm, area: '' })).toEqual([])
     expect(validateDraft({ ...validForm, area: '-1' })[0]?.field).toBe('area')
+    expect(validateDraft({ ...validForm, pred_tax: '1.123' })[0]?.field).toBe('pred_tax')
   })
 
   it('makes all four project metrics required for submission', () => {

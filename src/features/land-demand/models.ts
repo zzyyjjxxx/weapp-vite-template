@@ -48,6 +48,10 @@ export interface LandDemandRecord extends Omit<LandDemandForm, 'deploy_park'> {
   registrationType?: number
 }
 
+export type LandDemandRecordInput = Omit<LandDemandRecord, 'is_financing'> & {
+  is_financing: FinancingChoice | ''
+}
+
 export type SaveLandDemandPayload = Omit<
   LandDemandRecord,
   'updatetime' | 'updateuser' | 'newproject' | 'industryCode'

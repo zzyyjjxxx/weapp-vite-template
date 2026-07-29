@@ -1,4 +1,4 @@
-import type { FinancingChoice, LandDemandForm, LandDemandRecord } from './models'
+import type { LandDemandForm, LandDemandRecordInput } from './models'
 
 import type { EnterpriseProfile } from '@/features/auth/models'
 
@@ -8,10 +8,11 @@ function splitParks(value: string | undefined): string[] {
 
 export function createLandDemandForm(
   enterprise: EnterpriseProfile,
-  record?: Partial<LandDemandRecord>,
+  record?: Partial<LandDemandRecordInput>,
 ): LandDemandForm {
   const {
     deploy_park,
+    is_financing: savedFinancing,
     landusedemand: _landusedemand,
     updatetime: _updatetime,
     updateuser: _updateuser,
@@ -49,18 +50,17 @@ export function createLandDemandForm(
     pred_rdex: '',
     pred_unitenergy: '',
     projectdata: '',
-    is_financing: '没有' as FinancingChoice,
     financing_money: '',
     financing_time: '',
     contact: enterprise.contact,
     office: enterprise.office,
     phone: enterprise.phone,
     ...savedForm,
+    is_financing: savedFinancing === '有' ? '有' : '没有',
   }
 
   return {
     ...form,
     deploy_park: splitParks(deploy_park),
-    is_financing: form.is_financing === '有' ? '有' : '没有',
   }
 }

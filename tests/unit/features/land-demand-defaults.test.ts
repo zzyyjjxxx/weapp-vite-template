@@ -1,6 +1,7 @@
 import type { EnterpriseProfile } from '@/features/auth/models'
+import type { FinancingChoice, LandDemandRecordInput } from '@/features/land-demand/models'
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, expectTypeOf, it } from 'vitest'
 import { createLandDemandForm } from '@/features/land-demand/defaults'
 
 const enterprise: EnterpriseProfile = {
@@ -37,6 +38,10 @@ describe('land demand form defaults', () => {
   })
 
   it('defaults missing financing demand to 没有', () => {
-    expect(createLandDemandForm(enterprise, { is_financing: '' }).is_financing).toBe('没有')
+    const legacyRecord = { is_financing: '' } satisfies Partial<LandDemandRecordInput>
+    const form = createLandDemandForm(enterprise, legacyRecord)
+
+    expect(form.is_financing).toBe('没有')
+    expectTypeOf(form.is_financing).toEqualTypeOf<FinancingChoice>()
   })
 })

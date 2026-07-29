@@ -34,9 +34,11 @@ const STEPS: Readonly<Record<Field, 1 | 2 | 3 | 4>> = {
   phone: 4,
 }
 
-const TWO_DECIMAL_FIELDS = new Set<Field>(['building_area', 'deploy_height', 'deploy_weight'])
-const SIX_DECIMAL_FIELDS = new Set<Field>([
+const NUMERIC_FIELDS = new Set<Field>([
   'area',
+  'building_area',
+  'deploy_height',
+  'deploy_weight',
   'investment',
   'financing_money',
   'pred_ys',
@@ -64,12 +66,8 @@ function isValidNumber(value: string, maxDecimals: number): boolean {
 }
 
 function validateValue(field: Field, value: string | readonly string[]): FieldError | undefined {
-  if (TWO_DECIMAL_FIELDS.has(field) && typeof value === 'string' && !isValidNumber(value, 2)) {
+  if (NUMERIC_FIELDS.has(field) && typeof value === 'string' && !isValidNumber(value, 2)) {
     return error(field, '请输入非负数字，最多两位小数')
-  }
-
-  if (SIX_DECIMAL_FIELDS.has(field) && typeof value === 'string' && !isValidNumber(value, 6)) {
-    return error(field, '请输入非负数字')
   }
 
   if (DATE_FIELDS.has(field) && typeof value === 'string' && !/^\d{4}-(?:0[1-9]|1[0-2])$/.test(value)) {
