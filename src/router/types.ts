@@ -5,6 +5,8 @@ export type AppRoutePath = GeneratedRoutePath
   | '/pages/home/index'
   | '/pages/login/index'
   | '/pages/error/index'
+  | '/pages/land-demand/index'
+  | '/pages/land-demand/success'
 
 export interface RouteMeta {
   auth?: boolean

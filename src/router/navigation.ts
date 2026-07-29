@@ -55,13 +55,25 @@ export async function navigate(path: AppRoutePath, query?: RouteQuery): Promise<
 
 export async function replace(path: AppRoutePath, query?: RouteQuery): Promise<void> {
   const queryString = encodeQuery(query)
-  if (isTabRoute(path) && queryString) {
-    throw new Error('Tab 路由不支持 Query 参数')
+  if (isTabRoute(path)) {
+    if (queryString) {
+      throw new Error('Tab 路由不支持 Query 参数')
+    }
+    await getNavigationAdapter().switchTab(path)
+    return
   }
   await getNavigationAdapter().replace(`${path}${queryString}`)
 }
 
 export async function replaceUrl(url: string): Promise<void> {
+  const path = url.split('?')[0] as AppRoutePath
+  if (isTabRoute(path)) {
+    if (url.includes('?')) {
+      throw new Error('Tab 路由不支持 Query 参数')
+    }
+    await getNavigationAdapter().switchTab(path)
+    return
+  }
   await getNavigationAdapter().replace(url)
 }
 

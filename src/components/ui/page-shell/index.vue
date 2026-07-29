@@ -38,6 +38,9 @@ defineComponentJson({
           </text>
         </view>
       </view>
+      <view class="page-shell__actions">
+        <slot name="actions" />
+      </view>
     </view>
     <view class="page-shell__body">
       <slot />
@@ -55,12 +58,21 @@ defineComponentJson({
 }
 
 .page-shell__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   padding: $space-2 0 $space-4;
 }
 
 .page-shell__heading {
   display: flex;
   align-items: center;
+  min-width: 0;
+}
+
+.page-shell__actions {
+  flex: 0 0 auto;
+  margin-left: $space-2;
 }
 
 .page-shell__icon {

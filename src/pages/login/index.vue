@@ -13,8 +13,10 @@ definePageJson({
 
 const username = ref('demo')
 const password = ref('demo123')
-const returnTo = ref('/pages/home/index')
+const usernameError = ref('')
+const passwordError = ref('')
 const formError = ref('')
+const returnTo = ref('/pages/home/index')
 const loginMutation = useLoginMutation()
 const isPending = loginMutation.isPending
 const errorMessage = computed(() => formError.value || loginMutation.error.value?.message || '')
@@ -36,10 +38,18 @@ function readInputValue(event: unknown): string {
 
 function updateUsername(event: unknown): void {
   username.value = readInputValue(event)
+  usernameError.value = ''
 }
 
 function updatePassword(event: unknown): void {
   password.value = readInputValue(event)
+  passwordError.value = ''
+}
+
+function validate(input: LoginInput): boolean {
+  usernameError.value = input.username ? '' : '请输入用户名'
+  passwordError.value = input.password ? '' : '请输入密码'
+  return !usernameError.value && !passwordError.value
 }
 
 async function submit(): Promise<void> {
@@ -48,8 +58,7 @@ async function submit(): Promise<void> {
     username: username.value.trim(),
     password: password.value,
   }
-  if (!input.username || !input.password) {
-    formError.value = '请输入用户名和密码。'
+  if (!validate(input)) {
     return
   }
 
@@ -70,38 +79,42 @@ async function submit(): Promise<void> {
     icon="login"
   >
     <view class="login__card u-card">
-      <text class="login__label">
-        用户名
-      </text>
-      <input
-        class="login__input"
+      <t-input
+        data-testid="username"
+        label="用户名"
         :value="username"
         :maxlength="32"
         placeholder="请输入用户名"
-        @input="updateUsername"
-      >
-      <text class="login__label">
-        密码
-      </text>
-      <input
-        class="login__input"
+        :status="usernameError ? 'error' : 'default'"
+        :tips="usernameError"
+        @change="updateUsername"
+      />
+      <t-input
+        data-testid="password"
+        class="login__password"
+        label="密码"
+        type="password"
         :value="password"
-        password
         :maxlength="64"
         placeholder="请输入密码"
-        @input="updatePassword"
-      >
+        :status="passwordError ? 'error' : 'default'"
+        :tips="passwordError"
+        @change="updatePassword"
+      />
       <text v-if="errorMessage" class="login__error">
         {{ errorMessage }}
       </text>
-      <button
+      <t-button
+        data-testid="login-submit"
         class="login__submit"
+        theme="primary"
+        block
         :loading="isPending"
         :disabled="isPending"
         @tap="submit"
       >
         登录
-      </button>
+      </t-button>
     </view>
   </PageShell>
 </template>
@@ -113,25 +126,9 @@ async function submit(): Promise<void> {
   padding: $space-4;
 }
 
-.login__label {
+.login__password {
   display: block;
-  margin-bottom: $space-1;
-  font-size: 26rpx;
-  color: $color-text;
-}
-
-.login__label + .login__label {
   margin-top: $space-3;
-}
-
-.login__input {
-  width: 100%;
-  height: 88rpx;
-  padding: 0 $space-2;
-  font-size: 28rpx;
-  background: #f7f8fa;
-  border: 2rpx solid $color-border;
-  border-radius: $radius-sm;
 }
 
 .login__error {
@@ -144,9 +141,5 @@ async function submit(): Promise<void> {
 
 .login__submit {
   margin-top: $space-4;
-  color: #fff;
-  background: $color-primary;
-  border: 0;
-  border-radius: $radius-sm;
 }
 </style>

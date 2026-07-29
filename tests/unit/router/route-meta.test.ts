@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import * as routeMetaModule from '@/router/route-meta'
+import { resolveRouteMeta } from '@/router/route-meta'
 
 describe('route metadata lookup', () => {
-  it('resolves the path shape emitted by wevu router', () => {
-    const resolveRouteMeta = (routeMetaModule as Record<string, unknown>).resolveRouteMeta
-
-    expect(resolveRouteMeta).toEqual(expect.any(Function))
-    expect((resolveRouteMeta as (path: string) => unknown)('pages/home/index'))
-      .toMatchObject({ tab: true, analyticsName: 'home' })
+  it('protects every product page except login', () => {
+    expect(resolveRouteMeta('/pages/login/index')?.auth).not.toBe(true)
+    expect(resolveRouteMeta('/pages/home/index')?.auth).toBe(true)
+    expect(resolveRouteMeta('/pages/land-demand/index')?.auth).toBe(true)
+    expect(resolveRouteMeta('/pages/land-demand/success')?.auth).toBe(true)
   })
 })

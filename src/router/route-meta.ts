@@ -2,6 +2,7 @@ import type { AppRoutePath, RouteMeta } from './types'
 
 export const routeMeta = {
   '/pages/home/index': {
+    auth: true,
     tab: true,
     analyticsName: 'home',
   },
@@ -10,6 +11,14 @@ export const routeMeta = {
   },
   '/pages/error/index': {
     analyticsName: 'error',
+  },
+  '/pages/land-demand/index': {
+    auth: true,
+    analyticsName: 'land-demand',
+  },
+  '/pages/land-demand/success': {
+    auth: true,
+    analyticsName: 'land-demand-success',
   },
 } satisfies Partial<Record<AppRoutePath, RouteMeta>>
 
