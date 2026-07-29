@@ -149,4 +149,40 @@ describe('mock land demand repository', () => {
     await repository.verifyCode(challenge.phone, challenge.mockCode)
     await expect(repository.verifyCode(challenge.phone, challenge.mockCode)).rejects.toThrow('验证码已失效')
   })
+
+  it('keeps the resend cooldown after successful verification', async () => {
+    let time = 1_000
+    const repository = createMockLandDemandRepository({
+      storage: createMemoryStorage(),
+      now: () => time,
+      randomCode: () => '123456',
+    })
+    const challenge = await repository.sendCode('13800000000')
+
+    await repository.verifyCode(challenge.phone, challenge.mockCode)
+    await expect(repository.verifyCode(challenge.phone, challenge.mockCode)).rejects.toThrow('验证码已失效')
+    await expect(repository.sendCode(challenge.phone)).rejects.toThrow('请稍后再试')
+    time = challenge.retryAt - 1
+    await expect(repository.sendCode(challenge.phone)).rejects.toThrow('请稍后再试')
+    time = challenge.retryAt
+    await expect(repository.sendCode(challenge.phone)).resolves.toBeDefined()
+  })
+
+  it('keeps the resend cooldown after the fifth incorrect attempt', async () => {
+    let time = 1_000
+    const repository = createMockLandDemandRepository({
+      storage: createMemoryStorage(),
+      now: () => time,
+      randomCode: () => '123456',
+    })
+    const challenge = await repository.sendCode('13800000000')
+
+    for (let index = 0; index < 5; index += 1) {
+      await expect(repository.verifyCode(challenge.phone, '000000')).rejects.toThrow('验证码错误')
+    }
+    await expect(repository.verifyCode(challenge.phone, challenge.mockCode)).rejects.toThrow('验证码已失效')
+    await expect(repository.sendCode(challenge.phone)).rejects.toThrow('请稍后再试')
+    time = challenge.retryAt
+    await expect(repository.sendCode(challenge.phone)).resolves.toBeDefined()
+  })
 })

@@ -8,6 +8,7 @@ import { createMockLandDemandRepository } from '@/features/land-demand/repositor
 import { getLandDemandInfo, saveLandDemand, updateLandDemand } from '@/features/land-demand/service'
 import { createQueryClient } from '@/shared/query/client'
 import { configureQueryLifecycleAdapter, resetQueryLifecycleAdapter } from '@/shared/query/lifecycle'
+import { clearPrivateQueryCaches, PRIVATE_QUERY_SCOPE } from '@/shared/query/private-cache'
 import { createMemoryStorage } from '../../helpers/memory-storage'
 
 const enterprise: EnterpriseProfile = {
@@ -106,6 +107,27 @@ describe('land demand service and queries', () => {
     resetQueryLifecycleAdapter()
     client.clear()
     client.unmount()
+  })
+
+  it('marks mutation-created detail cache entries as private', async () => {
+    const client = createQueryClient()
+    const lifecycle = createLifecycle()
+    configureQueryLifecycleAdapter(lifecycle)
+
+    const mutation = useSaveLandDemandMutation({ client, repository })
+    await mutation.mutateAsync({ form, status: '2', updateuser: enterprise.username })
+    const queryKey = landDemandKeys.detail(form.creditcode)
+    const scope = client.getQueryCache().find({ queryKey, exact: true })?.meta?.scope
+
+    clearPrivateQueryCaches(client)
+    const cached = client.getQueryData(queryKey)
+    lifecycle.dispose()
+    resetQueryLifecycleAdapter()
+    client.clear()
+    client.unmount()
+
+    expect(scope).toBe(PRIVATE_QUERY_SCOPE)
+    expect(cached).toBeUndefined()
   })
 
   it('loads the server record through a private detail query', async () => {

@@ -28,6 +28,7 @@ export interface LandDemandRepository {
 
 interface StoredVerification extends VerificationChallenge {
   attempts: number
+  invalidated?: boolean
 }
 
 const CODE_EXPIRY_MS = 5 * 60 * 1_000
@@ -180,19 +181,25 @@ export function createMockLandDemandRepository(options: {
     async verifyCode(phone, code) {
       await wait(delayMs)
       const stored = storage.get<StoredVerification>(verificationKey(phone))
-      if (!stored || now() >= stored.expiresAt) {
+      if (!stored) {
+        throw new Error('验证码已失效')
+      }
+      if (now() >= stored.expiresAt) {
         storage.remove(verificationKey(phone))
+        throw new Error('验证码已失效')
+      }
+      if (stored.invalidated) {
         throw new Error('验证码已失效')
       }
 
       if (code === stored.mockCode) {
-        storage.remove(verificationKey(phone))
+        storage.set(verificationKey(phone), { ...stored, invalidated: true })
         return
       }
 
       const attempts = stored.attempts + 1
       if (attempts >= MAX_VERIFICATION_ATTEMPTS) {
-        storage.remove(verificationKey(phone))
+        storage.set(verificationKey(phone), { ...stored, attempts, invalidated: true })
       }
       else {
         storage.set(verificationKey(phone), { ...stored, attempts })

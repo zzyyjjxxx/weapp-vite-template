@@ -8,6 +8,7 @@ import type { LandDemandRepository, VerificationChallenge } from './repository'
 import type { UseMutationResult, UseQueryResult } from '@/shared/query/types'
 
 import { queryClient } from '@/shared/query/client'
+import { PRIVATE_QUERY_SCOPE } from '@/shared/query/private-cache'
 import { useMutation } from '@/shared/query/use-mutation'
 import { useQuery } from '@/shared/query/use-query'
 import { landDemandKeys } from './query-keys'
@@ -39,6 +40,14 @@ export interface VerificationCodeVariables {
   code: string
 }
 
+function cachePrivateRecord(client: QueryClient, record: LandDemandRecord): void {
+  const queryKey = landDemandKeys.detail(record.creditcode)
+  client.setQueryDefaults(queryKey, {
+    meta: { scope: PRIVATE_QUERY_SCOPE },
+  })
+  client.setQueryData(queryKey, record)
+}
+
 export function useLandDemandQuery(
   creditcode: string,
   options: QueryOptions = {},
@@ -61,7 +70,7 @@ export function useSaveLandDemandMutation(
       repository: options.repository,
       updateuser: variables.updateuser,
     }),
-    onSuccess: record => client.setQueryData(landDemandKeys.detail(record.creditcode), record),
+    onSuccess: record => cachePrivateRecord(client, record),
     retry: 0,
   }), client)
 }
@@ -76,7 +85,7 @@ export function useUpdateLandDemandMutation(
       repository: options.repository,
       updateuser: variables.updateuser,
     }),
-    onSuccess: record => client.setQueryData(landDemandKeys.detail(record.creditcode), record),
+    onSuccess: record => cachePrivateRecord(client, record),
     retry: 0,
   }), client)
 }
