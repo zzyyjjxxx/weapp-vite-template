@@ -53,6 +53,17 @@
 - 文档一致性、类型检查、零警告产品 lint、样式、全部 Vitest、覆盖率、构建和包体预算通过。
 - DevTools E2E 因自动化 websocket 不可连接而未完成，不能用静态构建结果替代。
 
+## 审查修复第二轮
+
+- TDD RED：`pnpm test tests/smoke/product-shape.test.ts` 退出 1，5 个测试中 1 个失败，明确指出 `lint:product` 未包含 `vitest.config.ts`。
+- TDD GREEN：将 `vitest.config.ts` 和 `stylelint.config.js` 同时加入 `lint:product` 与 `lint:fix` 后，同一命令退出 0，5/5 通过。
+- `pnpm lint`：退出 0；新增两个根配置后仍满足零警告门禁。
+- `pnpm typecheck`、`pnpm stylelint`：均退出 0。
+- `pnpm test`：退出 0，30 个文件、96 个测试通过。
+- `pnpm build`：退出 0，主包 706 KB；`pnpm analyze:budget` 退出 0。
+- `git diff --check`：退出 0，仅有 Windows LF→CRLF 转换警告。检查时 `git status --short` 只有 `package.json` 和 `tests/smoke/product-shape.test.ts` 两个预期修改；写入本段后本报告成为第三个预期修改。
+- 本轮开始时 HEAD 为 `e350f2c fix: address land demand review findings`。运行时 E2E 未重复执行，继续沿用本报告记录的 `re-login`/websocket 环境阻塞，未声称截图。
+
 ## Git 检查与提交基线
 
 - `git diff --check`：退出码 0；仅输出 Windows 工作区未来 LF→CRLF 转换警告，没有空白错误。

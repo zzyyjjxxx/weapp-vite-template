@@ -24,6 +24,10 @@ describe('land-demand product shape', () => {
   it('declares the product test commands', () => {
     expect(pkg.scripts).toHaveProperty('test:e2e')
     expect(pkg.scripts.verify).toContain('pnpm build')
+    expect(pkg.scripts['lint:product']).toContain('vitest.config.ts')
+    expect(pkg.scripts['lint:product']).toContain('stylelint.config.js')
+    expect(pkg.scripts['lint:fix']).toContain('vitest.config.ts')
+    expect(pkg.scripts['lint:fix']).toContain('stylelint.config.js')
   })
 
   it('has no unused HTTP environment scaffold', () => {
