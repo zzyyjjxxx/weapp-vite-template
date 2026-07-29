@@ -1,5 +1,5 @@
-import type { StorageAdapter } from '@/platform/storage'
 import type { AuthSession, EnterpriseProfile } from '@/features/auth/models'
+import type { StorageAdapter } from '@/platform/storage'
 
 export const AUTH_STORAGE_KEY = 'land-demand.auth'
 
@@ -32,18 +32,6 @@ function unwrapRef(value: unknown): unknown {
   return value
 }
 
-function isAuthSession(value: unknown): value is AuthSession {
-  if (!isRecord(value)) {
-    return false
-  }
-
-  return (
-    typeof value.token === 'string'
-    && typeof value.expiresAt === 'number'
-    && isEnterpriseProfile(value.enterprise)
-  )
-}
-
 function isEnterpriseProfile(value: unknown): value is EnterpriseProfile {
   if (!isRecord(value)) {
     return false
@@ -59,6 +47,18 @@ function isEnterpriseProfile(value: unknown): value is EnterpriseProfile {
     && typeof value.contact === 'string'
     && typeof value.office === 'string'
     && typeof value.phone === 'string'
+  )
+}
+
+function isAuthSession(value: unknown): value is AuthSession {
+  if (!isRecord(value)) {
+    return false
+  }
+
+  return (
+    typeof value.token === 'string'
+    && typeof value.expiresAt === 'number'
+    && isEnterpriseProfile(value.enterprise)
   )
 }
 

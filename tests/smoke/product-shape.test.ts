@@ -38,4 +38,12 @@ describe('land-demand product shape', () => {
       expect(source).not.toMatch(/订单取消|Hono 测试后端|demo order/i)
     }
   })
+
+  it('documents the intentional local-draft repository exception', () => {
+    const source = readFileSync('docs/http-client.md', 'utf8')
+
+    expect(source).toContain('Store → Repository')
+    expect(source).toContain('不经过 Service 或 Query')
+    expect(source).toContain('持久化记录')
+  })
 })

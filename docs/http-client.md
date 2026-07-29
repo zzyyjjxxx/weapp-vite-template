@@ -1,6 +1,6 @@
 # 用地需求 Mock Service 与 Repository
 
-当前产品没有 HTTP Client，也不启动本地后端。登录、用地需求保存/修改、草稿和验证码均通过领域 Service 调用可替换 Repository；默认实现使用微信小程序 Storage，是开发与自动化测试专用 Mock。
+当前产品没有 HTTP Client，也不启动本地后端。登录、用地需求持久化记录和验证码通过领域 Service 调用可替换 Repository；默认实现使用微信小程序 Storage，是开发与自动化测试专用 Mock。本地步骤草稿是明确的例外，由 LandDemand Store 直接调用 Repository，不经过 Service 或 Query。
 
 ## 接口边界
 
@@ -9,7 +9,7 @@
 - `getDraft/setDraft/removeDraft`：管理只在本机使用的步骤草稿。
 - `sendCode/verifyCode`：模拟六位验证码、5 分钟有效期、60 秒重发间隔与最多 5 次错误尝试。
 
-页面不得直接实例化 Repository。页面通过 `queries.ts` 的 Query/Mutation 调用 Service，Service 再使用配置的 Repository。测试可注入内存 Storage 和确定性时钟/验证码。
+页面和步骤组件不得直接实例化 Repository。已持久化记录遵循 `页面 → Query/Mutation → Service → Repository`；仅本地编辑草稿遵循 `页面 → Store → Repository`，以便步骤切换时同步保存且不污染 Query 的持久化记录所有权。测试可注入内存 Storage 和确定性时钟/验证码。
 
 ## Storage 键
 

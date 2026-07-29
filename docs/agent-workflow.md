@@ -27,7 +27,7 @@
 
 ## 验证与运行时证据
 
-先运行聚焦测试，再依次执行 `pnpm prepare`、app/E2E 类型检查、lint、stylelint、全量测试、coverage、build 和 budget。`pnpm lint` 若暴露未触及文件的历史 CRLF/排序问题，应区分基线与本次修改，同时保证所有本次修改文件定向 ESLint 通过。
+先运行聚焦测试，再依次执行 `pnpm prepare`、app/E2E 类型检查、`pnpm lint`、stylelint、全量测试、coverage、build 和 budget。产品 lint 必须零警告通过，覆盖所有维护中的应用/测试/E2E TypeScript 与 Vue、生成器和根配置；只排除由 SQL 生成且有精确字典测试保护的 `industries.generated.ts`。样式由 Stylelint 独立检查，不能以换行差异掩盖语义 lint 错误。
 
 微信运行时通过 `pnpm test:e2e`、`wv screenshot` 和 `wv compare` 验收。运行前确认开发者工具已登录且服务端口启用；`re-login` 必须报告为受阻。托管 Linux CI 不运行 DevTools E2E，构建成功也不能当作运行时成功。
 

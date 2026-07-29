@@ -11,6 +11,13 @@
 | `pnpm test tests/smoke/product-shape.test.ts`（环境配置 RED） | 1 | 新增旧 HTTP 环境配置断言后 1/4 测试失败，定位到未使用的 `src/shared/env.ts`。 |
 | `pnpm test tests/smoke/product-shape.test.ts`（最终 GREEN） | 0 | 删除未使用的 HTTP 环境配置后，1 个文件、4 个测试全部通过。 |
 
+## 审查修复 TDD
+
+| 命令 | 退出码 | 实际结果 |
+|---|---:|---|
+| `pnpm test tests/unit/components/land-demand-wizard.test.ts tests/smoke/product-shape.test.ts`（RED） | 1 | 2 个文件各有 1 个失败：投资/单位能耗标签仍是旧文案，Mock 文档也没有说明本地草稿的 Store→Repository 例外。 |
+| 同一聚焦命令（GREEN） | 0 | 2 个文件、14 个测试全部通过；精确标签和草稿架构说明均受测试保护。 |
+
 ## 静态、单元和构建门禁
 
 以下命令均在 `D:\WorkProject\weapp-vite-template\.worktrees\land-demand-mini-program` 中分别执行。
@@ -21,15 +28,15 @@
 | `pnpm prepare` | 0 | Weapp-TailwindCSS 识别 Tailwind CSS 4.3.3，生成 `.weapp-vite` 支持文件。 |
 | `pnpm typecheck:app` | 0 | `vue-tsc` 应用类型检查通过。 |
 | `pnpm typecheck:e2e` | 0 | `tsc -p e2e/tsconfig.json` 通过。 |
-| `pnpm typecheck`（最终复核） | 0 | 删除未使用的环境配置后，应用与 E2E 类型检查再次通过。 |
-| `pnpm lint` | 1 | 全仓基线未通过：182 个错误、5 个警告。主要是未触及文件的 CRLF 格式问题；另有既有认证模型 method-signature、生成行业字典 curly/if-newline、持久化 import 排序和测试链式格式问题。本任务未批量改写这些文件。 |
-| `pnpm exec eslint tests/smoke/product-shape.test.ts` | 0 | 本任务修改的可执行 TypeScript 文件定向 ESLint 通过。文档、YAML 与 JSON 不在当前 ESLint 代码规则覆盖范围内。 |
+| `pnpm typecheck`（审查修复复核） | 0 | 应用与 E2E 类型检查通过。 |
+| `pnpm lint`（审查修复复核） | 0 | 零警告产品门禁通过：覆盖所有维护中的 `src` TS/Vue、测试/E2E TS、行业生成器与根配置。仅排除 SQL 生成产物 `industries.generated.ts`；其生成器仍受 lint，产物受精确字典测试保护。 |
 | Node UTF-8 文档检查 | 0 | README、AGENTS、7 个来源文档和本报告共 10 个文件均可按 UTF-8 解码，包含“用地需求”且不含替换字符。 |
 | `pnpm stylelint` | 0 | `src/**/*.{css,scss,vue,wxss}` 样式检查通过。 |
-| `pnpm test` | 0 | 30 个测试文件、94 个测试全部通过。 |
-| `pnpm test:coverage` | 0 | 30 个测试文件、94 个测试全部通过；语句 83.27%、分支 76.16%、函数 79.82%、行 84.15%。 |
+| `pnpm test`（审查修复复核） | 0 | 30 个测试文件、96 个测试全部通过。 |
+| `pnpm test:coverage`（审查修复复核） | 0 | 30 个测试文件、96 个测试全部通过；语句 83.27%、分支 76.16%、函数 79.82%、行 84.15%。 |
 | `pnpm build` | 0 | 微信小程序构建完成；主包 706 KB。 |
 | `pnpm analyze:budget` | 0 | 包体预算检查通过。 |
+| `pnpm verify`（审查修复聚合复核） | 0 | 32.2 秒内依次通过 prepare、组合类型检查、零警告产品 lint、stylelint、30 文件/96 测试、706 KB 构建和包体预算。 |
 
 ## 微信开发者工具运行时 E2E
 
@@ -43,6 +50,13 @@
 
 ## 当前结论
 
-- 文档一致性、类型检查、样式、全部 Vitest、覆盖率、构建和包体预算通过。
-- 全仓 ESLint 因既有基线失败；本次 TypeScript 变更已定向通过。
+- 文档一致性、类型检查、零警告产品 lint、样式、全部 Vitest、覆盖率、构建和包体预算通过。
 - DevTools E2E 因自动化 websocket 不可连接而未完成，不能用静态构建结果替代。
+
+## Git 检查与提交基线
+
+- `git diff --check`：退出码 0；仅输出 Windows 工作区未来 LF→CRLF 转换警告，没有空白错误。
+- 检查时 `git status --short` 精确列出 14 个预期修改文件：`AGENTS.md`、3 个文档、`eslint.config.js`、`package.json`、3 个源文件和 5 个测试文件。更新本验证报告后，`reports/verification.md` 也进入预期修改集合；没有无关或用户拥有文件。
+- 审查修复开始时的 HEAD 为 `5177332 docs: align repository with land demand product`。
+- 运行时 E2E 证据来自 `1b70044 test: add land demand runtime e2e`，其草稿所有权修复为 `7d4222a fix: keep persisted drafts query-owned`。
+- 本报告不能在提交自身之前记录审查修复提交的最终 SHA；提交后由根任务独立运行 `git status --short` 和 `git log -1` 复核。

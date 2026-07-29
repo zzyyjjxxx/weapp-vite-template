@@ -22,5 +22,5 @@ export interface AuthSession {
 }
 
 export interface AuthRepository {
-  login(input: LoginInput): Promise<AuthSession>
+  login: (input: LoginInput) => Promise<AuthSession>
 }

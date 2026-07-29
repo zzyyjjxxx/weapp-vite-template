@@ -22,6 +22,14 @@ const session: AuthSession = {
   },
 }
 
+async function seedPrivateQuery(): Promise<void> {
+  await queryClient.fetchQuery({
+    queryKey: ['private', 'enterprise-record'],
+    queryFn: async () => ({ creditcode: session.enterprise.creditcode }),
+    meta: { scope: 'private' },
+  })
+}
+
 describe('auth store', () => {
   const storage = createMemoryStorage()
 
@@ -90,11 +98,3 @@ describe('auth store', () => {
     expect(auth.isAuthenticated.value).toBe(false)
   })
 })
-
-async function seedPrivateQuery(): Promise<void> {
-  await queryClient.fetchQuery({
-    queryKey: ['private', 'enterprise-record'],
-    queryFn: async () => ({ creditcode: session.enterprise.creditcode }),
-    meta: { scope: 'private' },
-  })
-}

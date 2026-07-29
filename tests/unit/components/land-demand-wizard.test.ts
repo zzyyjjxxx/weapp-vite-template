@@ -107,6 +107,15 @@ describe('land demand wizard component contract', () => {
     expect(source).not.toMatch(/<t-input[^>]+data-testid="project-hydm"/)
   })
 
+  it('uses the confirmed investment and unit-energy labels', () => {
+    const source = readFileSync(`${componentRoot}/project-info-step.vue`, 'utf8')
+
+    expect(source).toContain('label="固定资产投资额（万元）"')
+    expect(source).toContain('label="项目单位能耗增加值（万元/吨标煤）"')
+    expect(source).not.toContain('label="项目总投资（万元）"')
+    expect(source).not.toContain('label="预计单位能耗"')
+  })
+
   it('loads local drafts through the Store boundary instead of the page repository', () => {
     const source = readFileSync('src/pages/land-demand/index.vue', 'utf8')
 

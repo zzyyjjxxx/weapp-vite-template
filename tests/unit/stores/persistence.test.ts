@@ -27,6 +27,24 @@ const session: AuthSession = {
   },
 }
 
+function createPersistenceContext() {
+  const store: {
+    $id: string
+    session: AuthSession | null
+    $patch: (patch: { session?: AuthSession | null }) => void
+    $subscribe: () => () => void
+  } = {
+    $id: 'auth',
+    session: null,
+    $patch: (patch) => {
+      store.session = patch.session ?? null
+    },
+    $subscribe: () => () => undefined,
+  }
+
+  return { store }
+}
+
 describe('auth persistence', () => {
   const storage = createMemoryStorage()
 
@@ -79,21 +97,3 @@ describe('auth persistence', () => {
     expect(malformed.store.session).toBeNull()
   })
 })
-
-function createPersistenceContext() {
-  const store: {
-    $id: string
-    session: AuthSession | null
-    $patch: (patch: { session?: AuthSession | null }) => void
-    $subscribe: () => () => void
-  } = {
-    $id: 'auth',
-    session: null,
-    $patch: (patch) => {
-      store.session = patch.session ?? null
-    },
-    $subscribe: () => () => undefined,
-  }
-
-  return { store }
-}

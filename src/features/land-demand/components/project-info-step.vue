@@ -51,7 +51,7 @@ function changeIndustry(event: unknown): void {
     <text class="step-card__title">项目信息</text>
     <t-input
       data-testid="investment"
-      label="项目总投资（万元）"
+      label="固定资产投资额（万元）"
       type="digit"
       :value="props.form.investment"
       :status="fieldError('investment') ? 'error' : 'default'"
@@ -128,7 +128,7 @@ function changeIndustry(event: unknown): void {
     />
     <t-input
       data-testid="pred-unitenergy"
-      label="预计单位能耗"
+      label="项目单位能耗增加值（万元/吨标煤）"
       type="digit"
       :value="props.form.pred_unitenergy"
       :status="fieldError('pred_unitenergy') ? 'error' : 'default'"

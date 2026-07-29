@@ -17,6 +17,8 @@ pnpm analyze:budget
 
 `pnpm typecheck` 组合 app 和 E2E 类型检查；`pnpm verify` 组合 prepare、typecheck、lint、stylelint、unit test、build 与 budget。CI 对上述静态层逐项运行，便于定位失败。
 
+`pnpm lint` 调用 `lint:product`，以 `--max-warnings 0` 检查所有维护中的 `src` TypeScript/Vue、测试 TypeScript、E2E TypeScript、行业字典生成脚本及根配置文件。唯一业务代码例外是 `industries.generated.ts`：它由外部 SQL 确定性生成，生成器本身仍接受 lint，生成内容由行业字典数量、父子范围和标签测试校验。ESLint 的格式化桥已关闭，以消除 Windows 与 Linux 换行差异；Vue/CSS/SCSS 样式格式和规则由独立的 `pnpm stylelint` 负责。
+
 ## 测试层
 
 - `tests/smoke/`：产品形状、文档一致性、运行时 E2E 合约。

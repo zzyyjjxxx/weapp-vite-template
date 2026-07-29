@@ -30,8 +30,9 @@ describe('mock auth repository', () => {
     })
     expect(session.expiresAt).toBeGreaterThan(1_000)
     expect(session.enterprise).not.toHaveProperty('password')
-    await expect(repository.login({ username: 'demo', password: 'wrong' }))
-      .rejects.toThrow('账号或密码错误')
+    await expect(
+      repository.login({ username: 'demo', password: 'wrong' }),
+    ).rejects.toThrow('账号或密码错误')
   })
 
   it('returns a new session value for each successful login', async () => {

@@ -26,6 +26,7 @@ The five steps are 基本信息、用地需求、投资项目、融资及联系�
 - Query Core owns persisted server-like records. Wevu Store owns auth and the editable form. Do not duplicate Query records into Store.
 - Use TDesign MiniProgram, native mini-program nodes, and compile-time Tailwind via `weapp-tailwindcss`; do not add a browser Tailwind runtime or second UI library.
 - Keep `vite.config.ts` as the source of truth. Run `pnpm prepare` after route/generated-config changes; never edit `.weapp-vite/` by hand.
+- `pnpm lint` is the zero-warning product gate for maintained TS/Vue, tests, E2E, generators and root configs. Only the SQL-generated industry artifact is excluded; validate it through generator and dictionary tests. Style files remain under `pnpm stylelint`.
 - Preserve user-owned `.codex/config.toml`, `.mcp.json`, `CLAUDE.md`, `pnpm-lock.yaml`, `.DS_Store`, planning files and unrelated dirty changes.
 - Every implementation stage needs a focused test/build check and its own commit.
 
