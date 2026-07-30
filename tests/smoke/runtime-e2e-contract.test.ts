@@ -15,8 +15,10 @@ describe('mini-program runtime E2E contract', () => {
     expect(fixture).toContain('wsEndpoint: AUTOMATOR_ENDPOINT')
     expect(fixture).toContain('timeout: 90_000')
     expect(fixture).toContain('scope: \'worker\'')
-    expect(fixture).toContain('miniProgram.disconnect()')
-    expect(fixture).toContain('quitWechatIde()')
+    expect(fixture).toContain('activeMiniProgram.disconnect()')
+    expect(fixture).not.toContain('quitWechatIde()')
+    expect(fixture).toContain('message.includes(\'[Component] property\')')
+    expect(fixture).toContain('Runtime component property warnings:')
   })
 
   it('covers every required land-demand runtime scenario and hook', () => {
@@ -48,7 +50,6 @@ describe('mini-program runtime E2E contract', () => {
       'verification-submit',
       'deploy-park',
       'deploy-park-selection',
-      'project-hydm-cascader',
       'keyindustry',
       'futureindustry',
       'land-demand-edit',
@@ -59,6 +60,8 @@ describe('mini-program runtime E2E contract', () => {
 
     expect(spec).toContain('screenshot(\'.tmp/e2e-login.png\')')
     expect(spec).toContain('screenshot(\'.tmp/e2e-review.png\')')
+    expect(spec).toContain('project_hydm: \'1811\'')
+    expect(spec).toContain('getByTestId(\'project-hydm\').tap()')
     expect(spec).toContain('miniProgram.restart(\'/pages/home/index\')')
     expect(spec).not.toContain(
       'restores an authenticated session after a cold relaunch\', async ({ miniProgram }) => {\n    await miniProgram.relaunch',
