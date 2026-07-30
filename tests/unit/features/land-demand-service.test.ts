@@ -176,6 +176,23 @@ describe('land demand service and queries', () => {
     client.unmount()
   })
 
+  it('treats a missing server record as an empty successful query result', async () => {
+    const client = createQueryClient()
+    const lifecycle = createLifecycle()
+    configureQueryLifecycleAdapter(lifecycle)
+
+    const query = useLandDemandQuery(form.creditcode, { client, repository })
+    await query.refetch()
+
+    expect(query.isError.value).toBe(false)
+    expect(query.data.value).toBeNull()
+
+    lifecycle.dispose()
+    resetQueryLifecycleAdapter()
+    client.clear()
+    client.unmount()
+  })
+
   it('propagates Query cancellation through the service boundary', async () => {
     const controller = new AbortController()
     controller.abort()
@@ -189,7 +206,8 @@ describe('land demand service and queries', () => {
   it('passes the Query function AbortSignal into the service', () => {
     const source = readFileSync('src/features/land-demand/queries.ts', 'utf8')
 
-    expect(source).toContain('queryFn: ({ signal }) => getLandDemandInfo')
+    expect(source).toContain('queryFn: async ({ signal }) => (')
+    expect(source).toContain('await getLandDemandInfo')
     expect(source).toContain('signal,')
   })
 
@@ -219,7 +237,7 @@ describe('land demand service and queries', () => {
     const query = useLandDemandQuery(form.creditcode, { client, repository })
     await query.refetch()
     store.$reset()
-    store.initialize(enterprise, query.data.value)
+    store.initialize(enterprise, query.data.value ?? undefined)
 
     expect(store.form.value.area).toBe('41')
     expect(store.currentStep.value).toBe(1)

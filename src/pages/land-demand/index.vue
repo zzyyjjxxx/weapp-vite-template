@@ -127,11 +127,11 @@ watchEffect(() => {
   }
 
   if (viewOnly.value) {
-    store.initialize(profile, query.data.value)
+    store.initialize(profile, query.data.value ?? undefined)
     store.goToStep(5)
   }
   else {
-    store.initializeFromLocalDraft(profile, query.data.value)
+    store.initializeFromLocalDraft(profile, query.data.value ?? undefined)
   }
   initialized = true
   ready.value = true

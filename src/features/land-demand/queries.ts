@@ -51,13 +51,15 @@ function cachePrivateRecord(client: QueryClient, record: LandDemandRecord): void
 export function useLandDemandQuery(
   creditcode: string,
   options: QueryOptions = {},
-): UseQueryResult<LandDemandRecord | undefined, Error> {
+): UseQueryResult<LandDemandRecord | null, Error> {
   return useQuery(() => ({
     queryKey: landDemandKeys.detail(creditcode),
-    queryFn: ({ signal }) => getLandDemandInfo(creditcode, {
-      repository: options.repository,
-      signal,
-    }),
+    queryFn: async ({ signal }) => (
+      await getLandDemandInfo(creditcode, {
+        repository: options.repository,
+        signal,
+      })
+    ) ?? null,
     enabled: Boolean(creditcode),
     meta: { scope: 'private' },
   }), options.client ?? queryClient)
