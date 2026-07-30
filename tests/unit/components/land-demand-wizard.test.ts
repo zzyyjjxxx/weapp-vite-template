@@ -133,4 +133,13 @@ describe('land demand wizard component contract', () => {
     expect(source).not.toContain('getLandDemandRepository')
     expect(source).not.toContain('originalRecord')
   })
+
+  it('passes unwrapped Store refs into generated child-component properties', () => {
+    const source = readFileSync('src/pages/land-demand/index.vue', 'utf8')
+
+    expect(source).toContain('const formProps = computed(() => form.value)')
+    expect(source).toContain('const currentStepProps = computed(() => currentStep.value)')
+    expect(source).toContain(':form="formProps"')
+    expect(source).toContain(':current-step="currentStepProps"')
+  })
 })

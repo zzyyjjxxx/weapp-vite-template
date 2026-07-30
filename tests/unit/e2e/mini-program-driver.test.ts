@@ -1,7 +1,10 @@
 import type { MiniProgramLike } from 'weapp-ide-cli'
 
 import { describe, expect, it, vi } from 'vitest'
-import { createMiniProgramDriver } from '../../../e2e/support/mini-program-driver'
+import {
+  createMiniProgramDriver,
+  parseGeneratedComponentSelectors,
+} from '../../../e2e/support/mini-program-driver'
 
 function createDriverHarness() {
   const input = vi.fn(async () => {})
@@ -68,6 +71,18 @@ describe('mini-program E2E driver', () => {
         routeOnly: true,
       }),
     )
+  })
+
+  it('discovers generated scoped-slot component names from page config', () => {
+    expect(parseGeneratedComponentSelectors(JSON.stringify({
+      usingComponents: {
+        'WizardActions': '/features/land-demand/components/wizard-actions',
+        'scoped-slot-ibkah3-default-0': '/pages/land-demand/index.__scoped-slot-default-0',
+      },
+    }))).toEqual([
+      'WizardActions',
+      'scoped-slot-ibkah3-default-0',
+    ])
   })
 
   it('restarts the app runtime through wx.restartMiniProgram and waits for its route', async () => {

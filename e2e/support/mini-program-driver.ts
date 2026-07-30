@@ -3,6 +3,9 @@ import type {
   MiniProgramLike,
 } from 'weapp-ide-cli'
 
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
   isAutomatorProtocolTimeoutError,
   isDevtoolsExtensionContextInvalidatedError,
@@ -10,12 +13,12 @@ import {
 
 const DEFAULT_WAIT_MS = 8_000
 const POLL_INTERVAL_MS = 100
+const PROJECT_PATH = fileURLToPath(new URL('../../', import.meta.url))
 
 const COMPONENT_TREE_SELECTORS = [
   'weapp-layout-default',
   'PageShell',
   'scoped-slots-default',
-  'scoped-slot-5rfeus-default-0',
   'BasicInfoStep',
   'LandInfoStep',
   'ProjectInfoStep',
@@ -30,6 +33,7 @@ const COMPONENT_TREE_SELECTORS = [
   't-radio-group',
   't-textarea',
 ] as const
+const generatedComponentSelectors = new Map<string, string[]>()
 
 const CHANGE_EVENT_TEST_IDS = new Set([
   'deploy-park',
@@ -62,6 +66,42 @@ type InputCapableElement = MiniProgramElement & {
 
 function normalizePath(path: string): string {
   return `/${path.replace(/^\/+/, '')}`
+}
+
+export function parseGeneratedComponentSelectors(source: string): string[] {
+  try {
+    const config: unknown = JSON.parse(source)
+    if (!config || typeof config !== 'object' || !('usingComponents' in config)) {
+      return []
+    }
+    const usingComponents = config.usingComponents
+    return usingComponents && typeof usingComponents === 'object'
+      ? Object.keys(usingComponents)
+      : []
+  }
+  catch {
+    return []
+  }
+}
+
+function readGeneratedComponentSelectors(pagePath: string): string[] {
+  const normalized = normalizePath(pagePath).slice(1)
+  const cached = generatedComponentSelectors.get(normalized)
+  if (cached) {
+    return cached
+  }
+
+  let selectors: string[] = []
+  try {
+    selectors = parseGeneratedComponentSelectors(
+      readFileSync(resolve(PROJECT_PATH, 'dist', `${normalized}.json`), 'utf8'),
+    )
+  }
+  catch {
+    // Direct selectors and stable component names remain available when config is absent.
+  }
+  generatedComponentSelectors.set(normalized, selectors)
+  return selectors
 }
 
 function isExpectedRestartTransition(error: unknown): boolean {
@@ -139,7 +179,10 @@ class AutomatorLocator implements MiniProgramLocator {
       const selector = `[data-testid="${this.id}"]`
       const direct = await page.$(selector)
       return direct ?? (await page.$(selector, {
-        componentSelectors: [...COMPONENT_TREE_SELECTORS],
+        componentSelectors: [
+          ...COMPONENT_TREE_SELECTORS,
+          ...readGeneratedComponentSelectors(page.path),
+        ],
         routeOnly: true,
       })) ?? undefined
     }, `data-testid=${this.id}`)

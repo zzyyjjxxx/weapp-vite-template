@@ -81,6 +81,8 @@ const routeReady = ref(false)
 let initialized = false
 
 const saving = computed(() => saveMutation.isPending.value || updateMutation.isPending.value)
+const formProps = computed(() => form.value)
+const currentStepProps = computed(() => currentStep.value)
 const submitting = computed(() => (
   sendCodeMutation.isPending.value
   || verifyCodeMutation.isPending.value
@@ -439,35 +441,35 @@ async function editDetail(): Promise<void> {
       :message="queryErrorMessage"
     />
     <view v-else class="land-demand-page">
-      <WizardProgress v-if="!viewOnly" :current-step="currentStep" />
+      <WizardProgress v-if="!viewOnly" :current-step="currentStepProps" />
       <scroll-view class="land-demand-page__form" scroll-y>
         <BasicInfoStep
           v-if="currentStep === 1"
-          :form="form"
+          :form="formProps"
           :errors="errors"
           @change="changeForm"
         />
         <LandInfoStep
           v-else-if="currentStep === 2"
-          :form="form"
+          :form="formProps"
           :errors="errors"
           @change="changeForm"
         />
         <ProjectInfoStep
           v-else-if="currentStep === 3"
-          :form="form"
+          :form="formProps"
           :errors="errors"
           @change="changeForm"
         />
         <FinanceContactStep
           v-else-if="currentStep === 4"
-          :form="form"
+          :form="formProps"
           :errors="errors"
           @change="changeForm"
         />
         <ReviewStep
           v-else
-          :form="form"
+          :form="formProps"
           :accepted="accepted"
           :acceptance-error="acceptanceError"
           :submitting="submitting"
@@ -500,7 +502,7 @@ async function editDetail(): Promise<void> {
       <text v-if="mutationError" class="land-demand-page__error">{{ mutationError }}</text>
       <WizardActions
         v-if="!viewOnly"
-        :current-step="currentStep"
+        :current-step="currentStepProps"
         :saving="saving"
         @previous="goPrevious"
         @save="saveDraft"
