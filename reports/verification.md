@@ -134,3 +134,33 @@
 - `pnpm test:e2e` 仍未通过。当前 RC 的 `cli auto --auto-port 10535` 在前台可报告成功，但后台/工具进程中会以 0 退出且不持续监听 10535，或连接后首个 App 协议命令超时；因此 9 个串行场景没有完成全量验收。
 - `wv screenshot`（通过 workspace 工具调用，目标 `pages/login/index`、输出 `.tmp/wv-login.png`）退出 `-1`/超时，明确报告“无法连接到当前项目的微信开发者工具自动化 websocket”；没有生成该截图。由于没有可用的 `wv screenshot` 当前图，`wv compare` 未执行，也未创建或更新视觉基线。
 - 结论：静态、单元、覆盖率、构建和产物检查均通过；真实 DevTools E2E 与 `wv screenshot/compare` 仍是当前 RC 自动化服务的外部阻塞，不能标记为通过。
+
+## DevTools E2E 现场复核（2026-07-30）
+
+- `pnpm exec wv ide info`：34 秒内无输出并超时；仅停止了该命令遗留的
+  2 个 Node 子进程。
+- `pnpm build`：退出 0；微信小程序构建成功，主包 715 KB。
+- 首次 `pnpm test:e2e`：退出 1；9 个串行场景中第 1 个在 fixture 建立前
+  失败，Automator 无法连接 `ws://127.0.0.1:10541`，其余 8 个未运行。
+- 官方微信 CLI `islogin`：退出 0，返回 `{"login":true}`；IDE 服务端口
+  `40637` 成功启动，排除登录失效。
+- 官方微信 CLI `auto --project <workspace> --auto-port 10541
+  --trust-project`：退出 0，确认真实 AppID `wx75dcf8b64b21bcdf` 并报告
+  `auto` 成功；10541 随后由目标项目 DevTools 进程监听。
+- 第二次 `pnpm test:e2e`：退出 1；已连接 Automator，但第 1 个场景在首个
+  运行时协议调用处 15 秒超时，随后 fixture teardown 达到 120 秒上限；
+  其余 8 个串行场景未运行。没有进入登录、填表或提交业务断言。
+- 通过官方 `close --project <workspace>` 只关闭本次目标项目窗口后重新
+  `auto`，等待 15 秒再运行最小 `current-page` 探测；10541 正常监听，
+  但协议仍不可用，CLI 报告 websocket 无法连接并因端口已被目标 DevTools
+  占用而无法启动替代会话。
+- `pnpm typecheck:e2e`：退出 0。
+- `pnpm test tests/unit/e2e tests/smoke/runtime-e2e-contract.test.ts`：
+  退出 0，2 个文件/11 个测试通过，Driver 映射和运行时 E2E 静态合约有效。
+- 本轮没有生成 `.tmp/e2e-login.png` 或 `.tmp/e2e-review.png`，因此没有
+  执行 `wv compare`，也没有创建或更新视觉基线。
+
+结论：构建、E2E 类型检查、Driver 与静态合约通过；真实 9 场景 DevTools
+E2E 仍受当前 DevTools Automator 的“端口监听但首个协议调用超时”阻塞，
+不能标记为通过。该结论已通过登录检查、真实 AppID、目标项目关闭重开、
+端口监听和最小协议探测交叉验证，不是业务断言失败。
