@@ -54,7 +54,10 @@ describe('mini-program E2E driver', () => {
     await driver.getByTestId('login-submit').tap()
 
     expect(miniProgram.reLaunch).toHaveBeenCalledWith('/pages/home/index')
-    expect(page.$).toHaveBeenCalledWith('[data-testid="login-submit"]')
+    expect(page.$).toHaveBeenCalledWith(
+      '[data-testid="login-submit"]',
+      { fallback: false },
+    )
   })
 
   it('falls back to the app-service component tree for nested step controls', async () => {
