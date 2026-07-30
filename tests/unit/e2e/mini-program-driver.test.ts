@@ -18,6 +18,7 @@ function createDriverHarness() {
   }
   const page = {
     $: vi.fn(async () => element),
+    getElementByXpath: vi.fn(async () => null),
     path: 'pages/login/index',
   }
   const miniProgram = {
@@ -74,6 +75,19 @@ describe('mini-program E2E driver', () => {
         routeOnly: true,
       }),
     )
+  })
+
+  it('uses the rendered XPath tree before the app-service component fallback', async () => {
+    const { driver, element, page } = createDriverHarness()
+    page.$.mockResolvedValueOnce(null)
+    page.getElementByXpath.mockResolvedValueOnce(element)
+
+    await driver.getByTestId('next-step').tap()
+
+    expect(page.getElementByXpath).toHaveBeenCalledWith(
+      '//*[@data-testid="next-step"]',
+    )
+    expect(page.$).toHaveBeenCalledOnce()
   })
 
   it('discovers generated scoped-slot component names from page config', () => {

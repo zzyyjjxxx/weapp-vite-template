@@ -178,7 +178,10 @@ class AutomatorLocator implements MiniProgramLocator {
       const page = await this.miniProgram.currentPage()
       const selector = `[data-testid="${this.id}"]`
       const direct = await page.$(selector, { fallback: false })
-      return direct ?? (await page.$(selector, {
+      const rendered = direct ?? await page.getElementByXpath(
+        `//*[@data-testid="${this.id}"]`,
+      )
+      return rendered ?? (await page.$(selector, {
         componentSelectors: [
           ...COMPONENT_TREE_SELECTORS,
           ...readGeneratedComponentSelectors(page.path),
