@@ -13,10 +13,6 @@ import { resolveRouteMeta } from './route-meta'
 let router: RouterNavigation | undefined
 
 export function setupRouter(): RouterNavigation {
-  if (router) {
-    return router
-  }
-
   router = createRouter()
   router.beforeEach((to: RouteLocationNormalizedLoaded | undefined) => {
     if (!to) {
@@ -33,5 +29,5 @@ export function setupRouter(): RouterNavigation {
 }
 
 export function getRouter(): RouterNavigation {
-  return setupRouter()
+  return router ?? setupRouter()
 }

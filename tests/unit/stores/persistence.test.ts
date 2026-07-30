@@ -96,4 +96,16 @@ describe('auth persistence', () => {
 
     expect(malformed.store.session).toBeNull()
   })
+
+  it('hydrates setup-store refs without replacing the ref object', () => {
+    const sessionRef: { value: AuthSession | null } = { value: null }
+    const context = createPersistenceContext()
+    Object.assign(context.store, { session: sessionRef })
+    storage.set(AUTH_STORAGE_KEY, { version: 1, session })
+
+    createPersistencePlugin(storage)(context)
+
+    expect(context.store.session).toBe(sessionRef)
+    expect(sessionRef.value).toEqual(session)
+  })
 })

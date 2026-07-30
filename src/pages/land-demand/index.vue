@@ -8,8 +8,8 @@ import type {
 
 import { computed, onLoad, ref, watchEffect } from 'wevu'
 import AppError from '@/components/ui/app-error/index.vue'
+import AppIcon from '@/components/ui/app-icon/index.vue'
 import AppLoading from '@/components/ui/app-loading/index.vue'
-import PageShell from '@/components/ui/page-shell/index.vue'
 import BasicInfoStep from '@/features/land-demand/components/basic-info-step.vue'
 import FinanceContactStep from '@/features/land-demand/components/finance-contact-step.vue'
 import LandInfoStep from '@/features/land-demand/components/land-info-step.vue'
@@ -47,6 +47,10 @@ import { useLandDemandStore } from '@/stores/land-demand'
 
 definePageJson({
   navigationBarTitleText: '用地需求填报',
+})
+
+definePageMeta({
+  layout: false,
 })
 
 type PendingClear
@@ -151,6 +155,11 @@ function setAccepted(value: boolean): void {
   if (value) {
     acceptanceError.value = ''
   }
+}
+
+function setVerificationCode(value: string): void {
+  verificationCode.value = value
+  verificationError.value = ''
 }
 
 function applyDeployParkSnapshot(next: readonly string[]): void {
@@ -428,12 +437,22 @@ async function editDetail(): Promise<void> {
 </script>
 
 <template>
-  <PageShell
+  <view
     v-if="authorized"
-    title="用地需求填报"
-    :subtitle="enterpriseName"
-    icon="list-check"
+    class="land-demand-shell"
   >
+    <view class="land-demand-shell__header">
+      <AppIcon
+        class="land-demand-shell__icon"
+        name="list-check"
+        :size="48"
+        weight="Filled"
+      />
+      <view class="land-demand-shell__heading-copy">
+        <text class="land-demand-shell__title">用地需求填报</text>
+        <text class="land-demand-shell__subtitle">{{ enterpriseName }}</text>
+      </view>
+    </view>
     <AppLoading v-if="query.isPending || !ready" />
     <AppError
       v-else-if="query.isError"
@@ -445,33 +464,38 @@ async function editDetail(): Promise<void> {
       <scroll-view class="land-demand-page__form" scroll-y>
         <BasicInfoStep
           v-if="currentStep === 1"
+          class="e2e-basic-info-step"
           :form="formProps"
           :errors="errors"
           @change="changeForm"
         />
         <LandInfoStep
           v-else-if="currentStep === 2"
+          class="e2e-land-info-step"
           :form="formProps"
           :errors="errors"
           @change="changeForm"
         />
         <ProjectInfoStep
           v-else-if="currentStep === 3"
+          class="e2e-project-info-step"
           :form="formProps"
           :errors="errors"
           @change="changeForm"
         />
         <FinanceContactStep
           v-else-if="currentStep === 4"
+          class="e2e-finance-contact-step"
           :form="formProps"
           :errors="errors"
           @change="changeForm"
         />
         <ReviewStep
           v-else
+          class="e2e-review-step"
           :form="formProps"
           :accepted="accepted"
-          :acceptance-error="acceptanceError"
+          :acceptance-error="acceptanceError || ''"
           :submitting="submitting"
           :readonly="viewOnly"
           @edit="goToStep"
@@ -498,10 +522,17 @@ async function editDetail(): Promise<void> {
         </view>
       </scroll-view>
 
-      <text v-if="feedback" class="land-demand-page__feedback">{{ feedback }}</text>
+      <text
+        v-if="feedback"
+        class="land-demand-page__feedback"
+        data-testid="save-feedback"
+      >
+        {{ feedback }}
+      </text>
       <text v-if="mutationError" class="land-demand-page__error">{{ mutationError }}</text>
       <WizardActions
         v-if="!viewOnly"
+        class="e2e-wizard-actions"
         :current-step="currentStepProps"
         :saving="saving"
         @previous="goPrevious"
@@ -514,7 +545,7 @@ async function editDetail(): Promise<void> {
       data-testid="destructive-clear-dialog"
       :visible="clearDialogVisible"
       title="确认清空已有内容"
-      :content="clearDialogContent"
+      :content="clearDialogContent || ''"
       cancel-btn="取消"
       :confirm-btn="false"
       :close-on-overlay-click="false"
@@ -532,20 +563,58 @@ async function editDetail(): Promise<void> {
       </template>
     </t-dialog>
     <VerificationDialog
+      class="e2e-verification-dialog"
       :visible="verificationVisible"
       :challenge="challenge"
-      :code="verificationCode"
+      :code="verificationCode || ''"
       :loading="submitting"
-      :error="verificationError"
-      @change="verificationCode = $event"
+      :error="verificationError || ''"
+      @change="setVerificationCode"
       @close="closeVerification"
       @submit="submitVerificationCode"
     />
-  </PageShell>
+  </view>
 </template>
 
 <style lang="scss">
 @use '@/styles/tokens' as *;
+
+.land-demand-shell {
+  min-height: 100vh;
+  padding: $space-5 $space-4 $space-5;
+  background: $color-page;
+}
+
+.land-demand-shell__header {
+  display: flex;
+  align-items: center;
+  padding: $space-2 0 $space-4;
+}
+
+.land-demand-shell__icon {
+  margin-right: $space-2;
+}
+
+.land-demand-shell__heading-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.land-demand-shell__title {
+  display: block;
+  font-size: 44rpx;
+  font-weight: 700;
+  line-height: 1.25;
+  color: $color-text;
+}
+
+.land-demand-shell__subtitle {
+  display: block;
+  margin-top: $space-1;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: $color-text-secondary;
+}
 
 .land-demand-page__form {
   max-height: calc(100vh - 420rpx);

@@ -6,6 +6,10 @@ definePageJson({
   navigationBarTitleText: '页面异常',
 })
 
+definePageMeta({
+  layout: false,
+})
+
 async function goHome(): Promise<void> {
   await navigate('/pages/home/index')
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'wevu'
-import PageShell from '@/components/ui/page-shell/index.vue'
+import AppIcon from '@/components/ui/app-icon/index.vue'
 import { useLandDemandQuery } from '@/features/land-demand/queries'
 import { navigate, replace } from '@/router/navigation'
 import { useProtectedPage } from '@/router/protected-page'
@@ -8,6 +8,10 @@ import { useAuthStore } from '@/stores/auth'
 
 definePageJson({
   navigationBarTitleText: '用地需求',
+})
+
+definePageMeta({
+  layout: false,
 })
 
 const auth = useAuthStore()
@@ -52,13 +56,23 @@ async function logout(): Promise<void> {
 </script>
 
 <template>
-  <PageShell
+  <view
     v-if="authorized"
-    title="用地需求"
-    :subtitle="enterpriseSubtitle"
-    icon="home"
+    class="home-shell"
   >
-    <template #actions>
+    <view class="home-shell__header">
+      <view class="home-shell__heading">
+        <AppIcon
+          class="home-shell__icon"
+          name="home"
+          :size="48"
+          weight="Filled"
+        />
+        <view class="home-shell__heading-copy">
+          <text class="home-shell__title">用地需求</text>
+          <text class="home-shell__subtitle">{{ enterpriseSubtitle }}</text>
+        </view>
+      </view>
       <t-button
         data-testid="logout"
         size="small"
@@ -68,7 +82,7 @@ async function logout(): Promise<void> {
       >
         退出登录
       </t-button>
-    </template>
+    </view>
 
     <view class="home__enterprise u-card">
       <text class="home__enterprise-name">
@@ -121,11 +135,59 @@ async function logout(): Promise<void> {
         {{ primaryLabel }}
       </t-button>
     </view>
-  </PageShell>
+  </view>
 </template>
 
 <style lang="scss">
 @use '@/styles/tokens' as *;
+
+.home-shell {
+  min-height: 100vh;
+  padding: $space-5 $space-4 $space-5;
+  background: $color-page;
+}
+
+.home-shell__header,
+.home-shell__heading {
+  display: flex;
+  align-items: center;
+}
+
+.home-shell__header {
+  justify-content: space-between;
+  padding: $space-2 0 $space-4;
+}
+
+.home-shell__heading {
+  min-width: 0;
+}
+
+.home-shell__icon {
+  margin-right: $space-2;
+}
+
+.home-shell__heading-copy {
+  min-width: 0;
+}
+
+.home-shell__title,
+.home-shell__subtitle {
+  display: block;
+}
+
+.home-shell__title {
+  font-size: 44rpx;
+  font-weight: 700;
+  line-height: 1.25;
+  color: $color-text;
+}
+
+.home-shell__subtitle {
+  margin-top: $space-1;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: $color-text-secondary;
+}
 
 .home__enterprise,
 .home__product {

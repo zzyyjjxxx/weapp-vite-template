@@ -15,6 +15,7 @@ interface PersistenceStore {
     callback: (mutation: unknown, state: unknown) => void,
     options?: { detached?: boolean },
   ) => () => void
+  session?: unknown
 }
 
 interface RecordLike {
@@ -79,6 +80,14 @@ function readSession(state: unknown): AuthSession | null {
   return isAuthSession(session) ? session : null
 }
 
+function hydrateSession(store: PersistenceStore, session: AuthSession | null): void {
+  if (isRecord(store.session) && 'value' in store.session) {
+    store.session.value = session
+    return
+  }
+  store.$patch({ session })
+}
+
 export function createPersistencePlugin(storage: StorageAdapter) {
   return ({ store }: { store: PersistenceStore }): void => {
     if (store.$id !== 'auth') {
@@ -87,7 +96,7 @@ export function createPersistencePlugin(storage: StorageAdapter) {
 
     const persisted = storage.get<unknown>(AUTH_STORAGE_KEY)
     if (isPersistedAuthState(persisted)) {
-      store.$patch({ session: persisted.session })
+      hydrateSession(store, persisted.session)
     }
 
     store.$subscribe((_mutation, state) => {

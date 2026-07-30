@@ -2,7 +2,7 @@
 import type { LoginInput } from '@/features/auth/models'
 
 import { computed, onLoad, ref } from 'wevu'
-import PageShell from '@/components/ui/page-shell/index.vue'
+import AppIcon from '@/components/ui/app-icon/index.vue'
 import { useLoginMutation } from '@/features/auth/queries'
 import { readStringDetail } from '@/platform/event-detail'
 import { replaceUrl } from '@/router/navigation'
@@ -10,6 +10,10 @@ import { parseReturnTo } from '@/router/query'
 
 definePageJson({
   navigationBarTitleText: '登录',
+})
+
+definePageMeta({
+  layout: false,
 })
 
 const username = ref('demo')
@@ -63,11 +67,19 @@ async function submit(): Promise<void> {
 </script>
 
 <template>
-  <PageShell
-    title="登录"
-    subtitle="演示账号：demo / demo123"
-    icon="login"
-  >
+  <view class="login-shell">
+    <view class="login-shell__header">
+      <AppIcon
+        class="login-shell__icon"
+        name="login"
+        :size="48"
+        weight="Filled"
+      />
+      <view>
+        <text class="login-shell__title">登录</text>
+        <text class="login-shell__subtitle">演示账号：demo / demo123</text>
+      </view>
+    </view>
     <view class="login__card u-card">
       <t-input
         data-testid="username"
@@ -76,7 +88,7 @@ async function submit(): Promise<void> {
         :maxlength="32"
         placeholder="请输入用户名"
         :status="usernameError ? 'error' : 'default'"
-        :tips="usernameError"
+        :tips="usernameError || ''"
         @change="updateUsername"
       />
       <t-input
@@ -88,7 +100,7 @@ async function submit(): Promise<void> {
         :maxlength="64"
         placeholder="请输入密码"
         :status="passwordError ? 'error' : 'default'"
-        :tips="passwordError"
+        :tips="passwordError || ''"
         @change="updatePassword"
       />
       <text v-if="errorMessage" class="login__error">
@@ -106,11 +118,46 @@ async function submit(): Promise<void> {
         登录
       </t-button>
     </view>
-  </PageShell>
+  </view>
 </template>
 
 <style lang="scss">
 @use '@/styles/tokens' as *;
+
+.login-shell {
+  min-height: 100vh;
+  padding: $space-5 $space-4;
+  background: $color-page;
+}
+
+.login-shell__header {
+  display: flex;
+  align-items: center;
+  padding: $space-2 0 $space-4;
+}
+
+.login-shell__icon {
+  margin-right: $space-2;
+}
+
+.login-shell__title,
+.login-shell__subtitle {
+  display: block;
+}
+
+.login-shell__title {
+  font-size: 44rpx;
+  font-weight: 700;
+  line-height: 1.25;
+  color: $color-text;
+}
+
+.login-shell__subtitle {
+  margin-top: $space-1;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: $color-text-secondary;
+}
 
 .login__card {
   padding: $space-4;

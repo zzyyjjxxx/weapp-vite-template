@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watchEffect } from 'wevu'
 import AppError from '@/components/ui/app-error/index.vue'
+import AppIcon from '@/components/ui/app-icon/index.vue'
 import AppLoading from '@/components/ui/app-loading/index.vue'
-import PageShell from '@/components/ui/page-shell/index.vue'
 import { useLandDemandQuery } from '@/features/land-demand/queries'
 import { navigate, replace } from '@/router/navigation'
 import { useProtectedPage } from '@/router/protected-page'
@@ -10,6 +10,10 @@ import { useAuthStore } from '@/stores/auth'
 
 definePageJson({
   navigationBarTitleText: '填报完成',
+})
+
+definePageMeta({
+  layout: false,
 })
 
 const auth = useAuthStore()
@@ -42,12 +46,24 @@ async function viewDetail(): Promise<void> {
 </script>
 
 <template>
-  <PageShell
+  <view
     v-if="authorized"
-    title="填报完成"
-    :subtitle="submitted ? '用地需求已提交' : '正在核验提交结果'"
-    icon="list-check"
+    class="land-demand-success-shell"
   >
+    <view class="land-demand-success-shell__header">
+      <AppIcon
+        class="land-demand-success-shell__icon"
+        name="list-check"
+        :size="48"
+        weight="Filled"
+      />
+      <view>
+        <text class="land-demand-success-shell__title">填报完成</text>
+        <text class="land-demand-success-shell__subtitle">
+          {{ submitted ? '用地需求已提交' : '正在核验提交结果' }}
+        </text>
+      </view>
+    </view>
     <AppLoading v-if="query.isPending" />
     <AppError
       v-else-if="query.isError"
@@ -79,11 +95,46 @@ async function viewDetail(): Promise<void> {
         </t-button>
       </view>
     </view>
-  </PageShell>
+  </view>
 </template>
 
 <style lang="scss">
 @use '@/styles/tokens' as *;
+
+.land-demand-success-shell {
+  min-height: 100vh;
+  padding: $space-5 $space-4;
+  background: $color-page;
+}
+
+.land-demand-success-shell__header {
+  display: flex;
+  align-items: center;
+  padding: $space-2 0 $space-4;
+}
+
+.land-demand-success-shell__icon {
+  margin-right: $space-2;
+}
+
+.land-demand-success-shell__title,
+.land-demand-success-shell__subtitle {
+  display: block;
+}
+
+.land-demand-success-shell__title {
+  font-size: 44rpx;
+  font-weight: 700;
+  line-height: 1.25;
+  color: $color-text;
+}
+
+.land-demand-success-shell__subtitle {
+  margin-top: $space-1;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: $color-text-secondary;
+}
 
 .land-demand-success__notice {
   padding: $space-4;

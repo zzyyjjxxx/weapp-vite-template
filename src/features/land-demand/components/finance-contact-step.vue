@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { FieldError, FinancingChoice, LandDemandForm } from '../models'
 
+import { computed } from 'wevu'
 import { readStringDetail } from '@/platform/event-detail'
 
 const props = defineProps<{ form: LandDemandForm, errors: readonly FieldError[] }>()
@@ -8,9 +9,9 @@ const emit = defineEmits<{ change: [patch: Partial<LandDemandForm>] }>()
 
 defineComponentJson({ component: true })
 
-function fieldError(field: keyof LandDemandForm): string {
-  return props.errors.find(error => error.field === field)?.message ?? ''
-}
+const fieldErrors = computed<Partial<Record<keyof LandDemandForm, string>>>(() => (
+  Object.fromEntries((props.errors ?? []).map(error => [error.field, error.message]))
+))
 
 function changeText(field: keyof LandDemandForm, detail: unknown): void {
   emit('change', { [field]: readStringDetail(detail) })
@@ -34,7 +35,7 @@ function changeFinancing(detail: unknown): void {
         <t-radio data-testid="is-financing-yes" value="有">有</t-radio>
         <t-radio value="没有">没有</t-radio>
       </t-radio-group>
-      <text v-if="fieldError('is_financing')" class="field__error">{{ fieldError('is_financing') }}</text>
+      <text v-if="fieldErrors.is_financing" class="field__error">{{ fieldErrors.is_financing }}</text>
     </view>
     <view v-if="props.form.is_financing === '有'">
       <t-input
@@ -42,45 +43,45 @@ function changeFinancing(detail: unknown): void {
         label="融资金额（万元）"
         type="digit"
         :value="props.form.financing_money"
-        :status="fieldError('financing_money') ? 'error' : 'default'"
+        :status="fieldErrors.financing_money ? 'error' : 'default'"
         @change="changeText('financing_money', $event)"
       />
       <text
-        v-if="fieldError('financing_money')"
+        v-if="fieldErrors.financing_money"
         data-testid="financing-money-error"
         class="field__error"
       >
-        {{ fieldError('financing_money') }}
+        {{ fieldErrors.financing_money }}
       </text>
       <t-input
         data-testid="financing-time"
         label="融资时间（YYYY-MM）"
         :value="props.form.financing_time"
-        :status="fieldError('financing_time') ? 'error' : 'default'"
+        :status="fieldErrors.financing_time ? 'error' : 'default'"
         @change="changeText('financing_time', $event)"
       />
       <text
-        v-if="fieldError('financing_time')"
+        v-if="fieldErrors.financing_time"
         data-testid="financing-time-error"
         class="field__error"
       >
-        {{ fieldError('financing_time') }}
+        {{ fieldErrors.financing_time }}
       </text>
     </view>
     <t-input
       data-testid="contact"
       label="联系人"
       :value="props.form.contact"
-      :status="fieldError('contact') ? 'error' : 'default'"
-      :tips="fieldError('contact')"
+      :status="fieldErrors.contact ? 'error' : 'default'"
+      :tips="fieldErrors.contact || ''"
       @change="changeText('contact', $event)"
     />
     <t-input
       data-testid="office"
       label="职务（选填）"
       :value="props.form.office"
-      :status="fieldError('office') ? 'error' : 'default'"
-      :tips="fieldError('office')"
+      :status="fieldErrors.office ? 'error' : 'default'"
+      :tips="fieldErrors.office || ''"
       @change="changeText('office', $event)"
     />
     <t-input
@@ -89,8 +90,8 @@ function changeFinancing(detail: unknown): void {
       type="number"
       :maxlength="11"
       :value="props.form.phone"
-      :status="fieldError('phone') ? 'error' : 'default'"
-      :tips="fieldError('phone')"
+      :status="fieldErrors.phone ? 'error' : 'default'"
+      :tips="fieldErrors.phone || ''"
       @change="changeText('phone', $event)"
     />
   </view>

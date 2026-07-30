@@ -112,6 +112,8 @@ describe('land demand wizard component contract', () => {
     expect(source).toContain(':filterable="true"')
     expect(source).toContain('NATIONAL_INDUSTRY_OPTIONS')
     expect(source).toContain('getIndustryDisplay')
+    expect(source).toContain('v-if="industrySelectorVisible && nationalIndustryOptions.length > 0"')
+    expect(source).not.toContain('<t-cell')
     expect(source).not.toMatch(/<t-input[^>]+data-testid="project-hydm"/)
   })
 
@@ -134,6 +136,18 @@ describe('land demand wizard component contract', () => {
     expect(source).not.toContain('originalRecord')
   })
 
+  it('serializes land-step options and validation strings as stable component data', () => {
+    const source = readFileSync(`${componentRoot}/land-info-step.vue`, 'utf8')
+
+    expect(source).toContain('const parkOptions = computed(')
+    expect(source).toContain('const fieldErrors = computed')
+    expect(source).toContain('(props.errors ?? [])')
+    expect(source).toContain(':tips="fieldErrors.area || \'\'"')
+    expect(source).not.toContain(':options="parkOptions"')
+    expect(source).toContain('v-for="option in parkOptions"')
+    expect(source).not.toContain('fieldError(')
+  })
+
   it('passes unwrapped Store refs into generated child-component properties', () => {
     const source = readFileSync('src/pages/land-demand/index.vue', 'utf8')
 
@@ -141,5 +155,62 @@ describe('land demand wizard component contract', () => {
     expect(source).toContain('const currentStepProps = computed(() => currentStep.value)')
     expect(source).toContain(':form="formProps"')
     expect(source).toContain(':current-step="currentStepProps"')
+  })
+
+  it('keeps interactive wizard components on the page side of generic slots', () => {
+    const pageSource = readFileSync('src/pages/land-demand/index.vue', 'utf8')
+
+    expect(pageSource).toContain('class="land-demand-shell"')
+    expect(pageSource).toContain('<WizardActions')
+    expect(pageSource).toContain('class="e2e-basic-info-step"')
+    expect(pageSource).toContain('class="e2e-wizard-actions"')
+    expect(pageSource).toContain('data-testid="save-feedback"')
+    expect(pageSource).not.toContain('<PageShell')
+  })
+
+  it('keeps the home actions on the page side of generic slots', () => {
+    const source = readFileSync('src/pages/home/index.vue', 'utf8')
+
+    expect(source).toContain('class="home-shell"')
+    expect(source).toContain('data-testid="land-demand-primary"')
+    expect(source).not.toContain('<PageShell')
+  })
+
+  it('keeps login and success actions on the page side of generic slots', () => {
+    for (const file of [
+      'src/pages/login/index.vue',
+      'src/pages/land-demand/success.vue',
+    ]) {
+      const source = readFileSync(file, 'utf8')
+
+      expect(source).toContain('class=')
+      expect(source).not.toContain('<PageShell')
+    }
+  })
+
+  it('disables generated page layouts around runtime E2E controls', () => {
+    for (const file of [
+      'src/pages/login/index.vue',
+      'src/pages/home/index.vue',
+      'src/pages/land-demand/index.vue',
+      'src/pages/land-demand/success.vue',
+    ]) {
+      const source = readFileSync(file, 'utf8')
+
+      expect(source).toMatch(/definePageMeta\(\{\s+layout: false,\s+\}\)/)
+    }
+  })
+
+  it('serializes later-step validation strings as stable component data', () => {
+    for (const file of [
+      `${componentRoot}/project-info-step.vue`,
+      `${componentRoot}/finance-contact-step.vue`,
+    ]) {
+      const source = readFileSync(file, 'utf8')
+
+      expect(source).toContain('const fieldErrors = computed')
+      expect(source).toContain('(props.errors ?? [])')
+      expect(source).not.toContain('fieldError(')
+    }
   })
 })

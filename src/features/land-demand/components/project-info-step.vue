@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { FieldError, LandDemandForm } from '../models'
 
-import { ref } from 'wevu'
+import { computed, ref } from 'wevu'
 import { readStringDetail } from '@/platform/event-detail'
 import { getDirections, INDUSTRY_TRACK_DIRECTIONS } from '../dictionaries/industry-tracks'
 import { getIndustryDisplay, NATIONAL_INDUSTRY_OPTIONS } from '../industry-selector'
@@ -11,12 +11,14 @@ const emit = defineEmits<{ change: [patch: Partial<LandDemandForm>] }>()
 
 defineComponentJson({ component: true })
 
-const trackOptions = Object.keys(INDUSTRY_TRACK_DIRECTIONS)
+const nationalIndustryOptions = computed(() => NATIONAL_INDUSTRY_OPTIONS)
+const trackOptions = computed(() => Object.keys(INDUSTRY_TRACK_DIRECTIONS))
+const directionOptions = computed(() => getDirections(props.form?.keyindustry ?? ''))
+const industryDisplay = computed(() => getIndustryDisplay(props.form?.project_hydm ?? ''))
+const fieldErrors = computed<Partial<Record<keyof LandDemandForm, string>>>(() => (
+  Object.fromEntries((props.errors ?? []).map(error => [error.field, error.message]))
+))
 const industrySelectorVisible = ref(false)
-
-function fieldError(field: keyof LandDemandForm): string {
-  return props.errors.find(error => error.field === field)?.message ?? ''
-}
 
 function changeText(field: keyof LandDemandForm, detail: unknown): void {
   emit('change', { [field]: readStringDetail(detail) })
@@ -44,24 +46,31 @@ function changeIndustry(detail: unknown): void {
       label="固定资产投资额（万元）"
       type="digit"
       :value="props.form.investment"
-      :status="fieldError('investment') ? 'error' : 'default'"
-      :tips="fieldError('investment')"
+      :status="fieldErrors.investment ? 'error' : 'default'"
+      :tips="fieldErrors.investment || ''"
       @change="changeText('investment', $event)"
     />
     <view class="field field--selector">
-      <t-cell
+      <view
         data-testid="project-hydm"
-        title="国民经济行业"
-        :note="getIndustryDisplay(props.form.project_hydm) || '请选择行业'"
-        arrow
+        class="field__selector"
         @tap="openIndustrySelector"
-      />
-      <text v-if="fieldError('project_hydm')" class="field__error">{{ fieldError('project_hydm') }}</text>
+      >
+        <view>
+          <text class="field__selector-title">国民经济行业</text>
+          <text class="field__selector-note">
+            {{ industryDisplay || '请选择行业' }}
+          </text>
+        </view>
+        <text class="field__selector-arrow">›</text>
+      </view>
+      <text v-if="fieldErrors.project_hydm" class="field__error">{{ fieldErrors.project_hydm }}</text>
       <t-cascader
+        v-if="industrySelectorVisible && nationalIndustryOptions.length > 0"
         data-testid="project-hydm-cascader"
         :visible="industrySelectorVisible"
         :value="props.form.project_hydm"
-        :options="NATIONAL_INDUSTRY_OPTIONS"
+        :options="nationalIndustryOptions"
         :filterable="true"
         title="选择国民经济行业"
         placeholder="请选择"
@@ -74,28 +83,40 @@ function changeIndustry(detail: unknown): void {
       <t-radio-group
         data-testid="keyindustry"
         :value="props.form.keyindustry"
-        :options="trackOptions"
         @change="changeText('keyindustry', $event)"
-      />
-      <text v-if="fieldError('keyindustry')" class="field__error">{{ fieldError('keyindustry') }}</text>
+      >
+        <t-radio
+          v-for="option in trackOptions"
+          :key="option"
+          :value="option"
+          :label="option"
+        />
+      </t-radio-group>
+      <text v-if="fieldErrors.keyindustry" class="field__error">{{ fieldErrors.keyindustry }}</text>
     </view>
     <view class="field">
       <text class="field__label">细分方向</text>
       <t-radio-group
         data-testid="futureindustry"
         :value="props.form.futureindustry"
-        :options="getDirections(props.form.keyindustry)"
         @change="changeText('futureindustry', $event)"
-      />
-      <text v-if="fieldError('futureindustry')" class="field__error">{{ fieldError('futureindustry') }}</text>
+      >
+        <t-radio
+          v-for="option in directionOptions"
+          :key="option"
+          :value="option"
+          :label="option"
+        />
+      </t-radio-group>
+      <text v-if="fieldErrors.futureindustry" class="field__error">{{ fieldErrors.futureindustry }}</text>
     </view>
     <t-input
       data-testid="pred-ys"
       label="预计年营收（万元）"
       type="digit"
       :value="props.form.pred_ys"
-      :status="fieldError('pred_ys') ? 'error' : 'default'"
-      :tips="fieldError('pred_ys')"
+      :status="fieldErrors.pred_ys ? 'error' : 'default'"
+      :tips="fieldErrors.pred_ys || ''"
       @change="changeText('pred_ys', $event)"
     />
     <t-input
@@ -103,8 +124,8 @@ function changeIndustry(detail: unknown): void {
       label="预计年税收（万元）"
       type="digit"
       :value="props.form.pred_tax"
-      :status="fieldError('pred_tax') ? 'error' : 'default'"
-      :tips="fieldError('pred_tax')"
+      :status="fieldErrors.pred_tax ? 'error' : 'default'"
+      :tips="fieldErrors.pred_tax || ''"
       @change="changeText('pred_tax', $event)"
     />
     <t-input
@@ -112,8 +133,8 @@ function changeIndustry(detail: unknown): void {
       label="预计研发投入（万元）"
       type="digit"
       :value="props.form.pred_rdex"
-      :status="fieldError('pred_rdex') ? 'error' : 'default'"
-      :tips="fieldError('pred_rdex')"
+      :status="fieldErrors.pred_rdex ? 'error' : 'default'"
+      :tips="fieldErrors.pred_rdex || ''"
       @change="changeText('pred_rdex', $event)"
     />
     <t-input
@@ -121,16 +142,16 @@ function changeIndustry(detail: unknown): void {
       label="项目单位能耗增加值（万元/吨标煤）"
       type="digit"
       :value="props.form.pred_unitenergy"
-      :status="fieldError('pred_unitenergy') ? 'error' : 'default'"
-      :tips="fieldError('pred_unitenergy')"
+      :status="fieldErrors.pred_unitenergy ? 'error' : 'default'"
+      :tips="fieldErrors.pred_unitenergy || ''"
       @change="changeText('pred_unitenergy', $event)"
     />
     <t-textarea
       data-testid="projectdata"
       label="项目建设内容"
       :value="props.form.projectdata"
-      :status="fieldError('projectdata') ? 'error' : 'default'"
-      :tips="fieldError('projectdata')"
+      :status="fieldErrors.projectdata ? 'error' : 'default'"
+      :tips="fieldErrors.projectdata || ''"
       placeholder="请说明主要产品、建设规模和工艺"
       @change="changeText('projectdata', $event)"
     />
@@ -166,6 +187,34 @@ function changeIndustry(detail: unknown): void {
 
 .field--selector {
   padding-top: 0;
+}
+
+.field__selector {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 96rpx;
+}
+
+.field__selector-title,
+.field__selector-note {
+  display: block;
+}
+
+.field__selector-title {
+  font-size: 28rpx;
+  color: $color-text;
+}
+
+.field__selector-note {
+  margin-top: $space-1;
+  font-size: 24rpx;
+  color: $color-text-secondary;
+}
+
+.field__selector-arrow {
+  font-size: 40rpx;
+  color: $color-text-secondary;
 }
 
 .field__label {
