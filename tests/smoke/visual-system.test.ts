@@ -34,4 +34,13 @@ describe('land-demand visual system', () => {
       + ']')
     expect(source).toContain('wizard-progress__connector')
   })
+
+  it('keeps the planning illustration inside the home hero and the filling page compact', () => {
+    const home = readFileSync('src/pages/home/index.vue', 'utf8')
+    const shell = readFileSync('src/components/ui/page-shell/index.vue', 'utf8')
+
+    expect(home).toContain('mode="aspectFit"')
+    expect(home).toContain('inset: 0')
+    expect(shell).toContain('page-shell--compact')
+  })
 })

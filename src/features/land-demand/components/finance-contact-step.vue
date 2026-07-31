@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import type { FieldError, FinancingChoice, LandDemandForm } from '../models'
 
+import { ref } from 'wevu'
 import { readStringDetail } from '@/platform/event-detail'
 
 const props = defineProps<{ form: LandDemandForm, errors: readonly FieldError[] }>()
 const emit = defineEmits<{ change: [patch: Partial<LandDemandForm>] }>()
 
 defineComponentJson({ component: true })
+
+const emptyOptions = ref<string[]>([])
 
 function fieldError(field: keyof LandDemandForm): string {
   return props.errors.find(error => error.field === field)?.message ?? ''
@@ -30,6 +33,7 @@ function changeFinancing(detail: unknown): void {
       <t-radio-group
         data-testid="is-financing"
         :value="props.form.is_financing"
+        :options="emptyOptions"
         @change="changeFinancing"
       >
         <t-radio data-testid="is-financing-yes" value="有">有</t-radio>
@@ -43,7 +47,8 @@ function changeFinancing(detail: unknown): void {
         label="融资金额（万元）"
         type="digit"
         :value="props.form.financing_money"
-        :status="fieldError('financing_money') ? 'error' : 'default'"
+        status="default"
+        tips=""
         @change="changeText('financing_money', $event)"
       />
       <text
@@ -57,7 +62,8 @@ function changeFinancing(detail: unknown): void {
         data-testid="financing-time"
         label="融资时间（YYYY-MM）"
         :value="props.form.financing_time"
-        :status="fieldError('financing_time') ? 'error' : 'default'"
+        status="default"
+        tips=""
         @change="changeText('financing_time', $event)"
       />
       <text
@@ -72,16 +78,16 @@ function changeFinancing(detail: unknown): void {
       data-testid="contact"
       label="联系人"
       :value="props.form.contact"
-      :status="fieldError('contact') ? 'error' : 'default'"
-      :tips="fieldError('contact')"
+      status="default"
+      tips=""
       @change="changeText('contact', $event)"
     />
     <t-input
       data-testid="office"
       label="职务（选填）"
       :value="props.form.office"
-      :status="fieldError('office') ? 'error' : 'default'"
-      :tips="fieldError('office')"
+      status="default"
+      tips=""
       @change="changeText('office', $event)"
     />
     <t-input
@@ -90,8 +96,8 @@ function changeFinancing(detail: unknown): void {
       type="number"
       :maxlength="11"
       :value="props.form.phone"
-      :status="fieldError('phone') ? 'error' : 'default'"
-      :tips="fieldError('phone')"
+      status="default"
+      tips=""
       @change="changeText('phone', $event)"
     />
   </view>

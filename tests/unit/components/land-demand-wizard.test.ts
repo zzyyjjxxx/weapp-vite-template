@@ -90,6 +90,34 @@ describe('land demand wizard component contract', () => {
     expect(verificationDialog).toContain('content=""')
   })
 
+  it('keeps every TDesign string and array property concrete on first render', () => {
+    const sources = stepFiles.map(file => readFileSync(file, 'utf8')).join('\n')
+    const project = readFileSync(`${componentRoot}/project-info-step.vue`, 'utf8')
+    const basic = readFileSync(`${componentRoot}/basic-info-step.vue`, 'utf8')
+    const verificationDialog = readFileSync(`${componentRoot}/verification-dialog.vue`, 'utf8')
+
+    expect(sources).not.toMatch(/:tips="fieldError\([^)]*\)"/)
+    expect(sources).toContain('const emptyOptions')
+    expect(project).toContain('const industryOptions = ref([...NATIONAL_INDUSTRY_OPTIONS])')
+    expect(project).toContain('filter-placeholder="搜索行业"')
+    expect(project).toContain('const industryNote = ref')
+    expect(basic).toContain('status="default" tips=""')
+    expect(verificationDialog).toContain('status="default"')
+    expect(verificationDialog).toContain('tips=""')
+  })
+
+  it('uses a compact, viewport-safe progress rail and fixed action bar', () => {
+    const progress = readFileSync(`${componentRoot}/wizard-progress.vue`, 'utf8')
+    const actions = readFileSync(`${componentRoot}/wizard-actions.vue`, 'utf8')
+    const page = readFileSync('src/pages/land-demand/index.vue', 'utf8')
+
+    expect(progress).not.toContain('<scroll-view')
+    expect(progress).toContain('flex: 1 1 0')
+    expect(actions).toContain('position: fixed')
+    expect(page).toContain('compact')
+    expect(page).toContain('padding-bottom: 152rpx')
+  })
+
   it('does not recreate a local draft after an explicit server save', () => {
     const source = readFileSync('src/pages/land-demand/index.vue', 'utf8')
 

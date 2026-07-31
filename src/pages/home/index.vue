@@ -39,11 +39,11 @@ async function openLandDemand(): Promise<void> {
 }
 
 async function viewLandDemand(): Promise<void> {
-  await navigate('/pages/land-demand/index', { mode: 'view' })
+  await replace('/pages/land-demand/index', { mode: 'view' })
 }
 
 async function editLandDemand(): Promise<void> {
-  await navigate('/pages/land-demand/index', { mode: 'edit' })
+  await replace('/pages/land-demand/index', { mode: 'edit' })
 }
 
 async function logout(): Promise<void> {
@@ -75,7 +75,7 @@ async function logout(): Promise<void> {
       <image
         class="home__hero-image"
         :src="landPlanningHero"
-        mode="aspectFill"
+        mode="aspectFit"
       />
       <view class="home__hero-shade" />
       <view class="home__hero-content">
@@ -178,16 +178,16 @@ async function logout(): Promise<void> {
 
 .home__hero-image {
   position: absolute;
-  right: -180rpx;
-  bottom: -16rpx;
-  width: 660rpx;
-  height: 370rpx;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.98;
 }
 
 .home__hero-shade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgb(238 246 255 / 100%) 0%, rgb(238 246 255 / 94%) 42%, rgb(238 246 255 / 8%) 84%);
+  background: linear-gradient(90deg, rgb(238 246 255 / 100%) 0%, rgb(238 246 255 / 96%) 38%, rgb(238 246 255 / 12%) 78%, rgb(238 246 255 / 0%) 100%);
 }
 
 .home__hero-content {

@@ -4,7 +4,7 @@ import AppError from '@/components/ui/app-error/index.vue'
 import AppLoading from '@/components/ui/app-loading/index.vue'
 import PageShell from '@/components/ui/page-shell/index.vue'
 import { useLandDemandQuery } from '@/features/land-demand/queries'
-import { navigate, replace } from '@/router/navigation'
+import { replace } from '@/router/navigation'
 import { useProtectedPage } from '@/router/protected-page'
 import { useAuthStore } from '@/stores/auth'
 
@@ -37,7 +37,7 @@ async function backHome(): Promise<void> {
 }
 
 async function viewDetail(): Promise<void> {
-  await navigate('/pages/land-demand/index', { mode: 'view' })
+  await replace('/pages/land-demand/index', { mode: 'view' })
 }
 </script>
 

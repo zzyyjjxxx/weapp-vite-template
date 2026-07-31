@@ -1,18 +1,32 @@
 <script setup lang="ts">
 import type { FieldError, LandDemandForm, YesNo } from '../models'
 
+import { ref } from 'wevu'
 import { readStringArrayDetail, readStringDetail } from '@/platform/event-detail'
-import { LAND_TYPE_OPTIONS } from '../dictionaries/land-types'
-import { PARK_OPTIONS } from '../dictionaries/parks'
 
 const props = defineProps<{ form: LandDemandForm, errors: readonly FieldError[] }>()
 const emit = defineEmits<{ change: [patch: Partial<LandDemandForm>] }>()
 
 defineComponentJson({ component: true })
 
-const yesNoOptions = ['是', '否']
-const parkOptions = PARK_OPTIONS.map(option => ({ ...option }))
-const landTypeOptions = [...LAND_TYPE_OPTIONS]
+const yesNoOptions = ref(['是', '否'])
+const emptyOptions = ref<string[]>([])
+const parkOptions = [
+  { value: '330200', label: '宁波市' },
+  { value: '330203', label: '海曙区' },
+  { value: '330205', label: '江北区' },
+  { value: '330206', label: '北仑区' },
+  { value: '330211', label: '镇海区' },
+  { value: '330212', label: '鄞州区' },
+  { value: '330213', label: '奉化区' },
+  { value: '330225', label: '象山县' },
+  { value: '330226', label: '宁海县' },
+  { value: '330262', label: '高新区' },
+  { value: '330281', label: '余姚市' },
+  { value: '330282', label: '慈溪市' },
+  { value: '3302821', label: '前湾新区' },
+] as const
+const landTypeOptions = ['小微园', '租售型闲置空间', '租售型标准厂房', '以上皆可'] as const
 
 function fieldError(field: keyof LandDemandForm): string {
   return props.errors.find(error => error.field === field)?.message ?? ''
@@ -51,8 +65,8 @@ function changeSpecialUse(detail: unknown): void {
       label="用地面积（亩）"
       type="digit"
       :value="props.form.area"
-      :status="fieldError('area') ? 'error' : 'default'"
-      :tips="fieldError('area')"
+      status="default"
+      tips=""
       @change="changeText('area', $event)"
     />
     <t-input
@@ -60,8 +74,8 @@ function changeSpecialUse(detail: unknown): void {
       label="建筑面积（平方米）"
       type="digit"
       :value="props.form.building_area"
-      :status="fieldError('building_area') ? 'error' : 'default'"
-      :tips="fieldError('building_area')"
+      status="default"
+      tips=""
       @change="changeText('building_area', $event)"
     />
     <view class="field">
@@ -78,8 +92,8 @@ function changeSpecialUse(detail: unknown): void {
       data-testid="expect-time"
       label="预计用地时间（YYYY-MM）"
       :value="props.form.expect_time"
-      :status="fieldError('expect_time') ? 'error' : 'default'"
-      :tips="fieldError('expect_time')"
+      status="default"
+      tips=""
       @change="changeText('expect_time', $event)"
     />
     <view class="field">
@@ -111,8 +125,8 @@ function changeSpecialUse(detail: unknown): void {
       label="层高要求（米，选填）"
       type="digit"
       :value="props.form.deploy_height"
-      :status="fieldError('deploy_height') ? 'error' : 'default'"
-      :tips="fieldError('deploy_height')"
+      status="default"
+      tips=""
       @change="changeText('deploy_height', $event)"
     />
     <t-input
@@ -120,8 +134,8 @@ function changeSpecialUse(detail: unknown): void {
       label="承重要求（吨/平方米，选填）"
       type="digit"
       :value="props.form.deploy_weight"
-      :status="fieldError('deploy_weight') ? 'error' : 'default'"
-      :tips="fieldError('deploy_weight')"
+      status="default"
+      tips=""
       @change="changeText('deploy_weight', $event)"
     />
 
@@ -130,6 +144,7 @@ function changeSpecialUse(detail: unknown): void {
       <t-radio-group
         data-testid="is-specialuse"
         :value="props.form.is_specialuse"
+        :options="emptyOptions"
         @change="changeSpecialUse"
       >
         <t-radio value="是">是</t-radio>

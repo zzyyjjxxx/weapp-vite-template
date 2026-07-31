@@ -51,6 +51,8 @@ function close(): void {
         :maxlength="6"
         :value="props.code"
         :disabled="props.loading"
+        status="default"
+        tips=""
         @change="emit('change', readStringDetail($event))"
       />
       <view data-testid="mock-code" class="verification-dialog__mock">

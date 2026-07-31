@@ -342,7 +342,7 @@ const submitController = createSubmitController({
 })
 
 async function requestVerificationAuthorized(): Promise<void> {
-  feedback.value = ''
+  feedback.value = '正在发送验证码，请稍候…'
   acceptanceError.value = ''
   sendCodeMutation.reset()
   try {
@@ -351,15 +351,18 @@ async function requestVerificationAuthorized(): Promise<void> {
     acceptanceError.value = result.acceptanceError ?? ''
     const target = resolveSubmissionTarget(result.errors)
     if (target) {
+      feedback.value = ''
       goToStep(target)
       return
     }
     if (!result.challenge) {
+      feedback.value = ''
       return
     }
     challenge.value = result.challenge
     verificationCode.value = ''
     verificationError.value = ''
+    feedback.value = '验证码已发送，请在弹窗中完成验证'
   }
   catch {
     feedback.value = sendCodeMutation.error.value?.message ?? '验证码发送失败，请稍后重试'
@@ -389,6 +392,7 @@ async function submitVerificationCodeAuthorized(): Promise<void> {
     return
   }
   verificationError.value = ''
+  feedback.value = '正在核验并提交，请稍候…'
   verifyCodeMutation.reset()
   saveMutation.reset()
   updateMutation.reset()
@@ -399,9 +403,11 @@ async function submitVerificationCodeAuthorized(): Promise<void> {
     )
     store.markPersisted(record)
     challenge.value = undefined
+    feedback.value = ''
     await replace('/pages/land-demand/success')
   }
   catch (error) {
+    feedback.value = ''
     verificationError.value = error instanceof Error
       ? error.message
       : '提交失败，请稍后重试'
@@ -431,6 +437,7 @@ async function editDetail(): Promise<void> {
     :title="viewOnly ? '填报详情' : '用地需求填报'"
     :subtitle="viewOnly ? `${enterpriseName} · 已提交信息` : `${enterpriseName} · 请按实际情况填写`"
     icon="list-check"
+    compact
   >
     <view class="land-demand-page__content">
       <AppLoading v-if="query.isPending || !ready" />
@@ -569,6 +576,14 @@ async function editDetail(): Promise<void> {
   background: rgb(255 255 255 / 68%);
   border: 1rpx solid rgb(217 229 246 / 76%);
   border-radius: $radius-md;
+}
+
+.land-demand-page__content {
+  padding-bottom: 0;
+}
+
+.land-demand-page {
+  padding-bottom: 152rpx;
 }
 
 .land-demand-page__guide-dot {

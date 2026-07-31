@@ -6,6 +6,7 @@ const props = defineProps<{
   title: string
   subtitle?: string
   icon?: AppIconName
+  compact?: boolean
 }>()
 
 defineComponentJson({
@@ -14,7 +15,7 @@ defineComponentJson({
 </script>
 
 <template>
-  <view class="page-shell">
+  <view class="page-shell" :class="{ 'page-shell--compact': props.compact }">
     <view class="page-shell__glow page-shell__glow--left" />
     <view class="page-shell__glow page-shell__glow--right" />
     <view class="page-shell__content">
@@ -157,5 +158,46 @@ defineComponentJson({
 
 .page-shell__body {
   min-height: 480rpx;
+}
+
+.page-shell--compact .page-shell__content {
+  padding-top: 0;
+  padding-bottom: $space-4;
+}
+
+.page-shell--compact .page-shell__header {
+  min-height: 76rpx;
+  padding: $space-2 0 $space-2;
+}
+
+.page-shell--compact .page-shell__icon-wrap {
+  width: 56rpx;
+  height: 56rpx;
+  border-width: 4rpx;
+  border-radius: 18rpx;
+}
+
+.page-shell--compact .page-shell__icon {
+  width: 30rpx;
+  height: 30rpx;
+}
+
+.page-shell--compact .page-shell__eyebrow {
+  display: none;
+}
+
+.page-shell--compact .page-shell__title {
+  font-size: 34rpx;
+  line-height: 1.2;
+}
+
+.page-shell--compact .page-shell__subtitle {
+  margin-top: 4rpx;
+  font-size: 21rpx;
+  line-height: 1.35;
+}
+
+.page-shell--compact .page-shell__body {
+  min-height: 0;
 }
 </style>

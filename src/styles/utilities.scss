@@ -56,12 +56,12 @@
   --td-radio-checked-color: #{$color-primary};
   --td-checkbox-checked-color: #{$color-primary};
 
-  padding: $space-4;
+  padding: $space-3;
   overflow: hidden;
   background: $color-card;
   border: 1rpx solid rgb(217 228 244 / 78%);
-  border-radius: $radius-lg;
-  box-shadow: $shadow-card;
+  border-radius: 24rpx;
+  box-shadow: 0 12rpx 32rpx rgb(38 77 143 / 9%);
 }
 
 .step-card__title,
@@ -73,9 +73,9 @@
   position: relative;
   display: flex;
   align-items: center;
-  min-height: 48rpx;
-  padding-left: $space-3;
-  font-size: 34rpx;
+  min-height: 42rpx;
+  padding-left: $space-2;
+  font-size: 30rpx;
   font-weight: 700;
   line-height: 1.35;
   color: $color-text;
@@ -83,25 +83,25 @@
 
 .step-card__title::before {
   position: absolute;
-  top: 5rpx;
-  bottom: 5rpx;
+  top: 4rpx;
+  bottom: 4rpx;
   left: 0;
-  width: 8rpx;
+  width: 6rpx;
   content: '';
   background: $gradient-primary;
   border-radius: 999rpx;
 }
 
 .step-card__description {
-  padding-left: $space-3;
-  margin: $space-2 0 $space-3;
-  font-size: 24rpx;
-  line-height: 1.65;
+  padding-left: $space-2;
+  margin: $space-1 0 $space-2;
+  font-size: 22rpx;
+  line-height: 1.55;
   color: $color-text-secondary;
 }
 
 .field {
-  padding: $space-3 0;
+  padding: $space-2 0;
   border-bottom: 1rpx solid $color-border-soft;
 }
 
@@ -112,8 +112,8 @@
 }
 
 .field__label {
-  margin-bottom: $space-2;
-  font-size: 28rpx;
+  margin-bottom: $space-1;
+  font-size: 26rpx;
   font-weight: 500;
   color: $color-text;
 }

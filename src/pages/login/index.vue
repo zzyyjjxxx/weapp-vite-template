@@ -94,8 +94,8 @@ async function submit(): Promise<void> {
           :value="username"
           :maxlength="32"
           placeholder="请输入用户名"
-          :status="usernameError ? 'error' : 'default'"
-          :tips="usernameError"
+          status="default"
+          tips=""
           @change="updateUsername"
         />
       </view>
@@ -107,8 +107,8 @@ async function submit(): Promise<void> {
           :value="password"
           :maxlength="64"
           placeholder="请输入密码"
-          :status="passwordError ? 'error' : 'default'"
-          :tips="passwordError"
+          status="default"
+          tips=""
           @change="updatePassword"
         />
       </view>

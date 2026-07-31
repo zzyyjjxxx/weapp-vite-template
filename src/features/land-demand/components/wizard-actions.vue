@@ -55,13 +55,15 @@ defineComponentJson({ component: true })
 @use '@/styles/tokens' as *;
 
 .wizard-actions {
-  position: sticky;
+  position: fixed;
+  right: 0;
   bottom: 0;
+  left: 0;
   z-index: 20;
   display: flex;
   gap: $space-2;
   padding: $space-3 $space-4 calc($space-3 + env(safe-area-inset-bottom));
-  margin: $space-4 (-$space-4) (-$space-6);
+  margin: 0;
   background: rgb(255 255 255 / 96%);
   border-top: 1rpx solid rgb(218 227 241 / 86%);
   box-shadow: 0 -12rpx 36rpx rgb(30 62 112 / 8%);
