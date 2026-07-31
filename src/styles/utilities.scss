@@ -1,12 +1,15 @@
+@use './tokens' as *;
+
 .u-card {
-  padding: 32rpx;
-  background: #fff;
-  border-radius: 24rpx;
-  box-shadow: 0 8rpx 28rpx rgb(29 33 41 / 5%);
+  padding: $space-4;
+  background: $color-card;
+  border: 1rpx solid rgb(217 228 244 / 78%);
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
 }
 
 .u-muted {
-  color: #4e5969;
+  color: $color-text-secondary;
 }
 
 .u-caption {
@@ -16,9 +19,118 @@
 
 .u-button {
   margin: 0;
-  border-radius: 12rpx;
+  border-radius: $radius-md;
 }
 
 .u-button + .u-button {
   margin-top: 16rpx;
+}
+
+.u-section-heading {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 48rpx;
+  padding-left: $space-3;
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 1.35;
+  color: $color-text;
+}
+
+.u-section-heading::before {
+  position: absolute;
+  top: 5rpx;
+  bottom: 5rpx;
+  left: 0;
+  width: 8rpx;
+  content: '';
+  background: $gradient-primary;
+  border-radius: 999rpx;
+}
+
+.step-card {
+  --td-input-bg-color: transparent;
+  --td-input-border-color: #{$color-border-soft};
+  --td-input-placeholder-text-color: #{$color-text-placeholder};
+  --td-radio-checked-color: #{$color-primary};
+  --td-checkbox-checked-color: #{$color-primary};
+
+  padding: $space-4;
+  overflow: hidden;
+  background: $color-card;
+  border: 1rpx solid rgb(217 228 244 / 78%);
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+}
+
+.step-card__title,
+.step-card__description {
+  display: block;
+}
+
+.step-card__title {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 48rpx;
+  padding-left: $space-3;
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 1.35;
+  color: $color-text;
+}
+
+.step-card__title::before {
+  position: absolute;
+  top: 5rpx;
+  bottom: 5rpx;
+  left: 0;
+  width: 8rpx;
+  content: '';
+  background: $gradient-primary;
+  border-radius: 999rpx;
+}
+
+.step-card__description {
+  padding-left: $space-3;
+  margin: $space-2 0 $space-3;
+  font-size: 24rpx;
+  line-height: 1.65;
+  color: $color-text-secondary;
+}
+
+.field {
+  padding: $space-3 0;
+  border-bottom: 1rpx solid $color-border-soft;
+}
+
+.field__label,
+.field__selection,
+.field__error {
+  display: block;
+}
+
+.field__label {
+  margin-bottom: $space-2;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: $color-text;
+}
+
+.field__selection {
+  padding: $space-2;
+  margin-top: $space-2;
+  font-size: 24rpx;
+  line-height: 1.5;
+  color: $color-primary;
+  background: $color-primary-faint;
+  border-radius: $radius-sm;
+}
+
+.field__error {
+  margin-top: $space-1;
+  font-size: 24rpx;
+  line-height: 1.5;
+  color: $color-error;
 }

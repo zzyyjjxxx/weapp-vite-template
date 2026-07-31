@@ -1,18 +1,25 @@
+@use './tokens' as *;
+
 page {
   box-sizing: border-box;
   min-height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-  color: #1d2129;
-  background: #f5f7fa;
+  color: $color-text;
+  background: $gradient-page;
 }
 
 view,
 text,
 button,
-input {
+input,
+textarea {
   box-sizing: border-box;
 }
 
 button {
   line-height: 1.4;
+}
+
+button::after {
+  border: 0;
 }

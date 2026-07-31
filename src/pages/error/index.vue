@@ -17,9 +17,8 @@ async function goHome(): Promise<void> {
     subtitle="当前页面无法完成请求"
   >
     <view class="error-page u-card">
-      <text class="error-page__code">
-        404
-      </text>
+      <view class="error-page__mark">!</view>
+      <text class="error-page__title">页面暂时不可用</text>
       <text class="error-page__message">
         你可以返回首页，或稍后重新打开业务页面。
       </text>
@@ -40,10 +39,25 @@ async function goHome(): Promise<void> {
   text-align: center;
 }
 
-.error-page__code {
-  font-size: 96rpx;
-  font-weight: 800;
+.error-page__mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 110rpx;
+  height: 110rpx;
+  font-size: 52rpx;
+  font-weight: 700;
   color: $color-primary;
+  background: $color-primary-soft;
+  border: 8rpx solid #dceaff;
+  border-radius: 50%;
+}
+
+.error-page__title {
+  margin-top: $space-3;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: $color-text;
 }
 
 .error-page__message {
@@ -57,8 +71,9 @@ async function goHome(): Promise<void> {
   width: 100%;
   margin-top: $space-4;
   color: #fff;
-  background: $color-primary;
+  background: $gradient-primary;
   border: 0;
-  border-radius: $radius-sm;
+  border-radius: $radius-md;
+  box-shadow: $shadow-button;
 }
 </style>

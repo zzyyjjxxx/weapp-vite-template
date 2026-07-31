@@ -428,8 +428,8 @@ async function editDetail(): Promise<void> {
 <template>
   <PageShell
     v-if="authorized"
-    title="用地需求填报"
-    :subtitle="enterpriseName"
+    :title="viewOnly ? '填报详情' : '用地需求填报'"
+    :subtitle="viewOnly ? `${enterpriseName} · 已提交信息` : `${enterpriseName} · 请按实际情况填写`"
     icon="list-check"
   >
     <AppLoading v-if="query.isPending || !ready" />
@@ -440,7 +440,11 @@ async function editDetail(): Promise<void> {
     />
     <view v-else class="land-demand-page">
       <WizardProgress v-if="!viewOnly" :current-step="currentStep" />
-      <scroll-view class="land-demand-page__form" scroll-y>
+      <view v-if="!viewOnly" class="land-demand-page__guide">
+        <view class="land-demand-page__guide-dot" />
+        <text>当前第 {{ currentStep }} 步，共 5 步；切换步骤时会保留本地编辑内容</text>
+      </view>
+      <view class="land-demand-page__form">
         <BasicInfoStep
           v-if="currentStep === 1"
           :form="form"
@@ -494,7 +498,7 @@ async function editDetail(): Promise<void> {
             修改填报
           </t-button>
         </view>
-      </scroll-view>
+      </view>
 
       <text v-if="feedback" class="land-demand-page__feedback">{{ feedback }}</text>
       <text v-if="mutationError" class="land-demand-page__error">{{ mutationError }}</text>
@@ -545,8 +549,26 @@ async function editDetail(): Promise<void> {
 <style lang="scss">
 @use '@/styles/tokens' as *;
 
-.land-demand-page__form {
-  max-height: calc(100vh - 420rpx);
+.land-demand-page__guide {
+  display: flex;
+  align-items: flex-start;
+  padding: $space-2 $space-3;
+  margin: -$space-2 0 $space-3;
+  font-size: 22rpx;
+  line-height: 1.55;
+  color: $color-text-secondary;
+  background: rgb(255 255 255 / 68%);
+  border: 1rpx solid rgb(217 229 246 / 76%);
+  border-radius: $radius-md;
+}
+
+.land-demand-page__guide-dot {
+  flex: 0 0 auto;
+  width: 10rpx;
+  height: 10rpx;
+  margin: 12rpx 12rpx 0 0;
+  background: $color-primary;
+  border-radius: 50%;
 }
 
 .land-demand-page__feedback,
@@ -557,21 +579,29 @@ async function editDetail(): Promise<void> {
 .land-demand-page__detail-actions {
   display: flex;
   gap: $space-2;
-  margin-top: $space-3;
+  padding: $space-3;
+  margin-top: $space-4;
+  background: $color-card;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
 }
 
 .land-demand-page__feedback,
 .land-demand-page__error {
-  margin-top: $space-2;
+  padding: $space-2;
+  margin-top: $space-3;
   font-size: 24rpx;
   text-align: center;
+  border-radius: $radius-md;
 }
 
 .land-demand-page__feedback {
   color: $color-success;
+  background: $color-success-soft;
 }
 
 .land-demand-page__error {
   color: $color-error;
+  background: $color-error-soft;
 }
 </style>

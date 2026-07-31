@@ -43,7 +43,8 @@ function changeSpecialUse(detail: unknown): void {
 
 <template>
   <view class="step-card">
-    <text class="step-card__title">用地信息</text>
+    <text class="step-card__title">用地需求</text>
+    <text class="step-card__description">请填写项目所需空间、时间与调剂意向，选填项可按实际情况补充。</text>
 
     <t-input
       data-testid="area"
@@ -148,50 +149,3 @@ function changeSpecialUse(detail: unknown): void {
     </view>
   </view>
 </template>
-
-<style lang="scss">
-@use '@/styles/tokens' as *;
-
-.step-card {
-  padding: $space-4;
-  background: $color-card;
-  border-radius: $radius-md;
-}
-
-.step-card__title,
-.field__label,
-.field__selection,
-.field__error {
-  display: block;
-}
-
-.step-card__title {
-  margin-bottom: $space-3;
-  font-size: 34rpx;
-  font-weight: 700;
-  color: $color-text;
-}
-
-.field {
-  padding: $space-3 0;
-  border-bottom: 1rpx solid $color-border;
-}
-
-.field__label {
-  margin-bottom: $space-2;
-  font-size: 28rpx;
-  color: $color-text;
-}
-
-.field__error {
-  margin-top: $space-1;
-  font-size: 24rpx;
-  color: $color-error;
-}
-
-.field__selection {
-  margin-top: $space-1;
-  font-size: 24rpx;
-  color: $color-text-secondary;
-}
-</style>

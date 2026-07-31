@@ -38,7 +38,8 @@ function changeIndustry(detail: unknown): void {
 
 <template>
   <view class="step-card">
-    <text class="step-card__title">项目信息</text>
+    <text class="step-card__title">投资项目</text>
+    <text class="step-card__description">请按项目实际情况填写投资、行业、产出和建设内容等核心指标。</text>
     <t-input
       data-testid="investment"
       label="固定资产投资额（万元）"
@@ -138,45 +139,7 @@ function changeIndustry(detail: unknown): void {
 </template>
 
 <style lang="scss">
-@use '@/styles/tokens' as *;
-
-.step-card {
-  padding: $space-4;
-  background: $color-card;
-  border-radius: $radius-md;
-}
-
-.step-card__title,
-.field__label,
-.field__error {
-  display: block;
-}
-
-.step-card__title {
-  margin-bottom: $space-3;
-  font-size: 34rpx;
-  font-weight: 700;
-  color: $color-text;
-}
-
-.field {
-  padding: $space-3 0;
-  border-bottom: 1rpx solid $color-border;
-}
-
 .field--selector {
   padding-top: 0;
-}
-
-.field__label {
-  margin-bottom: $space-2;
-  font-size: 28rpx;
-  color: $color-text;
-}
-
-.field__error {
-  margin-top: $space-1;
-  font-size: 24rpx;
-  color: $color-error;
 }
 </style>

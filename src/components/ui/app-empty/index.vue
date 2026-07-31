@@ -14,6 +14,7 @@ defineComponentJson({
 
 <template>
   <view class="state state--empty">
+    <view class="state__mark">—</view>
     <text class="state__title">
       {{ props.title }}
     </text>
@@ -34,6 +35,23 @@ defineComponentJson({
   min-height: 240rpx;
   padding: $space-4;
   text-align: center;
+  background: rgb(255 255 255 / 86%);
+  border: 1rpx solid rgb(218 228 243 / 78%);
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+}
+
+.state__mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72rpx;
+  height: 72rpx;
+  margin-bottom: $space-2;
+  font-size: 32rpx;
+  color: $color-primary;
+  background: $color-primary-soft;
+  border-radius: 50%;
 }
 
 .state__title {

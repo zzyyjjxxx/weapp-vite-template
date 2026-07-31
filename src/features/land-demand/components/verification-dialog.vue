@@ -39,6 +39,7 @@ function close(): void {
     @close="close"
   >
     <view class="verification-dialog">
+      <view class="verification-dialog__mark">验</view>
       <text class="verification-dialog__copy">
         验证码已发送至 {{ challengePhone }}
       </text>
@@ -89,9 +90,25 @@ function close(): void {
   line-height: 1.5;
 }
 
+.verification-dialog__mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72rpx;
+  height: 72rpx;
+  margin: 0 auto $space-2;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #fff;
+  background: $gradient-primary;
+  border-radius: 22rpx;
+  box-shadow: $shadow-button;
+}
+
 .verification-dialog__copy {
   margin-bottom: $space-2;
   color: $color-text-secondary;
+  text-align: center;
 }
 
 .verification-dialog__mock {
@@ -101,8 +118,9 @@ function close(): void {
   margin-top: $space-2;
   font-size: 24rpx;
   color: $color-primary;
-  background: $color-primary-soft;
-  border-radius: $radius-sm;
+  background: $color-primary-faint;
+  border: 1rpx solid #deebff;
+  border-radius: $radius-md;
 }
 
 .verification-dialog__error {

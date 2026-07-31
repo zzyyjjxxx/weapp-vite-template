@@ -21,13 +21,27 @@ defineComponentJson({ component: true })
 
 <template>
   <view class="review-step">
+    <view class="review-step__overview">
+      <view class="review-step__overview-mark">✓</view>
+      <view>
+        <text class="review-step__overview-title">
+          {{ props.readonly ? '已提交信息' : '请确认填报信息' }}
+        </text>
+        <text class="review-step__overview-copy">
+          {{ props.readonly ? '以下内容为当前企业已提交的用地需求' : '请逐项核对，发现问题可返回对应步骤修改' }}
+        </text>
+      </view>
+    </view>
     <view
-      v-for="group in buildReviewGroups(props.form)"
+      v-for="(group, groupIndex) in buildReviewGroups(props.form)"
       :key="group.step"
       class="review-step__group u-card"
     >
       <view class="review-step__heading">
-        <text class="review-step__title">{{ group.title }}</text>
+        <view class="review-step__heading-copy">
+          <text class="review-step__number">{{ groupIndex + 1 }}</text>
+          <text class="review-step__title">{{ group.title }}</text>
+        </view>
         <t-button
           v-if="!props.readonly"
           size="small"
@@ -45,6 +59,7 @@ defineComponentJson({ component: true })
     </view>
 
     <view v-if="!props.readonly" class="review-step__promise u-card">
+      <text class="review-step__promise-title">真实性承诺</text>
       <t-checkbox
         data-testid="review-accept"
         :checked="props.accepted"
@@ -78,6 +93,50 @@ defineComponentJson({ component: true })
   padding: $space-4;
 }
 
+.review-step__overview {
+  display: flex;
+  gap: $space-3;
+  align-items: center;
+  padding: $space-4;
+  margin-bottom: $space-3;
+  color: #fff;
+  background: $gradient-primary;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-button;
+}
+
+.review-step__overview-mark {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 64rpx;
+  height: 64rpx;
+  font-size: 34rpx;
+  font-weight: 700;
+  background: rgb(255 255 255 / 18%);
+  border: 2rpx solid rgb(255 255 255 / 42%);
+  border-radius: 50%;
+}
+
+.review-step__overview-title,
+.review-step__overview-copy,
+.review-step__promise-title {
+  display: block;
+}
+
+.review-step__overview-title {
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.review-step__overview-copy {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: rgb(255 255 255 / 82%);
+}
+
 .review-step__group + .review-step__group,
 .review-step__promise {
   margin-top: $space-3;
@@ -91,15 +150,39 @@ defineComponentJson({ component: true })
   justify-content: space-between;
 }
 
+.review-step__heading {
+  padding-bottom: $space-2;
+  border-bottom: 1rpx solid $color-border-soft;
+}
+
+.review-step__heading-copy {
+  display: flex;
+  align-items: center;
+}
+
+.review-step__number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42rpx;
+  height: 42rpx;
+  margin-right: $space-2;
+  font-size: 21rpx;
+  font-weight: 700;
+  color: $color-primary;
+  background: $color-primary-soft;
+  border-radius: 14rpx;
+}
+
 .review-step__title {
-  font-size: 32rpx;
+  font-size: 30rpx;
   font-weight: 700;
   color: $color-text;
 }
 
 .review-step__item {
-  padding: $space-2 0;
-  border-bottom: 1rpx solid $color-border;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid $color-border-soft;
 }
 
 .review-step__label,
@@ -115,6 +198,7 @@ defineComponentJson({ component: true })
 }
 
 .review-step__value {
+  flex: 1;
   color: $color-text;
   text-align: right;
   overflow-wrap: anywhere;
@@ -128,5 +212,15 @@ defineComponentJson({ component: true })
 
 .review-step__submit {
   margin-top: $space-3;
+  overflow: hidden;
+  border-radius: $radius-md;
+  box-shadow: $shadow-button;
+}
+
+.review-step__promise-title {
+  margin-bottom: $space-3;
+  font-size: 29rpx;
+  font-weight: 700;
+  color: $color-text;
 }
 </style>

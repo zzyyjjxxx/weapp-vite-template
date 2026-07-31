@@ -57,15 +57,23 @@ defineComponentJson({ component: true })
 .wizard-actions {
   position: sticky;
   bottom: 0;
-  z-index: 10;
+  z-index: 20;
   display: flex;
   gap: $space-2;
-  padding: $space-3 0 calc($space-3 + env(safe-area-inset-bottom));
-  margin-top: $space-3;
-  background: $color-page;
+  padding: $space-3 $space-4 calc($space-3 + env(safe-area-inset-bottom));
+  margin: $space-4 (-$space-4) (-$space-6);
+  background: rgb(255 255 255 / 96%);
+  border-top: 1rpx solid rgb(218 227 241 / 86%);
+  box-shadow: 0 -12rpx 36rpx rgb(30 62 112 / 8%);
 }
 
 .wizard-actions__button {
   flex: 1;
+  overflow: hidden;
+  border-radius: $radius-md;
+}
+
+.wizard-actions__button:last-child {
+  box-shadow: $shadow-button;
 }
 </style>

@@ -23,7 +23,8 @@ function changeFinancing(detail: unknown): void {
 
 <template>
   <view class="step-card">
-    <text class="step-card__title">融资与联系人</text>
+    <text class="step-card__title">融资及联系人</text>
+    <text class="step-card__description">融资需求默认选择“没有”；如选择“有”，请补充金额和期望时间。</text>
     <view class="field">
       <text class="field__label">是否有融资需求</text>
       <t-radio-group
@@ -95,43 +96,3 @@ function changeFinancing(detail: unknown): void {
     />
   </view>
 </template>
-
-<style lang="scss">
-@use '@/styles/tokens' as *;
-
-.step-card {
-  padding: $space-4;
-  background: $color-card;
-  border-radius: $radius-md;
-}
-
-.step-card__title,
-.field__label,
-.field__error {
-  display: block;
-}
-
-.step-card__title {
-  margin-bottom: $space-3;
-  font-size: 34rpx;
-  font-weight: 700;
-  color: $color-text;
-}
-
-.field {
-  padding: $space-3 0;
-  border-bottom: 1rpx solid $color-border;
-}
-
-.field__label {
-  margin-bottom: $space-2;
-  font-size: 28rpx;
-  color: $color-text;
-}
-
-.field__error {
-  margin-top: $space-1;
-  font-size: 24rpx;
-  color: $color-error;
-}
-</style>
