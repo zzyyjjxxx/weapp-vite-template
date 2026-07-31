@@ -8,6 +8,7 @@ import './manager'
 export const useAuthStore = defineStore('auth', () => {
   const session = ref<AuthSession | null>(null)
   const initialized = ref(false)
+  const sessionClearRevision = ref(0)
 
   // Reactive presentation state only. Authorization decisions must call
   // ensureActiveSession(), which evaluates expiration against a fresh clock.
@@ -38,6 +39,7 @@ export const useAuthStore = defineStore('auth', () => {
   function clearSession(): void {
     clearPrivateQueryCaches()
     session.value = null
+    sessionClearRevision.value += 1
   }
 
   function isSessionActive(now = Date.now()): boolean {
@@ -62,6 +64,7 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     session,
     initialized,
+    sessionClearRevision,
     isAuthenticated,
     enterprise,
     isSessionActive,

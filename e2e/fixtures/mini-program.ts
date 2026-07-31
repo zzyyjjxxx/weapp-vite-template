@@ -1,16 +1,18 @@
 import type { MiniProgramLike } from 'weapp-ide-cli'
 import type { MiniProgramDriver } from '../support/mini-program-driver'
 
+import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { test as base } from '@playwright/test'
-import {
-  quitWechatIde,
-  resolveProjectAutomatorPort,
-} from 'weapp-ide-cli'
+import { resolveProjectAutomatorPort } from 'weapp-ide-cli'
 import { createMiniProgramDriver } from '../support/mini-program-driver'
 
 const PROJECT_PATH = fileURLToPath(new URL('../../', import.meta.url))
-const AUTOMATOR_PORT = resolveProjectAutomatorPort(PROJECT_PATH)
+const configuredAutomatorPort = Number(process.env.WEAPP_E2E_AUTOMATOR_PORT)
+const AUTOMATOR_PORT = Number.isInteger(configuredAutomatorPort)
+  && configuredAutomatorPort > 0
+  ? configuredAutomatorPort
+  : resolveProjectAutomatorPort(PROJECT_PATH)
 const AUTOMATOR_ENDPOINT = `ws://127.0.0.1:${AUTOMATOR_PORT}`
 
 const VERSION_COMPATIBILITY_PATCH = Symbol.for('land-demand.e2e.automator-version-compatibility')
@@ -64,17 +66,27 @@ interface WorkerFixtures {
 export const test = base.extend<Record<never, never>, WorkerFixtures>({
   miniProgram: [async ({ playwright: _playwright }, use) => {
     const automator = await loadCompatibleAutomator()
-    const miniProgram = await new automator.Launcher().connect({
+    let miniProgram = await new automator.Launcher().connect({
       timeout: 90_000,
       wsEndpoint: AUTOMATOR_ENDPOINT,
     })
 
     try {
-      await use(createMiniProgramDriver(miniProgram))
+      await use(createMiniProgramDriver(miniProgram, {
+        reconnect: async () => {
+          miniProgram.disconnect()
+          await new Promise(resolve => setTimeout(resolve, 1_500))
+          miniProgram = await new automator.Launcher().connect({
+            timeout: 90_000,
+            wsEndpoint: AUTOMATOR_ENDPOINT,
+          })
+          await miniProgram.waitForAppReady(30_000)
+          return miniProgram
+        },
+      }))
     }
     finally {
       miniProgram.disconnect()
-      await quitWechatIde().catch(() => undefined)
     }
   }, { scope: 'worker', timeout: 120_000 }],
 })

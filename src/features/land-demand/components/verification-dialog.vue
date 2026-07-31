@@ -33,6 +33,7 @@ function close(): void {
   <t-dialog
     :visible="props.visible"
     title="法人手机号验证"
+    content=""
     :close-on-overlay-click="false"
     :confirm-btn="false"
     :cancel-btn="false"

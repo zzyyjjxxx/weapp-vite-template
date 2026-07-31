@@ -127,11 +127,11 @@ watchEffect(() => {
   }
 
   if (viewOnly.value) {
-    store.initialize(profile, query.data.value)
+    store.initialize(profile, query.data.value ?? undefined)
     store.goToStep(5)
   }
   else {
-    store.initializeFromLocalDraft(profile, query.data.value)
+    store.initializeFromLocalDraft(profile, query.data.value ?? undefined)
   }
   initialized = true
   ready.value = true
@@ -432,117 +432,126 @@ async function editDetail(): Promise<void> {
     :subtitle="viewOnly ? `${enterpriseName} · 已提交信息` : `${enterpriseName} · 请按实际情况填写`"
     icon="list-check"
   >
-    <AppLoading v-if="query.isPending || !ready" />
-    <AppError
-      v-else-if="query.isError"
-      title="填报信息加载失败"
-      :message="queryErrorMessage"
-    />
-    <view v-else class="land-demand-page">
-      <WizardProgress v-if="!viewOnly" :current-step="currentStep" />
-      <view v-if="!viewOnly" class="land-demand-page__guide">
-        <view class="land-demand-page__guide-dot" />
-        <text>当前第 {{ currentStep }} 步，共 5 步；切换步骤时会保留本地编辑内容</text>
-      </view>
-      <view class="land-demand-page__form">
-        <BasicInfoStep
-          v-if="currentStep === 1"
-          :form="form"
-          :errors="errors"
-          @change="changeForm"
-        />
-        <LandInfoStep
-          v-else-if="currentStep === 2"
-          :form="form"
-          :errors="errors"
-          @change="changeForm"
-        />
-        <ProjectInfoStep
-          v-else-if="currentStep === 3"
-          :form="form"
-          :errors="errors"
-          @change="changeForm"
-        />
-        <FinanceContactStep
-          v-else-if="currentStep === 4"
-          :form="form"
-          :errors="errors"
-          @change="changeForm"
-        />
-        <ReviewStep
-          v-else
-          :form="form"
-          :accepted="accepted"
-          :acceptance-error="acceptanceError"
-          :submitting="submitting"
-          :readonly="viewOnly"
-          @edit="goToStep"
-          @accept="setAccepted"
-          @submit="requestVerification"
-        />
-        <view v-if="viewOnly" class="land-demand-page__detail-actions">
-          <t-button
-            data-testid="detail-back-home"
-            theme="default"
-            block
-            @tap="backToHome"
-          >
-            返回首页
-          </t-button>
-          <t-button
-            data-testid="detail-edit"
-            theme="primary"
-            block
-            @tap="editDetail"
-          >
-            修改填报
-          </t-button>
+    <view class="land-demand-page__content">
+      <AppLoading v-if="query.isPending || !ready" />
+      <AppError
+        v-else-if="query.isError"
+        title="填报信息加载失败"
+        :message="queryErrorMessage"
+      />
+      <view v-else class="land-demand-page">
+        <WizardProgress v-if="!viewOnly" :current-step="currentStep || 1" />
+        <view v-if="!viewOnly" class="land-demand-page__guide">
+          <view class="land-demand-page__guide-dot" />
+          <text>当前第 {{ currentStep }} 步，共 5 步；切换步骤时会保留本地编辑内容</text>
         </view>
+        <view class="land-demand-page__form">
+          <BasicInfoStep
+            v-if="currentStep === 1"
+            id="basic-info-step"
+            :form="form"
+            :errors="errors"
+            @change="changeForm"
+          />
+          <LandInfoStep
+            v-else-if="currentStep === 2"
+            id="land-info-step"
+            :form="form"
+            :errors="errors"
+            @change="changeForm"
+          />
+          <ProjectInfoStep
+            v-else-if="currentStep === 3"
+            id="project-info-step"
+            :form="form"
+            :errors="errors"
+            @change="changeForm"
+          />
+          <FinanceContactStep
+            v-else-if="currentStep === 4"
+            id="finance-contact-step"
+            :form="form"
+            :errors="errors"
+            @change="changeForm"
+          />
+          <ReviewStep
+            v-else
+            id="review-step"
+            :form="form"
+            :accepted="accepted"
+            :acceptance-error="acceptanceError || ''"
+            :submitting="submitting"
+            :readonly="viewOnly"
+            @edit="goToStep"
+            @accept="setAccepted"
+            @submit="requestVerification"
+          />
+          <view v-if="viewOnly" class="land-demand-page__detail-actions">
+            <t-button
+              data-testid="detail-back-home"
+              theme="default"
+              block
+              @tap="backToHome"
+            >
+              返回首页
+            </t-button>
+            <t-button
+              data-testid="detail-edit"
+              theme="primary"
+              block
+              @tap="editDetail"
+            >
+              修改填报
+            </t-button>
+          </view>
+        </view>
+
+        <text v-if="feedback" class="land-demand-page__feedback">{{ feedback }}</text>
+        <text v-if="mutationError" class="land-demand-page__error">{{ mutationError }}</text>
+        <WizardActions
+          v-if="!viewOnly"
+          id="wizard-actions"
+          :current-step="currentStep || 1"
+          :saving="saving"
+          @previous="goPrevious"
+          @save="saveDraft"
+          @next="goNext"
+        />
       </view>
 
-      <text v-if="feedback" class="land-demand-page__feedback">{{ feedback }}</text>
-      <text v-if="mutationError" class="land-demand-page__error">{{ mutationError }}</text>
-      <WizardActions
-        v-if="!viewOnly"
-        :current-step="currentStep"
-        :saving="saving"
-        @previous="goPrevious"
-        @save="saveDraft"
-        @next="goNext"
+      <t-dialog
+        data-testid="destructive-clear-dialog"
+        :visible="clearDialogVisible"
+        title="确认清空已有内容"
+        :content="clearDialogContent || ''"
+        cancel-btn="取消"
+        :confirm-btn="false"
+        :close-on-overlay-click="false"
+        @cancel="cancelDestructiveClear"
+        @close="cancelDestructiveClear"
+      >
+        <template #confirm-btn>
+          <t-button
+            data-testid="destructive-clear-confirm"
+            theme="primary"
+            @tap="confirmDestructiveClear"
+          >
+            继续
+          </t-button>
+        </template>
+      </t-dialog>
+      <VerificationDialog
+        id="verification-dialog"
+        :visible="verificationVisible"
+        :challenge="challenge"
+        :code="verificationCode || ''"
+        :loading="submitting"
+        :error="verificationError || ''"
+        @change="verificationCode = $event"
+        @close="closeVerification"
+        @submit="submitVerificationCode"
       />
     </view>
-
-    <t-dialog
-      data-testid="destructive-clear-dialog"
-      :visible="clearDialogVisible"
-      title="确认清空已有内容"
-      :content="clearDialogContent"
-      cancel-btn="取消"
-      :confirm-btn="false"
-      :close-on-overlay-click="false"
-      @cancel="cancelDestructiveClear"
-      @close="cancelDestructiveClear"
-    >
-      <template #confirm-btn>
-        <t-button
-          data-testid="destructive-clear-confirm"
-          theme="primary"
-          @tap="confirmDestructiveClear"
-        >
-          继续
-        </t-button>
-      </template>
-    </t-dialog>
-    <VerificationDialog
-      :visible="verificationVisible"
-      :challenge="challenge"
-      :code="verificationCode"
-      :loading="submitting"
-      :error="verificationError"
-      @change="verificationCode = $event"
-      @close="closeVerification"
-      @submit="submitVerificationCode"
-    />
   </PageShell>
 </template>
 

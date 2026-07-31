@@ -8,7 +8,7 @@ test.describe.serial('企业用地需求填报', () => {
   test('logs in, saves a draft and restores it', async ({ miniProgram }) => {
     await miniProgram.relaunch('/pages/login/index')
     await miniProgram.clearStorage()
-    await miniProgram.relaunch('/pages/login/index')
+    await miniProgram.restart('/pages/login/index')
     await miniProgram.screenshot('.tmp/e2e-login.png')
     await miniProgram.getByTestId('username').fill('demo')
     await miniProgram.getByTestId('password').fill('demo123')
@@ -21,20 +21,20 @@ test.describe.serial('企业用地需求填报', () => {
     await miniProgram.relaunch('/pages/home/index')
     await miniProgram.getByTestId('land-demand-primary').tap()
     await miniProgram.getByTestId('next-step').tap()
-    expect(await miniProgram.getByTestId('area').text()).toContain('30')
+    await expect.poll(() => miniProgram.getByTestId('area').text()).toContain('30')
   })
 
   test('restores an authenticated session after a cold relaunch', async ({ miniProgram }) => {
     await miniProgram.restart('/pages/home/index')
     await miniProgram.expectPath('/pages/home/index')
-    expect(await miniProgram.getByTestId('land-demand-status').text()).toContain('草稿')
+    await expect.poll(() => miniProgram.getByTestId('land-demand-status').text()).toContain('草稿')
     await miniProgram.getByTestId('land-demand-primary').tap()
   })
 
   test('keeps height while changing other-land acceptance', async ({ miniProgram }) => {
     await miniProgram.getByTestId('deploy-height').fill('8')
     await miniProgram.getByTestId('is-specialuse-no').tap()
-    expect(await miniProgram.getByTestId('deploy-height').text()).toContain('8')
+    await expect.poll(() => miniProgram.getByTestId('deploy-height').text()).toContain('8')
   })
 
   test('keeps only Ningbo after selecting a district and then the whole city', async ({ miniProgram }) => {
@@ -45,7 +45,7 @@ test.describe.serial('企业用地需求填报', () => {
     await miniProgram.getByTestId('deploy-park').fill('["330203"]')
     await miniProgram.getByTestId('deploy-park').fill('["330203","330200"]')
 
-    expect(await miniProgram.getByTestId('deploy-park-selection').text()).toBe('宁波市')
+    await expect.poll(() => miniProgram.getByTestId('deploy-park-selection').text()).toBe('宁波市')
   })
 
   test('restores the selected national industry leaf', async ({ miniProgram }) => {
@@ -67,14 +67,14 @@ test.describe.serial('企业用地需求填报', () => {
     await miniProgram.getByTestId('next-step').tap()
     await miniProgram.getByTestId('next-step').tap()
 
-    expect(await miniProgram.getByTestId('project-hydm').text()).toContain('运动机织服装制造（1811）')
+    await expect.poll(() => miniProgram.getByTestId('project-hydm').text()).toContain('运动机织服装制造（1811）')
   })
 
   test('resets direction when the industry track changes', async ({ miniProgram }) => {
     await miniProgram.getByTestId('keyindustry').fill('生物医药')
     await miniProgram.getByTestId('destructive-clear-confirm').tap()
 
-    expect(await miniProgram.getByTestId('futureindustry').text()).toBe('')
+    await expect.poll(() => miniProgram.getByTestId('futureindustry').text()).toBe('')
   })
 
   test('requires financing details only when financing is 有', async ({ miniProgram }) => {
@@ -95,12 +95,12 @@ test.describe.serial('企业用地需求填报', () => {
     await miniProgram.screenshot('.tmp/e2e-review.png')
     await miniProgram.getByTestId('review-accept').tap()
     await miniProgram.getByTestId('review-submit').tap()
-    expect(await miniProgram.getByTestId('mock-code').text()).toContain('123456')
+    await expect.poll(() => miniProgram.getByTestId('mock-code').text()).toContain('123456')
     await miniProgram.getByTestId('verification-code').fill('123456')
     await miniProgram.getByTestId('verification-submit').tap()
     await miniProgram.expectPath('/pages/land-demand/success')
     await miniProgram.getByTestId('back-home').tap()
-    expect(await miniProgram.getByTestId('land-demand-status').text()).toContain('已提交')
+    await expect.poll(() => miniProgram.getByTestId('land-demand-status').text()).toContain('已提交')
     await miniProgram.getByTestId('land-demand-view').tap()
     await miniProgram.getByTestId('detail-back-home').expectVisible()
     await miniProgram.getByTestId('detail-back-home').tap()
@@ -112,9 +112,9 @@ test.describe.serial('企业用地需求填报', () => {
     await miniProgram.getByTestId('area').fill('31')
     await miniProgram.getByTestId('save-draft').tap()
     await miniProgram.relaunch('/pages/home/index')
-    expect(await miniProgram.getByTestId('land-demand-status').text()).toContain('草稿')
+    await expect.poll(() => miniProgram.getByTestId('land-demand-status').text()).toContain('草稿')
     await miniProgram.getByTestId('land-demand-primary').tap()
     await miniProgram.getByTestId('next-step').tap()
-    expect(await miniProgram.getByTestId('area').text()).toContain('31')
+    await expect.poll(() => miniProgram.getByTestId('area').text()).toContain('31')
   })
 })

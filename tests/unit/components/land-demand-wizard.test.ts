@@ -78,6 +78,18 @@ describe('land demand wizard component contract', () => {
     expect(source).toContain('data-testid="destructive-clear-confirm"')
   })
 
+  it('never passes transient null values into typed mini-program component properties', () => {
+    const page = readFileSync('src/pages/land-demand/index.vue', 'utf8')
+    const verificationDialog = readFileSync(`${componentRoot}/verification-dialog.vue`, 'utf8')
+
+    expect(page.match(/:current-step="currentStep \|\| 1"/g)).toHaveLength(2)
+    expect(page).toContain(':acceptance-error="acceptanceError || \'\'"')
+    expect(page).toContain(':content="clearDialogContent || \'\'"')
+    expect(page).toContain(':code="verificationCode || \'\'"')
+    expect(page).toContain(':error="verificationError || \'\'"')
+    expect(verificationDialog).toContain('content=""')
+  })
+
   it('does not recreate a local draft after an explicit server save', () => {
     const source = readFileSync('src/pages/land-demand/index.vue', 'utf8')
 

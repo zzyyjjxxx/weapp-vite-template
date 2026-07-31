@@ -48,51 +48,53 @@ async function viewDetail(): Promise<void> {
     :subtitle="submitted ? '用地需求已提交' : '正在核验提交结果'"
     icon="list-check"
   >
-    <AppLoading v-if="query.isPending" />
-    <AppError
-      v-else-if="query.isError"
-      title="提交结果加载失败"
-      :message="queryErrorMessage"
-    />
-    <view v-else-if="submitted" data-testid="submit-success" class="u-card land-demand-success__notice">
-      <view class="land-demand-success__mark">
-        <text>✓</text>
-      </view>
-      <text class="land-demand-success__status">填报提交成功</text>
-      <text class="land-demand-success__description">您的企业用地需求已进入服务流程，请留意后续联系。</text>
-      <view class="land-demand-success__detail">
-        <view class="land-demand-success__row">
-          <text class="land-demand-success__label">企业名称</text>
-          <text class="land-demand-success__copy">{{ recordBusinessName }}</text>
+    <view class="land-demand-success">
+      <AppLoading v-if="query.isPending" />
+      <AppError
+        v-else-if="query.isError"
+        title="提交结果加载失败"
+        :message="queryErrorMessage"
+      />
+      <view v-else-if="submitted" data-testid="submit-success" class="u-card land-demand-success__notice">
+        <view class="land-demand-success__mark">
+          <text>✓</text>
         </view>
-        <view class="land-demand-success__row">
-          <text class="land-demand-success__label">提交时间</text>
-          <text class="land-demand-success__copy">{{ recordUpdateTime }}</text>
+        <text class="land-demand-success__status">填报提交成功</text>
+        <text class="land-demand-success__description">您的企业用地需求已进入服务流程，请留意后续联系。</text>
+        <view class="land-demand-success__detail">
+          <view class="land-demand-success__row">
+            <text class="land-demand-success__label">企业名称</text>
+            <text class="land-demand-success__copy">{{ recordBusinessName }}</text>
+          </view>
+          <view class="land-demand-success__row">
+            <text class="land-demand-success__label">提交时间</text>
+            <text class="land-demand-success__copy">{{ recordUpdateTime }}</text>
+          </view>
+          <view class="land-demand-success__row">
+            <text class="land-demand-success__label">当前状态</text>
+            <text class="land-demand-success__badge">已提交</text>
+          </view>
         </view>
-        <view class="land-demand-success__row">
-          <text class="land-demand-success__label">当前状态</text>
-          <text class="land-demand-success__badge">已提交</text>
-        </view>
-      </view>
-      <view class="land-demand-success__actions">
-        <view data-testid="success-back-home" class="land-demand-success__action">
+        <view class="land-demand-success__actions">
+          <view data-testid="success-back-home" class="land-demand-success__action">
+            <t-button
+              data-testid="back-home"
+              theme="default"
+              block
+              @tap="backHome"
+            >
+              返回首页
+            </t-button>
+          </view>
           <t-button
-            data-testid="back-home"
-            theme="default"
+            data-testid="success-view-detail"
+            theme="primary"
             block
-            @tap="backHome"
+            @tap="viewDetail"
           >
-            返回首页
+            查看填报信息
           </t-button>
         </view>
-        <t-button
-          data-testid="success-view-detail"
-          theme="primary"
-          block
-          @tap="viewDetail"
-        >
-          查看填报信息
-        </t-button>
       </view>
     </view>
   </PageShell>
