@@ -19,6 +19,8 @@ describe('mini-program runtime E2E contract', () => {
     expect(fixture).not.toContain('quitWechatIde()')
     expect(fixture).toContain('message.includes(\'[Component] property\')')
     expect(fixture).toContain('Runtime component property warnings:')
+    expect(fixture).toContain('message.includes(\'[mutation.failed]\')')
+    expect(fixture).toContain('Runtime mutation failures:')
   })
 
   it('covers every required land-demand runtime scenario and hook', () => {
@@ -62,6 +64,7 @@ describe('mini-program runtime E2E contract', () => {
     expect(spec).toContain('screenshot(\'.tmp/e2e-review.png\')')
     expect(spec).toContain('project_hydm: \'1811\'')
     expect(spec).toContain('getByTestId(\'project-hydm\').tap()')
+    expect(spec.match(/getByTestId\('review-submit'\)\.tap\(\)/g)).toHaveLength(3)
     expect(spec).toContain('miniProgram.restart(\'/pages/home/index\')')
     expect(spec).not.toContain(
       'restores an authenticated session after a cold relaunch\', async ({ miniProgram }) => {\n    await miniProgram.relaunch',

@@ -105,6 +105,28 @@ describe('land demand submit controller', () => {
     expect(sendCode).toHaveBeenCalledWith(validForm.phone)
   })
 
+  it('deduplicates concurrent challenge requests', async () => {
+    let resolveChallenge!: (value: VerificationChallenge) => void
+    const sendCode = vi.fn(() => new Promise<VerificationChallenge>((resolve) => {
+      resolveChallenge = resolve
+    }))
+    const controller = createSubmitController({
+      sendCode,
+      verifyCode: vi.fn(),
+      persist: vi.fn(),
+    })
+
+    const first = controller.requestCode(validForm, true)
+    const repeated = controller.requestCode(validForm, true)
+    resolveChallenge(challenge)
+
+    await expect(Promise.all([first, repeated])).resolves.toEqual([
+      { errors: [], challenge },
+      { errors: [], challenge },
+    ])
+    expect(sendCode).toHaveBeenCalledOnce()
+  })
+
   it('verifies once before persisting status 1', async () => {
     const events: string[] = []
     const controller = createSubmitController({
@@ -147,5 +169,30 @@ describe('land demand submit controller', () => {
     await expect(controller.submitCode(validForm.phone, '123456')).resolves.toEqual(submittedRecord)
     expect(verifyCode).toHaveBeenCalledOnce()
     expect(persist).toHaveBeenCalledTimes(2)
+  })
+
+  it('deduplicates concurrent verification and persistence', async () => {
+    let resolvePersist!: (value: LandDemandRecord) => void
+    const verifyCode = vi.fn(async () => undefined)
+    const persist = vi.fn(() => new Promise<LandDemandRecord>((resolve) => {
+      resolvePersist = resolve
+    }))
+    const controller = createSubmitController({
+      sendCode: async () => challenge,
+      verifyCode,
+      persist,
+    })
+
+    const first = controller.submitCode(validForm.phone, challenge.mockCode)
+    const repeated = controller.submitCode(validForm.phone, challenge.mockCode)
+    await vi.waitFor(() => expect(persist).toHaveBeenCalledOnce())
+    resolvePersist(submittedRecord)
+
+    await expect(Promise.all([first, repeated])).resolves.toEqual([
+      submittedRecord,
+      submittedRecord,
+    ])
+    expect(verifyCode).toHaveBeenCalledOnce()
+    expect(persist).toHaveBeenCalledOnce()
   })
 })

@@ -76,6 +76,7 @@ export const test = base.extend<Record<never, never>, WorkerFixtures>({
   miniProgram: [async ({ playwright: _playwright }, use) => {
     const automator = await loadCompatibleAutomator()
     const componentPropertyWarnings = new Set<string>()
+    const mutationFailures = new Set<string>()
     async function connectMiniProgram(): Promise<MiniProgramLike> {
       const connected = await new automator.Launcher().connect({
         timeout: 90_000,
@@ -86,6 +87,9 @@ export const test = base.extend<Record<never, never>, WorkerFixtures>({
         const message = serializeRuntimeLog(payload)
         if (message.includes('[Component] property')) {
           componentPropertyWarnings.add(message)
+        }
+        if (message.includes('[mutation.failed]')) {
+          mutationFailures.add(message)
         }
       })
       return connected
@@ -104,6 +108,11 @@ export const test = base.extend<Record<never, never>, WorkerFixtures>({
     if (componentPropertyWarnings.size > 0) {
       throw new Error(
         `Runtime component property warnings:\n${[...componentPropertyWarnings].join('\n')}`,
+      )
+    }
+    if (mutationFailures.size > 0) {
+      throw new Error(
+        `Runtime mutation failures:\n${[...mutationFailures].join('\n')}`,
       )
     }
   }, { scope: 'worker', timeout: 120_000 }],

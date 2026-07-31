@@ -160,6 +160,9 @@ export function createMockLandDemandRepository(options: {
       const timestamp = now()
       const previous = storage.get<StoredVerification>(verificationKey(phone))
       if (previous && timestamp < previous.retryAt) {
+        if (!previous.invalidated && timestamp < previous.expiresAt) {
+          return cloneChallenge(previous)
+        }
         throw new Error('请稍后再试')
       }
 

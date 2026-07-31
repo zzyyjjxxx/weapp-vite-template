@@ -1,6 +1,6 @@
 import type { LandDemandForm, SaveLandDemandPayload } from '@/features/land-demand/models'
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createMockLandDemandRepository } from '@/features/land-demand/repository'
 import { createMemoryStorage } from '../../helpers/memory-storage'
 
@@ -164,7 +164,7 @@ describe('mock land demand repository', () => {
       retryAt: 61_000,
       mockCode: '123456',
     })
-    await expect(repository.sendCode('13800000000')).rejects.toThrow('请稍后再试')
+    await expect(repository.sendCode('13800000000')).resolves.toEqual(challenge)
     for (let index = 0; index < 5; index += 1) {
       await expect(repository.verifyCode('13800000000', '000000')).rejects.toThrow()
     }
@@ -203,6 +203,21 @@ describe('mock land demand repository', () => {
     await expect(repository.sendCode(challenge.phone)).rejects.toThrow('请稍后再试')
     time = challenge.retryAt
     await expect(repository.sendCode(challenge.phone)).resolves.toBeDefined()
+  })
+
+  it('reuses an active challenge instead of treating a repeated request as a resend', async () => {
+    const randomCode = vi.fn(() => '123456')
+    const repository = createMockLandDemandRepository({
+      storage: createMemoryStorage(),
+      now: () => 1_000,
+      randomCode,
+    })
+
+    const first = await repository.sendCode(form.phone)
+    const repeated = await repository.sendCode(form.phone)
+
+    expect(repeated).toEqual(first)
+    expect(randomCode).toHaveBeenCalledOnce()
   })
 
   it('keeps the resend cooldown after the fifth incorrect attempt', async () => {

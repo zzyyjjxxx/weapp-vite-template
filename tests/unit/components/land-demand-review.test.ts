@@ -97,6 +97,8 @@ describe('land demand review', () => {
     expect(source).toContain('createSubmitController')
     expect(source).toContain('useSendVerificationCodeMutation')
     expect(source).toContain('useVerifyVerificationCodeMutation')
+    expect(source).toContain('Date.now() < activeChallenge.expiresAt')
+    expect(source).toContain('verificationOpen.value = true')
     expect(source).toContain('store.markPersisted(record)')
     expect(source).toContain('replace(\'/pages/land-demand/success\')')
     expect(source).not.toMatch(/wx\.(?:request|navigateTo|redirectTo|reLaunch)/)

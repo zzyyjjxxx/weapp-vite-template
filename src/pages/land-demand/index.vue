@@ -31,7 +31,7 @@ import {
   resolveSubmissionTarget,
 } from '@/features/land-demand/step-controller'
 import { createSubmitController } from '@/features/land-demand/submit'
-import { validateDraft } from '@/features/land-demand/validation'
+import { validateDraft, validateSubmission } from '@/features/land-demand/validation'
 import {
   applyFinancingChoice,
   applySpecialUseChoice,
@@ -78,6 +78,7 @@ const feedback = ref('')
 const accepted = ref(false)
 const acceptanceError = ref('')
 const challenge = ref<NonNullable<typeof sendCodeMutation.data.value>>()
+const verificationOpen = ref(false)
 const verificationCode = ref('')
 const verificationError = ref('')
 const mode = ref<'edit' | 'view'>('edit')
@@ -98,7 +99,9 @@ const mutationError = computed(() => (
 const queryErrorMessage = computed(() => query.error.value?.message ?? '请稍后重试')
 const enterpriseName = computed(() => enterprise.value?.businessname ?? '')
 const clearDialogVisible = computed(() => pendingClear.value !== null)
-const verificationVisible = computed(() => challenge.value !== undefined)
+const verificationVisible = computed(() => (
+  verificationOpen.value && challenge.value !== undefined
+))
 const viewOnly = computed(() => mode.value === 'view')
 const clearDialogContent = computed(() => {
   switch (pendingClear.value?.kind) {
@@ -356,6 +359,28 @@ async function requestVerificationAuthorized(): Promise<void> {
   feedback.value = ''
   acceptanceError.value = ''
   sendCodeMutation.reset()
+  const activeChallenge = challenge.value
+  if (
+    activeChallenge
+    && activeChallenge.phone === form.value.phone
+    && Date.now() < activeChallenge.expiresAt
+  ) {
+    const submissionErrors = validateSubmission(form.value)
+    errors.value = submissionErrors
+    acceptanceError.value = accepted.value
+      ? ''
+      : '请阅读并同意信息真实性承诺'
+    const target = resolveSubmissionTarget(submissionErrors)
+    if (target) {
+      goToStep(target)
+      return
+    }
+    if (acceptanceError.value) {
+      return
+    }
+    verificationOpen.value = true
+    return
+  }
   try {
     const result = await submitController.requestCode(form.value, accepted.value)
     errors.value = result.errors
@@ -369,6 +394,7 @@ async function requestVerificationAuthorized(): Promise<void> {
       return
     }
     challenge.value = result.challenge
+    verificationOpen.value = true
     verificationCode.value = ''
     verificationError.value = ''
   }
@@ -389,7 +415,7 @@ function closeVerification(): void {
   if (submitting.value) {
     return
   }
-  challenge.value = undefined
+  verificationOpen.value = false
   verificationCode.value = ''
   verificationError.value = ''
 }
@@ -409,6 +435,7 @@ async function submitVerificationCodeAuthorized(): Promise<void> {
       verificationCode.value,
     )
     store.markPersisted(record)
+    verificationOpen.value = false
     challenge.value = undefined
     await replace('/pages/land-demand/success')
   }
