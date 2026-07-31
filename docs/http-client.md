@@ -9,6 +9,10 @@
 - `getDraft/setDraft/removeDraft`：管理只在本机使用的步骤草稿。
 - `sendCode/verifyCode`：模拟六位验证码、5 分钟有效期、60 秒重发间隔与最多 5 次错误尝试。
 
+冷却期内再次请求未消费且仍有效的验证码时，Repository 返回原挑战，不生成
+新验证码；验证码已成功消费或因错误次数失效时，60 秒重发限制仍然生效。
+页面关闭验证弹窗后保留当前挑战，重新打开时不会产生第二个发送 Mutation。
+
 页面和步骤组件不得直接实例化 Repository。已持久化记录遵循 `页面 → Query/Mutation → Service → Repository`；仅本地编辑草稿遵循 `页面 → Store → Repository`，以便步骤切换时同步保存且不污染 Query 的持久化记录所有权。测试可注入内存 Storage 和确定性时钟/验证码。
 
 ## Storage 键
