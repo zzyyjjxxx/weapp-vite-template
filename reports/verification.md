@@ -134,3 +134,38 @@
 - `pnpm test:e2e` 仍未通过。当前 RC 的 `cli auto --auto-port 10535` 在前台可报告成功，但后台/工具进程中会以 0 退出且不持续监听 10535，或连接后首个 App 协议命令超时；因此 9 个串行场景没有完成全量验收。
 - `wv screenshot`（通过 workspace 工具调用，目标 `pages/login/index`、输出 `.tmp/wv-login.png`）退出 `-1`/超时，明确报告“无法连接到当前项目的微信开发者工具自动化 websocket”；没有生成该截图。由于没有可用的 `wv screenshot` 当前图，`wv compare` 未执行，也未创建或更新视觉基线。
 - 结论：静态、单元、覆盖率、构建和产物检查均通过；真实 DevTools E2E 与 `wv screenshot/compare` 仍是当前 RC 自动化服务的外部阻塞，不能标记为通过。
+
+## 全面视觉重构验收（2026-07-31）
+
+- 视觉范围：登录页、企业工作台、五步填报、确认提交、提交成功、错误、
+  空状态、加载状态、验证码弹窗与公共页面骨架均已统一为蓝白渐变、规划插画、
+  悬浮卡片和清晰步骤层级；业务仍为项目真实五步，没有加入参考图中的注册、
+  忘记密码、图形验证码或附件上传。
+- TDD RED：`pnpm exec vitest run tests/smoke/visual-system.test.ts` 退出 1，
+  3/3 测试按预期失败，分别捕获缺少规划插画/登录文案、缺少共享视觉令牌、
+  以及旧步骤名称和旧进度结构。
+- TDD GREEN：同一聚焦命令退出 0，1 个文件/3 个测试通过。
+- `pnpm verify` 退出 0：依次通过 `prepare`、应用与 E2E 类型检查、零警告
+  `lint`、`stylelint`、35 个测试文件/133 个测试、微信小程序构建、生成产物
+  契约和包体预算；主包为 753 KB。
+- `pnpm test:coverage` 退出 0：35 个测试文件/133 个测试通过；语句
+  85.85%、分支 77.97%、函数 81.89%、行 86.57%。
+- 插画源文件经压缩后为 `src/assets/land-planning-hero.webp`（20,054 字节）；
+  构建实际输出 `dist/land-planning-hero-eqexouqf.webp`，不是悬空模板路径。
+- 实现阶段提交为 `55ef3da feat: redesign land demand mini program`；
+  用户已有的 `skills-lock.json` 修改没有暂存或提交。
+
+### 本轮微信开发者工具运行时结果
+
+- `pnpm test:e2e` 退出 1：9 个串行用例中首个用例连接
+  `ws://127.0.0.1:9643` 失败，1 个失败、其余 8 个未运行；错误明确要求目标
+  项目窗口以自动化模式打开。
+- `pnpm open` 与
+  `pnpm exec wv open . --non-interactive --no-mcp --debug` 均在等待
+  DevTools 时超时，现场未出现可连接的 9643 监听端口。
+- `pnpm exec wv screenshot --project ./dist --page pages/login/index
+  --output .tmp/login-redesign.png --json` 退出 1，报告“无法连接到当前项目的
+  微信开发者工具自动化 websocket”，没有生成截图。
+- 因没有新的真实运行时截图，`wv compare` 未执行，也没有创建或更新视觉基线。
+  当前结论为静态、单元、类型、构建与包体门禁通过；DevTools E2E 和运行时
+  截图受外部自动化连接前置条件阻塞，不能标记为通过。
