@@ -30,15 +30,13 @@ function close(): void {
 </script>
 
 <template>
-  <t-dialog
-    :visible="props.visible"
-    title="法人手机号验证"
-    :close-on-overlay-click="false"
-    :confirm-btn="false"
-    :cancel-btn="false"
-    @close="close"
+  <view
+    v-if="props.visible"
+    data-testid="verification-dialog"
+    class="verification-dialog-overlay"
   >
-    <view class="verification-dialog">
+    <view class="verification-dialog" role="dialog" aria-label="法人手机号验证">
+      <text class="verification-dialog__title">法人手机号验证</text>
       <text class="verification-dialog__copy">
         验证码已发送至 {{ challengePhone }}
       </text>
@@ -58,6 +56,7 @@ function close(): void {
       <text v-if="props.error" class="verification-dialog__error">{{ props.error }}</text>
       <view class="verification-dialog__actions">
         <t-button
+          class="verification-dialog__button"
           theme="default"
           variant="outline"
           :disabled="props.loading"
@@ -67,6 +66,7 @@ function close(): void {
         </t-button>
         <t-button
           data-testid="verification-submit"
+          class="verification-dialog__button"
           theme="primary"
           :loading="props.loading"
           :disabled="submitDisabled"
@@ -76,11 +76,39 @@ function close(): void {
         </t-button>
       </view>
     </view>
-  </t-dialog>
+  </view>
 </template>
 
 <style lang="scss">
 @use '@/styles/tokens' as *;
+
+.verification-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $space-4;
+  background: rgb(0 0 0 / 55%);
+}
+
+.verification-dialog {
+  width: 100%;
+  padding: $space-5 $space-4 $space-4;
+  background: $color-card;
+  border-radius: $radius-lg;
+  box-shadow: 0 16rpx 48rpx rgb(0 0 0 / 18%);
+}
+
+.verification-dialog__title {
+  display: block;
+  margin-bottom: $space-4;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: $color-text;
+  text-align: center;
+}
 
 .verification-dialog__copy,
 .verification-dialog__error {
@@ -115,5 +143,9 @@ function close(): void {
   gap: $space-2;
   justify-content: flex-end;
   margin-top: $space-3;
+}
+
+.verification-dialog__button {
+  flex: 1;
 }
 </style>

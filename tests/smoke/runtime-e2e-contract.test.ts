@@ -62,6 +62,7 @@ describe('mini-program runtime E2E contract', () => {
 
     expect(spec).toContain('screenshot(\'.tmp/e2e-login.png\')')
     expect(spec).toContain('screenshot(\'.tmp/e2e-review.png\')')
+    expect(spec).toContain('screenshot(\'.tmp/e2e-verification.png\')')
     expect(spec).toContain('project_hydm: \'1811\'')
     expect(spec).toContain('getByTestId(\'project-hydm\').tap()')
     expect(spec.match(/getByTestId\('review-submit'\)\.tap\(\)/g)).toHaveLength(3)

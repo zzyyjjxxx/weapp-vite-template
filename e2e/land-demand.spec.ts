@@ -115,6 +115,7 @@ test.describe.serial('企业用地需求填报', () => {
     await miniProgram.getByTestId('review-accept').tap()
     await miniProgram.getByTestId('review-submit').tap()
     expect(await miniProgram.getByTestId('mock-code').text()).toContain('123456')
+    await miniProgram.screenshot('.tmp/e2e-verification.png')
     await miniProgram.getByTestId('review-submit').tap()
     expect(await miniProgram.getByTestId('mock-code').text()).toContain('123456')
     await miniProgram.getByTestId('verification-code').fill('123456')

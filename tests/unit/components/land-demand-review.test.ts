@@ -79,6 +79,7 @@ describe('land demand review', () => {
     for (const id of [
       'review-accept',
       'review-submit',
+      'verification-dialog',
       'verification-code',
       'verification-submit',
       'mock-code',
@@ -115,5 +116,7 @@ describe('land demand review', () => {
     expect(source).toContain(':loading="props.loading"')
     expect(source).toContain('submitDisabled = computed')
     expect(source).toContain(':disabled="submitDisabled"')
+    expect(source).toContain('class="verification-dialog-overlay"')
+    expect(source).not.toContain('<t-dialog')
   })
 })
