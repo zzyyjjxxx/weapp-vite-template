@@ -16,7 +16,7 @@ const emit = defineEmits<{
   accept: [value: boolean]
   submit: []
 }>()
-defineComponentJson({ component: true })
+defineComponentJson({ component: true, styleIsolation: 'apply-shared' })
 </script>
 
 <template>

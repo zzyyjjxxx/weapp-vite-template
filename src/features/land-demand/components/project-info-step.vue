@@ -9,7 +9,7 @@ import { getIndustryDisplay, NATIONAL_INDUSTRY_OPTIONS } from '../industry-selec
 const props = defineProps<{ form: LandDemandForm, errors: readonly FieldError[] }>()
 const emit = defineEmits<{ change: [patch: Partial<LandDemandForm>] }>()
 
-defineComponentJson({ component: true })
+defineComponentJson({ component: true, styleIsolation: 'apply-shared' })
 
 const trackOptions = ref(Object.keys(INDUSTRY_TRACK_DIRECTIONS))
 const industryOptions = ref([...NATIONAL_INDUSTRY_OPTIONS])

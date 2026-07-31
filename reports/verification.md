@@ -208,3 +208,24 @@
   微信小程序主包 739 KB。
 - 实际检查截图：`.tmp/e2e-login.png`、`.tmp/e2e-home-latest.png`、
   `.tmp/e2e-basic-latest.png`、`.tmp/e2e-review.png`；均在页面就绪后采集。
+
+## 首页与填报页视觉复核（2026-07-31，本轮最终结果）
+
+- 首页 hero 使用 `aspectFill` 配合右侧定位（`left: 5%`、`width: 108%`），
+  插画定位点与参考图保持右侧构图，避免原先 `aspectFit` 留白导致的错位。
+- 五步进度条将圆点、连接线、文字拆分为独立布局：五等分节点、连接线不再占用
+  圆点宽度，文字 `text-align: center` 且不横向溢出。
+- 填报步骤组件启用 `styleIsolation: 'apply-shared'`，使共享的白色卡片、
+  `32rpx` 圆角、标题蓝色竖标、卡片阴影在真实运行时生效；底部操作区继续固定吸底。
+- `pnpm vitest run tests/unit/components/land-demand-wizard.test.ts tests/smoke/visual-system.test.ts`：
+  2 个测试文件、18 个测试通过。
+- `pnpm verify`：退出码 0，35 个测试文件、153 个测试通过；应用/E2E 类型检查、
+  零警告 lint、stylelint、739 KB 主包构建、生成运行时契约和包体预算均通过，耗时
+  66.5 秒。
+- 构建后真实运行时逐页扫描（登录、首页、填报第 1–5 步、成功页，监听 Automator
+  `console` 与 `exception`）：`warnings=[]`、`exceptions=[]`。
+- 微信开发者工具服务端口 `40637`、Automator `9651`；完整 `pnpm test:e2e`
+  首次因会话协议超时失败，关闭并重新打开同一端口后重试退出码 0，9/9 场景通过，
+  用时 49.3 秒。
+- 最终截图：`.tmp/home-final.png`、`.tmp/fill-final.png`、`.tmp/e2e-login.png`、
+  `.tmp/e2e-review.png`，均在页面完成渲染后采集并人工核对。

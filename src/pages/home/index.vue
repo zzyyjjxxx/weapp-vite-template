@@ -75,7 +75,7 @@ async function logout(): Promise<void> {
       <image
         class="home__hero-image"
         :src="landPlanningHero"
-        mode="aspectFit"
+        mode="aspectFill"
       />
       <view class="home__hero-shade" />
       <view class="home__hero-content">
@@ -168,7 +168,7 @@ async function logout(): Promise<void> {
 
 .home__hero {
   position: relative;
-  height: 330rpx;
+  height: 360rpx;
   overflow: hidden;
   background: $gradient-hero;
   border: 1rpx solid rgb(211 226 248 / 78%);
@@ -178,8 +178,9 @@ async function logout(): Promise<void> {
 
 .home__hero-image {
   position: absolute;
-  inset: 0;
-  width: 100%;
+  top: 0;
+  left: 5%;
+  width: 108%;
   height: 100%;
   opacity: 0.98;
 }

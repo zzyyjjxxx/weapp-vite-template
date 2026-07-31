@@ -39,8 +39,9 @@ describe('land-demand visual system', () => {
     const home = readFileSync('src/pages/home/index.vue', 'utf8')
     const shell = readFileSync('src/components/ui/page-shell/index.vue', 'utf8')
 
-    expect(home).toContain('mode="aspectFit"')
-    expect(home).toContain('inset: 0')
+    expect(home).toContain('mode="aspectFill"')
+    expect(home).toContain('left: 5%')
+    expect(home).toContain('width: 108%')
     expect(shell).toContain('page-shell--compact')
   })
 })

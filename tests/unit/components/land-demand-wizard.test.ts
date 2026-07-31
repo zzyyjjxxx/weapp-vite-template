@@ -118,6 +118,20 @@ describe('land demand wizard component contract', () => {
     expect(page).toContain('padding-bottom: 152rpx')
   })
 
+  it('allows shared card utilities to style isolated step components', () => {
+    for (const file of [
+      'basic-info-step.vue',
+      'land-info-step.vue',
+      'project-info-step.vue',
+      'finance-contact-step.vue',
+      'review-step.vue',
+    ]) {
+      expect(readFileSync(`${componentRoot}/${file}`, 'utf8')).toContain(
+        'styleIsolation: \'apply-shared\'',
+      )
+    }
+  })
+
   it('does not recreate a local draft after an explicit server save', () => {
     const source = readFileSync('src/pages/land-demand/index.vue', 'utf8')
 

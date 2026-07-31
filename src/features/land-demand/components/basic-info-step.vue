@@ -3,7 +3,7 @@ import type { FieldError, LandDemandForm } from '../models'
 
 const props = defineProps<{ form: LandDemandForm, errors: readonly FieldError[] }>()
 
-defineComponentJson({ component: true })
+defineComponentJson({ component: true, styleIsolation: 'apply-shared' })
 </script>
 
 <template>

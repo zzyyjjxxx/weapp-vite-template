@@ -22,8 +22,8 @@ const steps = ['基本信息', '用地需求', '投资项目', '融资及联系�
       >
         <view class="wizard-progress__indicator">
           <text class="wizard-progress__number">{{ index + 1 }}</text>
-          <view v-if="index < steps.length - 1" class="wizard-progress__connector" />
         </view>
+        <view v-if="index < steps.length - 1" class="wizard-progress__connector" />
         <text class="wizard-progress__label">{{ label }}</text>
       </view>
     </view>
@@ -35,25 +35,24 @@ const steps = ['基本信息', '用地需求', '投资项目', '融资及联系�
 
 .wizard-progress {
   width: 100%;
-  margin-bottom: $space-3;
+  margin-bottom: $space-2;
 }
 
 .wizard-progress__track {
   box-sizing: border-box;
   display: flex;
   width: 100%;
-  padding: $space-2 $space-1;
+  padding: $space-2 0 $space-1;
   overflow: hidden;
-  background: rgb(255 255 255 / 88%);
-  border: 1rpx solid rgb(220 230 245 / 90%);
-  border-radius: $radius-md;
-  box-shadow: 0 8rpx 24rpx rgb(38 77 143 / 7%);
+  background: transparent;
 }
 
 .wizard-progress__step {
+  position: relative;
   display: flex;
   flex: 1 1 0;
   flex-direction: column;
+  align-items: center;
   min-width: 0;
   color: $color-text-placeholder;
 }
@@ -63,9 +62,14 @@ const steps = ['基本信息', '用地需求', '投资项目', '融资及联系�
 }
 
 .wizard-progress__indicator {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
-  width: 100%;
+  justify-content: center;
+  width: 46rpx;
+  height: 46rpx;
+  margin: 0 auto;
 }
 
 .wizard-progress__number {
@@ -73,9 +77,9 @@ const steps = ['基本信息', '用地需求', '投资项目', '融资及联系�
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 38rpx;
-  height: 38rpx;
-  font-size: 20rpx;
+  width: 42rpx;
+  height: 42rpx;
+  font-size: 21rpx;
   font-weight: 700;
   color: $color-text-placeholder;
   background: #edf1f7;
@@ -84,9 +88,12 @@ const steps = ['基本信息', '用地需求', '投资项目', '融资及联系�
 }
 
 .wizard-progress__connector {
-  flex: 1;
+  position: absolute;
+  top: 22rpx;
+  left: calc(50% + 23rpx);
+  z-index: 0;
+  width: calc(100% - 46rpx);
   height: 2rpx;
-  margin: 0 5rpx;
   background: #d7e0ed;
 }
 
@@ -107,11 +114,14 @@ const steps = ['基本信息', '用地需求', '投资项目', '融资及联系�
 }
 
 .wizard-progress__label {
+  box-sizing: border-box;
   width: 100%;
-  padding: 0 2rpx;
+  min-height: 52rpx;
+  padding: 0 4rpx;
   margin-top: 8rpx;
   overflow: hidden;
-  font-size: 18rpx;
+  font-size: 20rpx;
+  font-weight: 500;
   line-height: 1.35;
   text-align: center;
   white-space: normal;

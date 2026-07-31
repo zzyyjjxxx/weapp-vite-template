@@ -56,12 +56,12 @@
   --td-radio-checked-color: #{$color-primary};
   --td-checkbox-checked-color: #{$color-primary};
 
-  padding: $space-3;
+  padding: $space-4;
   overflow: hidden;
   background: $color-card;
-  border: 1rpx solid rgb(217 228 244 / 78%);
-  border-radius: 24rpx;
-  box-shadow: 0 12rpx 32rpx rgb(38 77 143 / 9%);
+  border: 1rpx solid rgb(213 227 246 / 88%);
+  border-radius: $radius-lg;
+  box-shadow: 0 18rpx 48rpx rgb(38 77 143 / 12%);
 }
 
 .step-card__title,
@@ -79,6 +79,7 @@
   font-weight: 700;
   line-height: 1.35;
   color: $color-text;
+  letter-spacing: 1rpx;
 }
 
 .step-card__title::before {
@@ -94,7 +95,7 @@
 
 .step-card__description {
   padding-left: $space-2;
-  margin: $space-1 0 $space-2;
+  margin: $space-2 0 $space-3;
   font-size: 22rpx;
   line-height: 1.55;
   color: $color-text-secondary;

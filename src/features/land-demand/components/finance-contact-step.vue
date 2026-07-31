@@ -7,7 +7,7 @@ import { readStringDetail } from '@/platform/event-detail'
 const props = defineProps<{ form: LandDemandForm, errors: readonly FieldError[] }>()
 const emit = defineEmits<{ change: [patch: Partial<LandDemandForm>] }>()
 
-defineComponentJson({ component: true })
+defineComponentJson({ component: true, styleIsolation: 'apply-shared' })
 
 const emptyOptions = ref<string[]>([])
 
