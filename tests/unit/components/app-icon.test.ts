@@ -8,7 +8,7 @@ const projectRoot = fileURLToPath(new URL('../../../', import.meta.url))
 
 describe('AppIcon registry', () => {
   it('keeps the initial Reicon subset available in both weights', () => {
-    expect(appIconNames).toEqual(['home', 'user-circle', 'list-check', 'login'])
+    expect(appIconNames).toEqual(['home', 'user-circle', 'lock', 'list-check', 'login'])
 
     for (const name of appIconNames) {
       for (const weight of ['Outline', 'Filled'] as const) {

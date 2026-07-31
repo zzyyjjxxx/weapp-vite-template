@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'wevu'
-import landPlanningHero from '@/assets/land-planning-hero.webp'
+import { computed, watchEffect } from 'wevu'
 import PageShell from '@/components/ui/page-shell/index.vue'
 import { useLandDemandQuery } from '@/features/land-demand/queries'
 import { navigate, replace } from '@/router/navigation'
 import { useProtectedPage } from '@/router/protected-page'
 import { useAuthStore } from '@/stores/auth'
+import { useLandDemandStore } from '@/stores/land-demand'
 
 definePageJson({
   navigationBarTitleText: '用地需求',
@@ -16,8 +16,26 @@ const { authorized } = useProtectedPage('/pages/home/index')
 const enterprise = auth.enterprise
 const creditcode = enterprise.value?.creditcode ?? ''
 const landDemandQuery = useLandDemandQuery(creditcode)
+const landDemandStore = useLandDemandStore()
 const record = landDemandQuery.data
 const submitted = computed(() => record.value?.landusedemand === '1')
+const stepNumbers = [1, 2, 3, 4, 5] as const
+const currentProgressStep = computed(() => submitted.value
+  ? 5
+  : Math.min(5, Math.max(1, landDemandStore.currentStep.value)))
+const progressLabel = computed(() => submitted.value
+  ? '已完成全部填报'
+  : `当前第 ${currentProgressStep.value} 步 / 共 5 步`)
+let draftInitialized = false
+
+watchEffect(() => {
+  const profile = enterprise.value
+  if (draftInitialized || !profile || landDemandQuery.isPending.value) {
+    return
+  }
+  landDemandStore.initializeFromLocalDraft(profile, record.value ?? undefined)
+  draftInitialized = true
+})
 const enterpriseName = computed(() => enterprise.value?.businessname ?? '企业信息加载中')
 const enterpriseSubtitle = computed(() => enterprise.value?.businessname ?? '企业服务')
 const enterpriseCreditcode = computed(() => enterprise.value?.creditcode ?? '--')
@@ -60,24 +78,16 @@ async function logout(): Promise<void> {
     icon="home"
   >
     <template #actions>
-      <t-button
+      <view
         data-testid="logout"
-        size="small"
-        theme="default"
-        variant="text"
+        class="home__logout"
         @tap="logout"
       >
         退出登录
-      </t-button>
+      </view>
     </template>
 
     <view class="home__hero">
-      <image
-        class="home__hero-image"
-        :src="landPlanningHero"
-        mode="aspectFill"
-      />
-      <view class="home__hero-shade" />
       <view class="home__hero-content">
         <text class="home__hero-kicker">企业用地需求服务</text>
         <text class="home__hero-title">让项目需求更清晰</text>
@@ -119,10 +129,19 @@ async function logout(): Promise<void> {
         依次填写基本信息、用地需求、投资项目、融资及联系人，确认无误后提交。
       </text>
       <view class="home__steps">
-        <view v-for="number in 5" :key="number" class="home__step">
+        <view
+          v-for="number in stepNumbers"
+          :key="number"
+          class="home__step"
+          :class="{
+            'home__step--active': number <= currentProgressStep,
+            'home__step--current': number === currentProgressStep,
+          }"
+        >
           <text class="home__step-number">{{ number }}</text>
         </view>
       </view>
+      <text class="home__steps-progress">{{ progressLabel }}</text>
       <view v-if="submitted" class="home__product-actions">
         <t-button
           data-testid="land-demand-view"
@@ -168,34 +187,41 @@ async function logout(): Promise<void> {
 
 .home__hero {
   position: relative;
-  height: 360rpx;
+  box-sizing: border-box;
+  min-height: 190rpx;
   overflow: hidden;
-  background: $gradient-hero;
+  background: linear-gradient(135deg, #edf6ff 0%, #f8fbff 100%);
   border: 1rpx solid rgb(211 226 248 / 78%);
   border-radius: $radius-lg;
   box-shadow: $shadow-card;
 }
 
-.home__hero-image {
+.home__hero::after {
   position: absolute;
-  top: 0;
-  left: 5%;
-  width: 108%;
-  height: 100%;
-  opacity: 0.98;
-}
-
-.home__hero-shade {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, rgb(238 246 255 / 100%) 0%, rgb(238 246 255 / 96%) 38%, rgb(238 246 255 / 12%) 78%, rgb(238 246 255 / 0%) 100%);
+  top: -100rpx;
+  right: -80rpx;
+  width: 280rpx;
+  height: 280rpx;
+  content: '';
+  background: rgb(95 153 241 / 10%);
+  border-radius: 50%;
 }
 
 .home__hero-content {
   position: relative;
   z-index: 1;
-  width: 58%;
-  padding: $space-5 $space-4;
+  width: 100%;
+  padding: $space-4;
+}
+
+.home__logout {
+  flex: 0 0 auto;
+  padding: 10rpx 0 10rpx $space-2;
+  font-size: 22rpx;
+  font-weight: 600;
+  line-height: 1.3;
+  color: $color-text;
+  white-space: nowrap;
 }
 
 .home__hero-kicker,
@@ -352,7 +378,30 @@ async function logout(): Promise<void> {
   font-size: 19rpx;
   color: $color-primary;
   background: $color-primary-soft;
+  border: 3rpx solid transparent;
   border-radius: 50%;
+}
+
+.home__step--active .home__step-number {
+  color: #fff;
+  background: $gradient-primary;
+  box-shadow: $shadow-button;
+}
+
+.home__step--current .home__step-number {
+  border-color: #cfe0ff;
+}
+
+.home__step--active:not(:last-child)::after {
+  background: #83affb;
+}
+
+.home__steps-progress {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 20rpx;
+  color: $color-text-secondary;
+  text-align: center;
 }
 
 .home__product-action {

@@ -3,6 +3,7 @@ import type { LoginInput } from '@/features/auth/models'
 
 import { computed, onLoad, ref } from 'wevu'
 import landPlanningHero from '@/assets/land-planning-hero.webp'
+import AppIcon from '@/components/ui/app-icon/index.vue'
 import { useLoginMutation } from '@/features/auth/queries'
 import { readStringDetail } from '@/platform/event-detail'
 import { replaceUrl } from '@/router/navigation'
@@ -97,7 +98,11 @@ async function submit(): Promise<void> {
           status="default"
           tips=""
           @change="updateUsername"
-        />
+        >
+          <template #prefix-icon>
+            <AppIcon class="login__input-icon" name="user-circle" :size="34" />
+          </template>
+        </t-input>
       </view>
       <view class="login__field">
         <text class="login__field-label">密码</text>
@@ -110,7 +115,11 @@ async function submit(): Promise<void> {
           status="default"
           tips=""
           @change="updatePassword"
-        />
+        >
+          <template #prefix-icon>
+            <AppIcon class="login__input-icon" name="lock" :size="34" />
+          </template>
+        </t-input>
       </view>
       <view class="login__account-tip">
         <text class="login__account-tip-label">演示账号</text>
@@ -215,12 +224,17 @@ async function submit(): Promise<void> {
 
 .login__illustration {
   position: absolute;
-  right: -210rpx;
+  right: -46rpx;
   bottom: -18rpx;
   z-index: 1;
   width: 730rpx;
   height: 410rpx;
   opacity: 0.96;
+}
+
+.login__input-icon {
+  margin-right: 8rpx;
+  opacity: 0.72;
 }
 
 .login__panel {

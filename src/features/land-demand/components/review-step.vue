@@ -42,15 +42,13 @@ defineComponentJson({ component: true, styleIsolation: 'apply-shared' })
           <text class="review-step__number">{{ groupIndex + 1 }}</text>
           <text class="review-step__title">{{ group.title }}</text>
         </view>
-        <t-button
+        <view
           v-if="!props.readonly"
-          size="small"
-          theme="primary"
-          variant="text"
+          class="review-step__edit"
           @tap="emit('edit', group.step)"
         >
           修改
-        </t-button>
+        </view>
       </view>
       <view v-for="item in group.items" :key="item.field" class="review-step__item">
         <text class="review-step__label">{{ item.label }}</text>
@@ -151,6 +149,7 @@ defineComponentJson({ component: true, styleIsolation: 'apply-shared' })
 }
 
 .review-step__heading {
+  align-items: center;
   padding-bottom: $space-2;
   border-bottom: 1rpx solid $color-border-soft;
 }
@@ -178,6 +177,17 @@ defineComponentJson({ component: true, styleIsolation: 'apply-shared' })
   font-size: 30rpx;
   font-weight: 700;
   color: $color-text;
+}
+
+.review-step__edit {
+  flex: 0 0 auto;
+  padding: 8rpx 18rpx;
+  font-size: 22rpx;
+  line-height: 1.3;
+  color: $color-primary;
+  white-space: nowrap;
+  background: $color-primary-soft;
+  border-radius: 999rpx;
 }
 
 .review-step__item {

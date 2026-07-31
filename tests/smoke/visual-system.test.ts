@@ -35,13 +35,15 @@ describe('land-demand visual system', () => {
     expect(source).toContain('wizard-progress__connector')
   })
 
-  it('keeps the planning illustration inside the home hero and the filling page compact', () => {
+  it('keeps the home workspace compact and exposes the current filling progress', () => {
     const home = readFileSync('src/pages/home/index.vue', 'utf8')
     const shell = readFileSync('src/components/ui/page-shell/index.vue', 'utf8')
 
-    expect(home).toContain('mode="aspectFill"')
-    expect(home).toContain('left: 5%')
-    expect(home).toContain('width: 108%')
+    expect(home).not.toContain('landPlanningHero')
+    expect(home).toContain('stepNumbers')
+    expect(home).toContain('home__step--active')
+    expect(home).toContain('home__steps-progress')
+    expect(home).toContain('initializeFromLocalDraft')
     expect(shell).toContain('page-shell--compact')
   })
 })

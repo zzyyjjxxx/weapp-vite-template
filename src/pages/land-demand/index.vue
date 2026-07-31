@@ -583,7 +583,7 @@ async function editDetail(): Promise<void> {
 }
 
 .land-demand-page {
-  padding-bottom: 152rpx;
+  padding-bottom: 220rpx;
 }
 
 .land-demand-page__guide-dot {

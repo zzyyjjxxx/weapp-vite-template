@@ -115,7 +115,7 @@ describe('land demand wizard component contract', () => {
     expect(progress).toContain('flex: 1 1 0')
     expect(actions).toContain('position: fixed')
     expect(page).toContain('compact')
-    expect(page).toContain('padding-bottom: 152rpx')
+    expect(page).toContain('padding-bottom: 220rpx')
   })
 
   it('allows shared card utilities to style isolated step components', () => {
