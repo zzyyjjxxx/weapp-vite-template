@@ -134,3 +134,71 @@
 - `pnpm test:e2e` 仍未通过。当前 RC 的 `cli auto --auto-port 10535` 在前台可报告成功，但后台/工具进程中会以 0 退出且不持续监听 10535，或连接后首个 App 协议命令超时；因此 9 个串行场景没有完成全量验收。
 - `wv screenshot`（通过 workspace 工具调用，目标 `pages/login/index`、输出 `.tmp/wv-login.png`）退出 `-1`/超时，明确报告“无法连接到当前项目的微信开发者工具自动化 websocket”；没有生成该截图。由于没有可用的 `wv screenshot` 当前图，`wv compare` 未执行，也未创建或更新视觉基线。
 - 结论：静态、单元、覆盖率、构建和产物检查均通过；真实 DevTools E2E 与 `wv screenshot/compare` 仍是当前 RC 自动化服务的外部阻塞，不能标记为通过。
+## Forguncy 8.0.4 JWT login verification — 2026-08-03
+
+All commands below were run in `D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login`. Secret values, connection strings, signing keys, and bootstrap credentials were neither printed nor recorded.
+
+### Release unit tests
+
+Command (run from `forguncy-server-api`):
+
+```powershell
+dotnet test .\ForguncyServerApi.sln --configuration Release --no-restore --logger "console;verbosity=normal"
+```
+
+- Exit code: `1`.
+- Counts reported by the test runner: total `48`; passed `41`; failed `7`; skipped `0` (the runner did not print a skipped count, and `41 + 7 = 48`).
+- The test host and both project assemblies built for Release, but all seven failures were in `JwtTokenServiceTests` because the test process could not load `System.IdentityModel.Tokens.Jwt, Version=6.8.0.0`.
+- Failed tests: `CreateToken_contains_user_claims_and_validate_returns_them`; `ValidateToken_rejects_an_expired_token`; `ValidateToken_rejects_a_token_signed_with_another_key`; `ValidateToken_rejects_a_token_that_is_not_yet_valid`; `ValidateToken_rejects_a_malformed_token`; `ValidateToken_rejects_a_token_using_a_non_hs256_algorithm`; and `ValidateToken_rejects_a_token_with_another_issuer`.
+- Read-only diagnostic: neither `tests\ForguncyServerApi.Tests\bin\Release\net6.0` nor the two Release `.deps.json` manifests contained a JWT/IdentityModel assembly entry. `ForguncyServerApi.csproj` references `System.IdentityModel.Tokens.Jwt.dll`, `Microsoft.IdentityModel.Tokens.dll`, and `Microsoft.IdentityModel.JsonWebTokens.dll` through `$(ForguncyBin)`. This is consistent with a Release test-output dependency problem; no source, project, dependency, or restore change was made.
+
+### Release upload artifact
+
+Command (run from `forguncy-server-api`):
+
+```powershell
+dotnet build .\ForguncyServerApi.csproj --configuration Release --no-restore -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+- Exit code: `0`.
+- Output: `ForguncyServerApi -> ...\bin\Release\net6.0\ForguncyServerApi.dll`; `0` warnings and `0` errors.
+
+Artifact listing command:
+
+```powershell
+Get-ChildItem .\bin\Release\net6.0 -File | Select-Object Name,Length
+```
+
+| Name | Length (bytes) |
+|---|---:|
+| `ForguncyServerApi.deps.json` | 443 |
+| `ForguncyServerApi.dll` | 46592 |
+| `ForguncyServerApi.pdb` | 27864 |
+
+`ForguncyServerApi.dll` is present with the required custom-assembly name. The complete file listing contains no generated settings, credential, connection-string, key, or secret-bearing file.
+
+### MySQL preflight and schema/login smoke
+
+Read-only preflight command:
+
+```powershell
+Test-NetConnection -ComputerName 127.0.0.1 -Port 3306
+```
+
+- Exit code: `0`; `TcpTestSucceeded : True` for `127.0.0.1:3306`.
+- `mysqld` processes were present, but no `mysql` command was available on `PATH`.
+- The names (not values) of environment variables matching the permitted task-scoped/MySQL prefixes were checked; none were present.
+- Blocker: no usable local MySQL client and no task-scoped credentials were available. `sql\001-create-database.sql` was not executed, `forguncy_auth.jwt_users` was not queried, and no real login request was sent. The schema script itself exists (`98` bytes).
+
+### Active Forguncy designer/runtime check
+
+- Read-only process checks initially found a Forguncy 8.0.4 designer executable, but it did not expose an independently targetable designer window.
+- Windows-app inspection found two visible designer windows, both identified in their titles as Forguncy `10.0.103`, not 8.0.4. The subsequently refreshed 8.0.4 process query no longer returned a usable window.
+- Blocker: no usable, active Forguncy 8.0.4 designer/app was available for a version-correct upload. The Release DLL was not uploaded to the visible 10.x projects.
+- Consequently, no `/customapi/authapi/login` HTTP response, database-backed bootstrap login, or absence check for `/customapi/authapi/issue` and `/customapi/authapi/validate` was observed. These runtime checks are not passed.
+
+### Unresolved blockers
+
+1. The exact required Release unit-test command fails (7 of 48 tests) because the test host cannot load the JWT dependency.
+2. MySQL listens locally, but the scoped schema/login smoke is blocked by the absence of both a usable local client and task-scoped credentials.
+3. A visible, independently targetable Forguncy 8.0.4 app is unavailable; only 10.0.103 designer windows were observed, so no upload or HTTP route verification was performed.
