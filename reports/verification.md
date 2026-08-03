@@ -264,3 +264,14 @@
   `verification-dialog-current.png`；截图确认插画、输入图标、日期区间、步骤进度、底栏留白和
   验证码弹窗正文均已渲染。
 - `skills-lock.json` 为用户已有修改，未暂存。
+
+## 登录与验证码对齐复核（2026-08-03，本轮结果）
+
+- 登录页已移除“演示环境”角标和底部本地提示；用户名/密码图标改为固定高度的
+  TDesign `prefix-icon` 插槽容器，输入文字与图标垂直居中。
+- 验证码弹窗将“验”图标移入标题插槽与标题同排，验证码输入、Mock 验证码和底部操作
+  使用 TDesign 内容/按钮插槽并保持等宽布局。
+- `pnpm test:e2e` 退出 0：9/9 场景通过（约 1.1 分钟）。
+- `pnpm verify` 退出 0（60.7 秒）：35 个测试文件、153 个测试通过，主包 766 KB。
+- 构建后运行时扫描结果为 `RUNTIME_PATH=pages/home/index`、`RUNTIME_BLOCKING=[]`；
+  最新截图为 `.tmp/login-visual-current.png` 与 `.tmp/verification-dialog-current.png`。

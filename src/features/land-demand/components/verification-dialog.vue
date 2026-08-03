@@ -32,15 +32,20 @@ function close(): void {
 <template>
   <t-dialog
     :visible="props.visible"
-    title="法人手机号验证"
+    title=""
     content=""
     :close-on-overlay-click="false"
     :confirm-btn="false"
     :cancel-btn="false"
     @close="close"
   >
+    <template #title>
+      <view class="verification-dialog__title">
+        <view class="verification-dialog__mark">验</view>
+        <text>法人手机号验证</text>
+      </view>
+    </template>
     <view slot="content" class="verification-dialog">
-      <view class="verification-dialog__mark">验</view>
       <text class="verification-dialog__copy">
         验证码已发送至 {{ challengePhone }}
       </text>
@@ -64,6 +69,7 @@ function close(): void {
     <template #cancel-btn>
       <t-button
         class="verification-dialog__action"
+        block
         theme="default"
         variant="text"
         :disabled="props.loading"
@@ -76,6 +82,7 @@ function close(): void {
       <t-button
         data-testid="verification-submit"
         class="verification-dialog__action"
+        block
         theme="primary"
         :loading="props.loading"
         :disabled="submitDisabled"
@@ -90,6 +97,7 @@ function close(): void {
 <style lang="scss">
 @use '@/styles/tokens' as *;
 
+.verification-dialog__title,
 .verification-dialog__copy,
 .verification-dialog__error {
   display: block;
@@ -97,14 +105,25 @@ function close(): void {
   line-height: 1.5;
 }
 
-.verification-dialog__mark {
+.verification-dialog__title {
   display: flex;
+  gap: $space-2;
   align-items: center;
   justify-content: center;
-  width: 72rpx;
-  height: 72rpx;
-  margin: 0 auto $space-2;
-  font-size: 26rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: $color-text;
+  text-align: center;
+}
+
+.verification-dialog__mark {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 52rpx;
+  height: 52rpx;
+  font-size: 24rpx;
   font-weight: 700;
   color: #fff;
   background: $gradient-primary;
@@ -113,7 +132,7 @@ function close(): void {
 }
 
 .verification-dialog__copy {
-  margin-bottom: $space-2;
+  margin: $space-3 0 $space-2;
   color: $color-text-secondary;
   text-align: center;
 }

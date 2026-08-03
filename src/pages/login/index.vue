@@ -85,7 +85,6 @@ async function submit(): Promise<void> {
           <text class="login__panel-title">企业账号登录</text>
           <text class="login__panel-description">登录后可填报、暂存和查询用地需求</text>
         </view>
-        <text class="login__demo">演示环境</text>
       </view>
 
       <view class="login__field">
@@ -100,7 +99,9 @@ async function submit(): Promise<void> {
           @change="updateUsername"
         >
           <template #prefix-icon>
-            <AppIcon class="login__input-icon" name="user-circle" :size="34" />
+            <view class="login__input-prefix">
+              <AppIcon class="login__input-icon" name="user-circle" :size="34" />
+            </view>
           </template>
         </t-input>
       </view>
@@ -117,7 +118,9 @@ async function submit(): Promise<void> {
           @change="updatePassword"
         >
           <template #prefix-icon>
-            <AppIcon class="login__input-icon" name="lock" :size="34" />
+            <view class="login__input-prefix">
+              <AppIcon class="login__input-icon" name="lock" :size="34" />
+            </view>
           </template>
         </t-input>
       </view>
@@ -139,10 +142,6 @@ async function submit(): Promise<void> {
       >
         登录并进入填报
       </t-button>
-      <view class="login__trust">
-        <view class="login__trust-dot" />
-        <text>仅用于企业用地需求服务，信息保存在本地演示环境</text>
-      </view>
     </view>
 
     <view class="login__footer">
@@ -233,7 +232,6 @@ async function submit(): Promise<void> {
 }
 
 .login__input-icon {
-  margin-right: 8rpx;
   opacity: 0.72;
 }
 
@@ -249,10 +247,7 @@ async function submit(): Promise<void> {
 }
 
 .login__panel-heading {
-  display: flex;
-  gap: $space-3;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: block;
   margin-bottom: $space-4;
 }
 
@@ -275,15 +270,6 @@ async function submit(): Promise<void> {
   font-size: 23rpx;
   line-height: 1.5;
   color: $color-text-secondary;
-}
-
-.login__demo {
-  flex: 0 0 auto;
-  padding: 6rpx 14rpx;
-  font-size: 20rpx;
-  color: $color-primary;
-  background: $color-primary-soft;
-  border-radius: 999rpx;
 }
 
 .login__field {
@@ -340,24 +326,12 @@ async function submit(): Promise<void> {
   box-shadow: $shadow-button;
 }
 
-.login__trust {
+.login__input-prefix {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  margin-top: $space-3;
-  font-size: 21rpx;
-  line-height: 1.5;
-  color: $color-text-placeholder;
-  text-align: center;
-}
-
-.login__trust-dot {
-  flex: 0 0 auto;
-  width: 10rpx;
-  height: 10rpx;
-  margin: 10rpx 10rpx 0 0;
-  background: $color-success;
-  border-radius: 50%;
+  width: 34rpx;
+  height: 48rpx;
 }
 
 .login__footer {
