@@ -199,7 +199,7 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 3306
 
 ### Unresolved blockers
 
-1. The exact required Release unit-test command fails (7 of 48 tests) because the test host cannot load the JWT dependency.
+1. Resolved: the initial Release unit-test command failed 7 of 48 tests because the test host could not load the JWT dependency; the test-only references added in the subsequent fix produced 48 of 48 passing tests.
 2. MySQL listens locally, but the scoped schema/login smoke is blocked by the absence of both a usable local client and task-scoped credentials.
 3. A visible, independently targetable Forguncy 8.0.4 app is unavailable; only 10.0.103 designer windows were observed, so no upload or HTTP route verification was performed.
 
