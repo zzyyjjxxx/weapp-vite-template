@@ -14,14 +14,19 @@ public sealed class AuthDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        var isSqlite = Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite";
         var user = modelBuilder.Entity<AuthUser>();
         user.ToTable("jwt_users");
-        user.HasCharSet("utf8mb4").UseCollation("utf8mb4_unicode_ci");
+        if (Database.ProviderName == "Pomelo.EntityFrameworkCore.MySql")
+        {
+            user.Metadata.SetAnnotation("MySql:CharSet", "utf8mb4");
+            user.Metadata.SetAnnotation("Relational:Collation", "utf8mb4_unicode_ci");
+        }
 
         user.HasKey(entity => entity.Id);
         user.Property(entity => entity.Id)
             .HasColumnName("id")
-            .HasColumnType(Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite" ? "INTEGER" : "BIGINT")
+            .HasColumnType(isSqlite ? "INTEGER" : "BIGINT")
             .ValueGeneratedOnAdd();
         user.Property(entity => entity.Username)
             .HasColumnName("username")
@@ -37,11 +42,11 @@ public sealed class AuthDbContext : DbContext
             .IsRequired();
         user.Property(entity => entity.CreatedAtUtc)
             .HasColumnName("created_at_utc")
-            .HasColumnType("datetime(6)")
+            .HasColumnType(isSqlite ? "TEXT" : "datetime(6)")
             .IsRequired();
         user.Property(entity => entity.UpdatedAtUtc)
             .HasColumnName("updated_at_utc")
-            .HasColumnType("datetime(6)")
+            .HasColumnType(isSqlite ? "TEXT" : "datetime(6)")
             .IsRequired();
     }
 }
