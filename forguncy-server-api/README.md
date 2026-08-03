@@ -34,15 +34,15 @@ their values, connection strings, signing keys, or bootstrap credentials.
 [Environment]::SetEnvironmentVariable('FGC_JWT_SIGNING_KEY', '<strong-random-secret-at-least-32-chars>', 'User')
 [Environment]::SetEnvironmentVariable('FGC_JWT_ISSUER', '<issuer-name>', 'User')
 [Environment]::SetEnvironmentVariable('FGC_JWT_EXPIRES_MINUTES', '<positive-integer-minutes>', 'User')
-[Environment]::SetEnvironmentVariable('FGC_BOOTSTRAP_USERNAME', '<initial-username>', 'User')
-[Environment]::SetEnvironmentVariable('FGC_BOOTSTRAP_PASSWORD', '<initial-password-from-secret-store>', 'User')
+[Environment]::SetEnvironmentVariable('FGC_AUTH_BOOTSTRAP_USERNAME', '<initial-username>', 'User')
+[Environment]::SetEnvironmentVariable('FGC_AUTH_BOOTSTRAP_PASSWORD', '<initial-password-from-secret-store>', 'User')
 ```
 
 `FGC_AUTH_MYSQL_CONNECTION` and `FGC_JWT_SIGNING_KEY` are required. The
 signing key must contain at least 32 characters. `FGC_JWT_ISSUER` defaults to
 `forguncy-server-api`, and `FGC_JWT_EXPIRES_MINUTES` defaults to 60 minutes and
-must be a positive integer when supplied. `FGC_BOOTSTRAP_USERNAME` and
-`FGC_BOOTSTRAP_PASSWORD` are optional, but must be supplied together. If both
+must be a positive integer when supplied. `FGC_AUTH_BOOTSTRAP_USERNAME` and
+`FGC_AUTH_BOOTSTRAP_PASSWORD` are optional, but must be supplied together. If both
 are set, the first initialization creates that enabled user when the username
 does not already exist.
 
