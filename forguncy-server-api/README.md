@@ -16,7 +16,7 @@ for the database administrator password; do not put that password in this
 repository or in the command history.
 
 ```powershell
-mysql --host=<mysql-host> --user=<mysql-user> --password < .\sql\001-create-database.sql
+cmd /c "mysql --host=<mysql-host> --user=<mysql-user> --password < .\sql\001-create-database.sql"
 ```
 
 The script creates the `forguncy_auth` database only. On the first API request,
@@ -47,6 +47,10 @@ are set, the first initialization creates that enabled user when the username
 does not already exist.
 
 Restart the Forguncy application process after changing environment variables.
+
+Expose the login route only through the Forguncy site's HTTPS endpoint or an
+equivalent trusted network boundary. Never expose credentials through an
+unprotected direct HTTP endpoint.
 
 ## Login contract
 

@@ -199,9 +199,8 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 3306
 
 ### Unresolved blockers
 
-1. Resolved: the initial Release unit-test command failed 7 of 48 tests because the test host could not load the JWT dependency; the test-only references added in the subsequent fix produced 48 of 48 passing tests.
-2. MySQL listens locally, but the scoped schema/login smoke is blocked by the absence of both a usable local client and task-scoped credentials.
-3. A visible, independently targetable Forguncy 8.0.4 app is unavailable; only 10.0.103 designer windows were observed, so no upload or HTTP route verification was performed.
+1. MySQL listens locally, but the scoped schema/login smoke is blocked by the absence of both a usable local client and task-scoped credentials.
+2. A visible, independently targetable Forguncy 8.0.4 app is unavailable; only 10.0.103 designer windows were observed, so no upload or HTTP route verification was performed.
 
 ## Forguncy 8.0.4 Release JWT test-runtime fix — 2026-08-03
 
@@ -252,3 +251,65 @@ The production artifact contains zero copied host IdentityModel DLLs and zero se
 ### Remaining MySQL and designer blockers
 
 The JWT test-output blocker is resolved. The prior runtime blockers remain unchanged: no usable local MySQL client or task-scoped credentials are available for schema/login smoke, and no independently targetable Forguncy 8.0.4 designer/app is available (only 10.0.103 designer windows were previously observed). No database action, upload, or HTTP route verification was attempted by this fix.
+
+## Final verification after the API-boundary fix — 2026-08-03
+
+The verified code baseline was commit `01a36d859a843f6a415fc088f9e980ef098f6d0f`
+(`01a36d8 fix: cover login request read failures`). This was the code HEAD before
+the documentation-only commit that records this final evidence.
+
+### Current Release unit tests
+
+Command (run from `forguncy-server-api`):
+
+```powershell
+dotnet test .\ForguncyServerApi.sln --configuration Release --no-restore --logger "console;verbosity=normal" -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+- Exit code: `0`.
+- Counts: total `54`; passed `54`; failed `0`; skipped `0`.
+
+### Current Release production build and artifact
+
+Command (run from `forguncy-server-api`):
+
+```powershell
+dotnet build .\ForguncyServerApi.csproj --configuration Release --no-restore -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+- Exit code: `0`.
+- Result: Release production build succeeded with `0` warnings and `0` errors
+  using the Forguncy 8.0.4 `ForguncyBin` path shown above.
+
+Artifact listing command:
+
+```powershell
+Get-ChildItem .\bin\Release\net6.0 -File | Select-Object Name,Length
+```
+
+| Name | Length (bytes) |
+|---|---:|
+| `ForguncyServerApi.deps.json` | 443 |
+| `ForguncyServerApi.dll` | 48640 |
+| `ForguncyServerApi.pdb` | 28200 |
+
+The clean current-code build contained only these three production artifact
+files. The earlier `46592`-byte DLL and `27864`-byte PDB listing is retained in
+the historical evidence above; it does not describe the clean `01a36d8` build.
+
+### Repository and documentation checks
+
+- `git diff --check` passed with exit code `0`.
+- A sanitized scan of the current tree and reachable feature history found no
+  user-provided credential literal. No credential value was printed or
+  reproduced during the scan or in this report.
+- Focused README/report phrase scans passed for the PowerShell-compatible
+  database command, HTTPS/trusted-boundary warning, code baseline, test/build
+  counts, artifact names, and explicit runtime blockers.
+
+### Remaining runtime blockers
+
+1. MySQL runtime verification at `127.0.0.1:3306` remains blocked: no usable MySQL client or task-scoped credentials are available. No schema, database-backed login, or live MySQL check was performed.
+2. Upload and HTTP verification remain blocked because no usable, active Forguncy 8.0.4 designer/runtime is available. No DLL upload, live login request, direct HTTP request, or route-absence smoke check was performed.
+
+These blockers are not passes, and the unit/build evidence above is not a claim of live MySQL, HTTP, upload, or Forguncy runtime verification.
