@@ -39,18 +39,77 @@ public sealed class AuthServiceTests
     }
 
     [Fact]
-    public async Task LoginAsync_unifies_unknown_wrong_and_disabled_users_as_invalid_credentials()
+    public async Task LoginAsync_verifies_once_and_rejects_a_missing_user()
     {
-        var results = await Task.WhenAll(
-            TestServiceWithMissingUser().LoginAsync(new LoginRequest("demo", "demo123"), CancellationToken.None),
-            TestService().LoginAsync(new LoginRequest("demo", "wrong"), CancellationToken.None),
-            TestServiceWithDisabledUser().LoginAsync(new LoginRequest("demo", "demo123"), CancellationToken.None));
+        var passwords = new StubPasswords(true, "submitted-password");
+        var service = new AuthService(
+            new StubUsers(null),
+            passwords,
+            new StubTokens("signed-token"),
+            TimeSpan.FromMinutes(60));
 
-        Assert.All(results, result =>
+        var result = await service.LoginAsync(
+            new LoginRequest("missing", "submitted-password"),
+            CancellationToken.None);
+
+        Assert.Equal(LoginStatus.InvalidCredentials, result.Status);
+        Assert.Null(result.AccessToken);
+        Assert.Equal(1, passwords.VerifyCallCount);
+        Assert.True(new PasswordHasher().Verify(string.Empty, passwords.LastEncodedHash!));
+    }
+
+    [Fact]
+    public async Task LoginAsync_verifies_once_and_rejects_a_disabled_user()
+    {
+        var user = new AuthUser
         {
-            Assert.Equal(LoginStatus.InvalidCredentials, result.Status);
-            Assert.Null(result.AccessToken);
-        });
+            Id = 3,
+            Username = "demo",
+            PasswordHash = "stored-disabled-hash",
+            IsEnabled = false
+        };
+        var passwords = new StubPasswords(true, "submitted-password");
+        var service = new AuthService(
+            new StubUsers(user),
+            passwords,
+            new StubTokens("signed-token"),
+            TimeSpan.FromMinutes(60));
+
+        var result = await service.LoginAsync(
+            new LoginRequest("demo", "submitted-password"),
+            CancellationToken.None);
+
+        Assert.Equal(LoginStatus.InvalidCredentials, result.Status);
+        Assert.Null(result.AccessToken);
+        Assert.Equal(1, passwords.VerifyCallCount);
+        Assert.Equal(user.PasswordHash, passwords.LastEncodedHash);
+    }
+
+    [Fact]
+    public async Task LoginAsync_verifies_once_and_rejects_an_enabled_user_with_a_wrong_password()
+    {
+        var user = new AuthUser
+        {
+            Id = 3,
+            Username = "demo",
+            PasswordHash = "stored-enabled-hash",
+            IsEnabled = true
+        };
+        var passwords = new StubPasswords(false);
+        var service = new AuthService(
+            new StubUsers(user),
+            passwords,
+            new StubTokens("signed-token"),
+            TimeSpan.FromMinutes(60));
+
+        var result = await service.LoginAsync(
+            new LoginRequest("demo", "wrong"),
+            CancellationToken.None);
+
+        Assert.Equal(LoginStatus.InvalidCredentials, result.Status);
+        Assert.Null(result.AccessToken);
+        Assert.Equal(1, passwords.VerifyCallCount);
+        Assert.Equal(user.PasswordHash, passwords.LastEncodedHash);
     }
 
     [Fact]
@@ -102,18 +161,6 @@ public sealed class AuthServiceTests
         new StubTokens("signed-token"),
         TimeSpan.FromMinutes(60));
 
-    private static AuthService TestServiceWithDisabledUser() => new(
-        new StubUsers(new AuthUser { Id = 3, Username = "demo", IsEnabled = false }),
-        new StubPasswords(true, "demo123"),
-        new StubTokens("signed-token"),
-        TimeSpan.FromMinutes(60));
-
-    private static AuthService TestServiceWithMissingUser() => new(
-        new StubUsers(null),
-        new StubPasswords(true, "demo123"),
-        new StubTokens("signed-token"),
-        TimeSpan.FromMinutes(60));
-
     private sealed class StubUsers : IUserRepository
     {
         private readonly AuthUser? user;
@@ -143,9 +190,18 @@ public sealed class AuthServiceTests
             this.expectedPassword = expectedPassword;
         }
 
+        public int VerifyCallCount { get; private set; }
+
+        public string? LastEncodedHash { get; private set; }
+
         public string Hash(string password) => "synthetic-hash";
 
-        public bool Verify(string password, string encodedHash) => valid && password == expectedPassword;
+        public bool Verify(string password, string encodedHash)
+        {
+            VerifyCallCount++;
+            LastEncodedHash = encodedHash;
+            return valid && password == expectedPassword;
+        }
     }
 
     private sealed class StubTokens : IJwtTokenService

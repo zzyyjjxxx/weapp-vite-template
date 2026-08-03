@@ -6,6 +6,9 @@ namespace ForguncyServerApi.Application;
 
 public sealed class AuthService
 {
+    private const string DummyPasswordHash =
+        "PBKDF2-SHA256$100000$AAECAwQFBgcICQoLDA0ODw==$KG7Q4OxHzJU9xwnahrB0hJ4cEgLMpKzWY98YYFFJNK4=";
+
     private readonly IUserRepository users;
     private readonly IPasswordHasher passwords;
     private readonly IJwtTokenService tokens;
@@ -41,7 +44,8 @@ public sealed class AuthService
         }
 
         var user = await users.FindByUsernameAsync(username, cancellationToken);
-        if (user is null || !user.IsEnabled || !passwords.Verify(request.Password, user.PasswordHash))
+        var passwordIsValid = passwords.Verify(request.Password, user?.PasswordHash ?? DummyPasswordHash);
+        if (user is null || !user.IsEnabled || !passwordIsValid)
         {
             return InvalidCredentials();
         }
