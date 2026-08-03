@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using ForguncyServerApi.Application;
 using ForguncyServerApi.Domain;
+using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace ForguncyServerApi.Tests.Api;
@@ -50,6 +51,54 @@ public sealed class AuthApiSurfaceTests
             Assert.DoesNotContain("secret", lowerJson);
             Assert.DoesNotContain("password", lowerJson);
             Assert.DoesNotContain("connection", lowerJson);
+        });
+    }
+
+    [Fact]
+    public void AuthApi_unexpected_exception_records_only_a_sanitized_server_diagnostic()
+    {
+        WithAuthApiType(type =>
+        {
+            var recorder = type.GetMethod(
+                "RecordUnexpectedLoginFailure",
+                BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.NotNull(recorder);
+
+            const string secret = "password=diagnostic-must-not-log-this";
+            var loggerFactory = new CapturingLoggerFactory();
+            var services = new SingleServiceProvider(typeof(ILoggerFactory), loggerFactory);
+
+            try
+            {
+                throw new InvalidOperationException(secret);
+            }
+            catch (Exception exception)
+            {
+                recorder!.Invoke(null, new object?[] { services, exception });
+            }
+
+            var entry = Assert.Single(loggerFactory.Logger.Entries);
+            Assert.Equal(LogLevel.Error, entry.LogLevel);
+            Assert.Equal(1001, entry.EventId.Id);
+            Assert.Equal("AuthLoginUnexpectedFailure", entry.EventId.Name);
+            Assert.Null(entry.Exception);
+
+            var fields = entry.State
+                .Where(field => field.Key != "{OriginalFormat}")
+                .ToDictionary(field => field.Key, field => field.Value?.ToString());
+            Assert.Equal(2, fields.Count);
+            Assert.Equal("auth.login.unexpected_failure", fields["OperationCode"]);
+            Assert.Equal(nameof(InvalidOperationException), fields["ExceptionType"]);
+
+            var diagnostic = string.Join(
+                "|",
+                entry.Message,
+                string.Join("|", entry.State.Select(field => $"{field.Key}={field.Value}")));
+            var lowerDiagnostic = diagnostic.ToLowerInvariant();
+            Assert.DoesNotContain(secret, diagnostic);
+            Assert.DoesNotContain("password", lowerDiagnostic);
+            Assert.DoesNotContain("connection string", lowerDiagnostic);
+            Assert.DoesNotContain("stack trace", lowerDiagnostic);
         });
     }
 
@@ -123,4 +172,70 @@ public sealed class AuthApiSurfaceTests
             ? Assembly.LoadFrom("D:\\Program Files\\Forguncy 8.0.4\\Website\\bin\\GrapeCity.Forguncy.ServerApi.dll")
             : null;
     }
+
+    private sealed class SingleServiceProvider : IServiceProvider
+    {
+        private readonly Type serviceType;
+        private readonly object service;
+
+        public SingleServiceProvider(Type serviceType, object service)
+        {
+            this.serviceType = serviceType;
+            this.service = service;
+        }
+
+        public object? GetService(Type requestedType) => requestedType == serviceType ? service : null;
+    }
+
+    private sealed class CapturingLoggerFactory : ILoggerFactory
+    {
+        public CapturingLogger Logger { get; } = new();
+
+        public void AddProvider(ILoggerProvider provider)
+        {
+        }
+
+        public ILogger CreateLogger(string categoryName) => Logger;
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed class CapturingLogger : ILogger
+    {
+        public List<LogEntry> Entries { get; } = new();
+
+        public IDisposable BeginScope<TState>(TState state) => NoopDisposable.Instance;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            var fields = state as IEnumerable<KeyValuePair<string, object?>>
+                ?? Array.Empty<KeyValuePair<string, object?>>();
+            Entries.Add(new LogEntry(logLevel, eventId, formatter(state, exception), fields.ToArray(), exception));
+        }
+    }
+
+    private sealed class NoopDisposable : IDisposable
+    {
+        public static NoopDisposable Instance { get; } = new();
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed record LogEntry(
+        LogLevel LogLevel,
+        EventId EventId,
+        string Message,
+        IReadOnlyList<KeyValuePair<string, object?>> State,
+        Exception? Exception);
 }
