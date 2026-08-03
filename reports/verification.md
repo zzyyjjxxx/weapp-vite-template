@@ -202,3 +202,53 @@ Test-NetConnection -ComputerName 127.0.0.1 -Port 3306
 1. The exact required Release unit-test command fails (7 of 48 tests) because the test host cannot load the JWT dependency.
 2. MySQL listens locally, but the scoped schema/login smoke is blocked by the absence of both a usable local client and task-scoped credentials.
 3. A visible, independently targetable Forguncy 8.0.4 app is unavailable; only 10.0.103 designer windows were observed, so no upload or HTTP route verification was performed.
+
+## Forguncy 8.0.4 Release JWT test-runtime fix — 2026-08-03
+
+All commands below were run in `D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login`. No source behavior, routes, packages, credentials, production references, or upload artifacts were changed.
+
+### Baseline and test-only fix
+
+The original Task 7 Release test run failed with exit code `1`: total `48`, passed `41`, failed `7`. Every failure was in `JwtTokenServiceTests` because the test host could not load `System.IdentityModel.Tokens.Jwt, Version=6.8.0.0`.
+
+`dotnet clean .\ForguncyServerApi.sln --configuration Release` exited `0` and removed only generated Release `bin`/`obj` output. The installed .NET 6 SDK rejects `--no-restore` for `dotnet clean`, so no unsupported switch was used for that cleanup command.
+
+Only `forguncy-server-api\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj` changed. It now has an overridable `ForguncyBin` property defaulting to `D:\Program Files\Forguncy 8.0.4\Website\bin` and test-only `Private=true` references to these existing host files:
+
+- `System.IdentityModel.Tokens.Jwt.dll`
+- `Microsoft.IdentityModel.Tokens.dll`
+- `Microsoft.IdentityModel.JsonWebTokens.dll`
+- `Microsoft.IdentityModel.Logging.dll`
+
+The production project's host references remain `Private=false`.
+
+### Release unit-test rerun
+
+```powershell
+dotnet test .\ForguncyServerApi.sln --configuration Release --no-restore --logger "console;verbosity=normal"
+```
+
+- Exit code: `0`.
+- Counts: total `48`; passed `48`; failed `0`; skipped `0` (the runner did not print a skipped count, and all 48 discovered tests passed).
+- The seven `JwtTokenServiceTests` now execute and pass in a clean Release test output.
+
+### Release production artifact
+
+```powershell
+dotnet build .\ForguncyServerApi.csproj --configuration Release --no-restore -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+Get-ChildItem .\bin\Release\net6.0 -File | Select-Object Name,Length
+```
+
+- Build exit code: `0` with `0` warnings and `0` errors.
+
+| Name | Length (bytes) |
+|---|---:|
+| `ForguncyServerApi.deps.json` | 443 |
+| `ForguncyServerApi.dll` | 46592 |
+| `ForguncyServerApi.pdb` | 27864 |
+
+The production artifact contains zero copied host IdentityModel DLLs and zero secret-named files. The added references are therefore confined to the test output.
+
+### Remaining MySQL and designer blockers
+
+The JWT test-output blocker is resolved. The prior runtime blockers remain unchanged: no usable local MySQL client or task-scoped credentials are available for schema/login smoke, and no independently targetable Forguncy 8.0.4 designer/app is available (only 10.0.103 designer windows were previously observed). No database action, upload, or HTTP route verification was attempted by this fix.

@@ -4,10 +4,27 @@
     <IsPackable>false</IsPackable>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ForguncyBin Condition="'$(ForguncyBin)' == ''">D:\Program Files\Forguncy 8.0.4\Website\bin</ForguncyBin>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\ForguncyServerApi.csproj" />
+    <Reference Include="System.IdentityModel.Tokens.Jwt">
+      <HintPath>$(ForguncyBin)\System.IdentityModel.Tokens.Jwt.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Microsoft.IdentityModel.Tokens">
+      <HintPath>$(ForguncyBin)\Microsoft.IdentityModel.Tokens.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Microsoft.IdentityModel.JsonWebTokens">
+      <HintPath>$(ForguncyBin)\Microsoft.IdentityModel.JsonWebTokens.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Microsoft.IdentityModel.Logging">
+      <HintPath>$(ForguncyBin)\Microsoft.IdentityModel.Logging.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.21" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.7.2" />
     <PackageReference Include="xunit" Version="2.4.2" />
