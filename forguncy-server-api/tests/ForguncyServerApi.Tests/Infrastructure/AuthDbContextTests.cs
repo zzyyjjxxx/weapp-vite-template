@@ -44,6 +44,21 @@ public sealed class AuthDbContextTests
     }
 
     [Fact]
+    public async Task FindByUsernameAsync_rejects_a_case_insensitive_database_match_when_the_username_is_not_an_ordinal_match()
+    {
+        await using var connection = CreateOpenConnection();
+        await CreateCaseInsensitiveUsersTableAsync(connection);
+        await using var setupContext = CreateContext(connection);
+        setupContext.Users.Add(CreateUser("Alice"));
+        await setupContext.SaveChangesAsync();
+
+        var user = await new UserRepository(() => CreateContext(connection))
+            .FindByUsernameAsync("alice", CancellationToken.None);
+
+        Assert.Null(user);
+    }
+
+    [Fact]
     public async Task FindByUsernameAsync_returns_disabled_users_as_disabled()
     {
         await using var connection = CreateOpenConnection();
@@ -116,6 +131,21 @@ public sealed class AuthDbContextTests
             .UseSqlite(connection)
             .Options;
         return new AuthDbContext(options);
+    }
+
+    private static async Task CreateCaseInsensitiveUsersTableAsync(SqliteConnection connection)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = @"
+            CREATE TABLE jwt_users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT COLLATE NOCASE NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL,
+                is_enabled INTEGER NOT NULL,
+                created_at_utc TEXT NOT NULL,
+                updated_at_utc TEXT NOT NULL
+            );";
+        await command.ExecuteNonQueryAsync();
     }
 
     private static AuthOptions CreateOptions() => new(

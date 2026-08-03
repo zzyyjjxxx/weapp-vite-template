@@ -17,7 +17,10 @@ public sealed class UserRepository : IUserRepository
         ArgumentNullException.ThrowIfNull(username);
 
         await using var context = _contextFactory();
-        return await context.Users.SingleOrDefaultAsync(user => user.Username == username, cancellationToken);
+        var user = await context.Users.SingleOrDefaultAsync(user => user.Username == username, cancellationToken);
+        return user is not null && string.Equals(user.Username, username, StringComparison.Ordinal)
+            ? user
+            : null;
     }
 
     public async Task<bool> ExistsByUsernameAsync(string username, CancellationToken cancellationToken)
