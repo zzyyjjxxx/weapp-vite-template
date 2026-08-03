@@ -320,3 +320,12 @@
   预算均通过，主包 768 KB。
 - `pnpm test:e2e` 退出 0：9/9 场景通过（46.6 秒）；最终运行时扫描为
   `RUNTIME_PATH=pages/home/index`、`RUNTIME_BLOCKING=[]`。用户已有的 `skills-lock.json` 未暂存。
+
+## 项目级 MCP stdio 握手修复（2026-08-03）
+
+- 项目级 `.codex/config.toml` 与 `.mcp.json` 改用 `scripts/weapp-vite-mcp.mjs`，绕过
+  `wv mcp` 启动时写入 stdout 的引导文本，确保 stdout 仅包含 JSON-RPC。
+- `pnpm exec eslint scripts/weapp-vite-mcp.mjs` 退出 0；`git diff --check` 退出 0。
+- 按项目配置启动服务后，首行即为合法 `initialize` JSON-RPC 响应，stderr 为空。
+- 使用 `@modelcontextprotocol/sdk` 的 `StdioClientTransport` 实测连接成功：服务端
+  `@weapp-vite/mcp@2.0.0`，可列出 35 个工具。
