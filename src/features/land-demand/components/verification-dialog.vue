@@ -66,7 +66,7 @@ function close(): void {
       </view>
       <text v-if="props.error" class="verification-dialog__error">{{ props.error }}</text>
     </view>
-    <template #cancel-btn>
+    <view slot="cancel-btn" class="verification-dialog__slot-action">
       <t-button
         class="verification-dialog__action"
         block
@@ -77,8 +77,8 @@ function close(): void {
       >
         取消
       </t-button>
-    </template>
-    <template #confirm-btn>
+    </view>
+    <view slot="confirm-btn" class="verification-dialog__slot-action">
       <t-button
         data-testid="verification-submit"
         class="verification-dialog__action"
@@ -90,7 +90,7 @@ function close(): void {
       >
         确认提交
       </t-button>
-    </template>
+    </view>
   </t-dialog>
 </template>
 
@@ -154,10 +154,18 @@ function close(): void {
   color: $color-error;
 }
 
-.verification-dialog__action {
+.verification-dialog__slot-action {
   flex: 1;
   min-width: 0;
   overflow: hidden;
+}
+
+.verification-dialog__slot-action + .verification-dialog__slot-action {
+  margin-left: 24rpx;
+}
+
+.verification-dialog__action {
+  width: 100%;
   border-radius: $radius-md;
 }
 </style>

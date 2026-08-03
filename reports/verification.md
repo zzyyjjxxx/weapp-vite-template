@@ -275,3 +275,12 @@
 - `pnpm verify` 退出 0（60.7 秒）：35 个测试文件、153 个测试通过，主包 766 KB。
 - 构建后运行时扫描结果为 `RUNTIME_PATH=pages/home/index`、`RUNTIME_BLOCKING=[]`；
   最新截图为 `.tmp/login-visual-current.png` 与 `.tmp/verification-dialog-current.png`。
+
+## 验证码弹窗 footer 溢出修复（2026-08-03，本轮最终结果）
+
+- footer 的取消/确认插槽改为显式 flex 容器，内部 TDesign 按钮使用 `block` 填充各自半区，
+  修复确认按钮超出弹窗右边界的问题。
+- 修复后实机截图确认按钮完整位于弹窗内，验证码提交按钮仍可被自动化定位。
+- `pnpm test:e2e` 退出 0：9/9 场景通过（约 1.4 分钟）。
+- `pnpm verify` 退出 0（57.8 秒）：35 个测试文件、153 个测试通过，主包 766 KB。
+- 构建后运行时扫描结果：`RUNTIME_PATH=pages/home/index`、`RUNTIME_BLOCKING=[]`。
