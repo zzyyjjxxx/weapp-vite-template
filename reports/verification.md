@@ -329,3 +329,5 @@
 - 按项目配置启动服务后，首行即为合法 `initialize` JSON-RPC 响应，stderr 为空。
 - 使用 `@modelcontextprotocol/sdk` 的 `StdioClientTransport` 实测连接成功：服务端
   `@weapp-vite/mcp@2.0.0`，可列出 35 个工具。
+- 主工作树首次检查发现未安装 `node_modules`；执行 `pnpm install --frozen-lockfile` 退出 0，
+  `postinstall/prepare` 均成功。安装后从主工作树再次完成同样的 MCP 握手验证。
