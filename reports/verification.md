@@ -309,3 +309,14 @@
   `RUNTIME_PATH=pages/home/index`、`RUNTIME_BLOCKING=[]`。
 - `pnpm test:e2e` 退出 0：9/9 场景通过（42.3 秒），包含已有填报、步骤切换、融资条件、
   验证码提交、详情查看及修改再保存回归。用户已有的 `skills-lock.json` 未暂存。
+
+## 首页已填进度与当前选择分离（2026-08-03，本轮最终结果）
+
+- Store 新增可持久化的 `progressStep`，`currentStep` 回退到已填写步骤时不再降低最高进度；
+  首页增加 `completed / selected / pending` 三种节点状态。
+- 实机选择第 2 步后，运行时仍显示“已填写至第 5 步 / 共 5 步”，节点 3–5 保持完成态，
+  节点 2 显示选中态；截图为 `.tmp/home-step-selection-middle.png`。
+- `pnpm verify` 退出 0（76.9 秒）：35 个测试文件、155 个测试通过，生成运行时契约和包体
+  预算均通过，主包 768 KB。
+- `pnpm test:e2e` 退出 0：9/9 场景通过（46.6 秒）；最终运行时扫描为
+  `RUNTIME_PATH=pages/home/index`、`RUNTIME_BLOCKING=[]`。用户已有的 `skills-lock.json` 未暂存。

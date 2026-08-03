@@ -65,6 +65,7 @@ export type UpdateLandDemandPayload = Omit<
 export interface LandDemandDraft {
   form: LandDemandForm
   currentStep: 1 | 2 | 3 | 4 | 5
+  progressStep?: 1 | 2 | 3 | 4 | 5
   savedAt: number
 }
 

@@ -25,7 +25,7 @@ const stepNumbers = [1, 2, 3, 4, 5] as const
 const selectedStep = ref<LandDemandStep | undefined>(undefined)
 const currentProgressStep = computed(() => submitted.value
   ? 5
-  : Math.min(5, Math.max(1, landDemandStore.currentStep.value)))
+  : Math.min(5, Math.max(1, landDemandStore.progressStep.value)))
 const progressLabel = computed(() => submitted.value
   ? '已完成全部填报'
   : `已填写至第 ${currentProgressStep.value} 步 / 共 5 步`)
@@ -157,9 +157,10 @@ async function logout(): Promise<void> {
           class="home__step"
           :class="{
             'home__step--active': number <= currentProgressStep,
+            'home__step--completed': number < currentProgressStep,
             'home__step--current': number === currentProgressStep,
             'home__step--selected': number === (selectedStep || currentProgressStep),
-            'home__step--disabled': number > currentProgressStep,
+            'home__step--pending': number > currentProgressStep,
           }"
           @tap="selectStep(number)"
         >
@@ -445,7 +446,7 @@ async function logout(): Promise<void> {
   box-shadow: 0 0 0 5rpx rgb(56 113 224 / 14%);
 }
 
-.home__step--disabled {
+.home__step--pending {
   opacity: 0.5;
 }
 

@@ -27,6 +27,7 @@ describe('product navigation source contract', () => {
     expect(home).toContain(['home-step-', '$', '{number}'].join(''))
     expect(home).toContain('selectStep(number)')
     expect(home).toContain('number === (selectedStep || currentProgressStep)')
+    expect(home).toContain('landDemandStore.progressStep.value')
     expect(home).toContain('step: selectedStep.value')
     expect(home).toContain('{ mode: \'view\' }')
     expect(form).toContain('parseLandDemandMode(query?.mode)')
