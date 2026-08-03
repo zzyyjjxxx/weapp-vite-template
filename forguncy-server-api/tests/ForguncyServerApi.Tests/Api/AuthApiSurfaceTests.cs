@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using ForguncyServerApi.Application;
 using ForguncyServerApi.Domain;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -103,6 +104,50 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
+    public async Task AuthApi_request_read_failure_returns_fixed_server_error_and_records_a_diagnostic()
+    {
+        await WithAuthApiTypeAsync(async type =>
+        {
+            const string sensitiveDetail = "password=request-stream-detail-must-not-escape";
+            var loggerFactory = new CapturingLoggerFactory();
+            var context = new DefaultHttpContext();
+            context.Request.ContentType = "application/json";
+            context.Request.Body = new ThrowingReadStream(new IOException(sensitiveDetail));
+            context.RequestServices = new SingleServiceProvider(typeof(ILoggerFactory), loggerFactory);
+            context.Response.Body = new MemoryStream();
+
+            var api = Activator.CreateInstance(type);
+            Assert.NotNull(api);
+            var contextProperty = type.BaseType?.GetProperty(
+                "Context",
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.NotNull(contextProperty);
+            contextProperty!.SetValue(api, context);
+
+            var login = type.GetMethod("Login", BindingFlags.Public | BindingFlags.Instance);
+            Assert.NotNull(login);
+            var loginTask = Assert.IsAssignableFrom<Task>(login!.Invoke(api, null));
+
+            await loginTask;
+
+            context.Response.Body.Position = 0;
+            using var responseReader = new StreamReader(context.Response.Body);
+            var responseBody = await responseReader.ReadToEndAsync();
+
+            Assert.Equal(StatusCodes.Status500InternalServerError, context.Response.StatusCode);
+            Assert.Equal("application/json; charset=utf-8", context.Response.ContentType);
+            Assert.Equal("{\"error\":\"server_error\"}", responseBody);
+            Assert.DoesNotContain(sensitiveDetail, responseBody);
+
+            var entry = Assert.Single(loggerFactory.Logger.Entries);
+            Assert.Equal(LogLevel.Error, entry.LogLevel);
+            Assert.Equal(nameof(IOException), entry.State.Single(field => field.Key == "ExceptionType").Value);
+            Assert.Null(entry.Exception);
+            Assert.DoesNotContain(sensitiveDetail, entry.Message);
+        });
+    }
+
+    [Fact]
     public void AuthApi_maps_login_outcomes_to_200_400_and_401_responses()
     {
         WithAuthApiType(type =>
@@ -158,6 +203,22 @@ public sealed class AuthApiSurfaceTests
             var type = Assembly.Load("ForguncyServerApi").GetType("ForguncyServerApi.Api.AuthApi");
             Assert.NotNull(type);
             action(type!);
+        }
+        finally
+        {
+            AppDomain.CurrentDomain.AssemblyResolve -= handler;
+        }
+    }
+
+    private static async Task WithAuthApiTypeAsync(Func<Type, Task> action)
+    {
+        ResolveEventHandler handler = ResolveForguncyServerApi;
+        AppDomain.CurrentDomain.AssemblyResolve += handler;
+        try
+        {
+            var type = Assembly.Load("ForguncyServerApi").GetType("ForguncyServerApi.Api.AuthApi");
+            Assert.NotNull(type);
+            await action(type!);
         }
         finally
         {
@@ -230,6 +291,43 @@ public sealed class AuthApiSurfaceTests
         public void Dispose()
         {
         }
+    }
+
+    private sealed class ThrowingReadStream : Stream
+    {
+        private readonly Exception exception;
+
+        public ThrowingReadStream(Exception exception)
+        {
+            this.exception = exception;
+        }
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => throw exception;
+
+        public override ValueTask<int> ReadAsync(
+            Memory<byte> buffer,
+            CancellationToken cancellationToken = default) => ValueTask.FromException<int>(exception);
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     private sealed record LogEntry(

@@ -16,22 +16,23 @@ public sealed class AuthApi : ForguncyApi
     public async Task Login()
     {
         var cancellationToken = Context.RequestAborted;
-        LoginRequest request;
         try
         {
-            request = await LoginRequestReader.ReadAsync(Context.Request, cancellationToken);
-        }
-        catch (LoginRequestFormatException)
-        {
-            await WriteJsonAsync(400, new ErrorResponse("invalid_request"), cancellationToken);
-            return;
-        }
+            LoginRequest request;
+            try
+            {
+                request = await LoginRequestReader.ReadAsync(Context.Request, cancellationToken);
+            }
+            catch (LoginRequestFormatException)
+            {
+                await WriteJsonAsync(400, new ErrorResponse("invalid_request"), cancellationToken);
+                return;
+            }
 
-        LoginResult result;
-        try
-        {
             var auth = await AuthCompositionRoot.CreateAsync(cancellationToken);
-            result = await auth.LoginAsync(request, cancellationToken);
+            var result = await auth.LoginAsync(request, cancellationToken);
+            var response = CreateLoginResponse(result);
+            await WriteJsonAsync(response.StatusCode, response.Payload, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -43,9 +44,6 @@ public sealed class AuthApi : ForguncyApi
             await WriteJsonAsync(500, CreateServerErrorResponse(), cancellationToken);
             return;
         }
-
-        var response = CreateLoginResponse(result);
-        await WriteJsonAsync(response.StatusCode, response.Payload, cancellationToken);
     }
 
     private async Task WriteJsonAsync(int statusCode, object value, CancellationToken cancellationToken)
