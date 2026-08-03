@@ -284,3 +284,14 @@
 - `pnpm test:e2e` 退出 0：9/9 场景通过（约 1.4 分钟）。
 - `pnpm verify` 退出 0（57.8 秒）：35 个测试文件、153 个测试通过，主包 766 KB。
 - 构建后运行时扫描结果：`RUNTIME_PATH=pages/home/index`、`RUNTIME_BLOCKING=[]`。
+
+## 验证码输入类 Dialog 对齐官方实现（2026-08-03，本轮最终结果）
+
+- 验证码弹窗 footer 改为 TDesign `t-dialog` 原生 `confirm-btn` / `cancel-btn` 对象配置，
+  显式使用 `button-layout="horizontal"`；输入内容继续通过 `content` slot 承载业务字段。
+- 移除 footer 内嵌自定义 `t-button` 和手写 flex 宽度，避免小程序 slot 包裹层导致按钮溢出、重叠。
+- 使用 TDesign `tId` 保留验证码提交的稳定运行时定位，提交事件改由 `t-dialog` 的 `confirm` 事件触发。
+- `pnpm test:e2e` 退出 0：9/9 场景通过（50.1 秒）。
+- `pnpm verify` 退出 0（47.8 秒）：35 个测试文件、153 个测试通过，主包 766 KB。
+- 构建后运行时扫描结果：`RUNTIME_PATH=pages/home/index`、`RUNTIME_BLOCKING=[]`。
+- 最新验证码弹窗截图：`.tmp/verification-dialog-native.png`。

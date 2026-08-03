@@ -19,6 +19,19 @@ const emit = defineEmits<{
 const challengePhone = computed(() => props.challenge?.phone ?? '')
 const challengeMockCode = computed(() => props.challenge?.mockCode ?? '')
 const submitDisabled = computed(() => Boolean(props.loading) || props.code.length !== 6)
+const cancelButton = computed(() => ({
+  content: '取消',
+  disabled: Boolean(props.loading),
+  tId: 'verification-cancel',
+  variant: 'text' as const,
+}))
+const confirmButton = computed(() => ({
+  content: '确认提交',
+  disabled: submitDisabled.value,
+  loading: Boolean(props.loading),
+  tId: 'verification-submit',
+  variant: 'text' as const,
+}))
 
 defineComponentJson({ component: true })
 
@@ -34,10 +47,12 @@ function close(): void {
     :visible="props.visible"
     title=""
     content=""
+    button-layout="horizontal"
     :close-on-overlay-click="false"
-    :confirm-btn="false"
-    :cancel-btn="false"
+    :confirm-btn="confirmButton"
+    :cancel-btn="cancelButton"
     @close="close"
+    @confirm="emit('submit')"
   >
     <template #title>
       <view class="verification-dialog__title">
@@ -65,31 +80,6 @@ function close(): void {
         <text>{{ challengeMockCode }}</text>
       </view>
       <text v-if="props.error" class="verification-dialog__error">{{ props.error }}</text>
-    </view>
-    <view slot="cancel-btn" class="verification-dialog__slot-action">
-      <t-button
-        class="verification-dialog__action"
-        block
-        theme="default"
-        variant="text"
-        :disabled="props.loading"
-        @tap="close"
-      >
-        取消
-      </t-button>
-    </view>
-    <view slot="confirm-btn" class="verification-dialog__slot-action">
-      <t-button
-        data-testid="verification-submit"
-        class="verification-dialog__action"
-        block
-        theme="primary"
-        :loading="props.loading"
-        :disabled="submitDisabled"
-        @tap="emit('submit')"
-      >
-        确认提交
-      </t-button>
     </view>
   </t-dialog>
 </template>
@@ -152,20 +142,5 @@ function close(): void {
 .verification-dialog__error {
   margin-top: $space-2;
   color: $color-error;
-}
-
-.verification-dialog__slot-action {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.verification-dialog__slot-action + .verification-dialog__slot-action {
-  margin-left: 24rpx;
-}
-
-.verification-dialog__action {
-  width: 100%;
-  border-radius: $radius-md;
 }
 </style>

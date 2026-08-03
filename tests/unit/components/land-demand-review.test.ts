@@ -80,7 +80,6 @@ describe('land demand review', () => {
       'review-accept',
       'review-submit',
       'verification-code',
-      'verification-submit',
       'mock-code',
       'submit-success',
       'success-back-home',
@@ -88,6 +87,7 @@ describe('land demand review', () => {
     ]) {
       expect(source).toContain(`data-testid="${id}"`)
     }
+    expect(source).toContain('tId: \'verification-submit\'')
     expect(source).toContain('emit(\'edit\', group.step)')
   })
 
@@ -110,8 +110,8 @@ describe('land demand review', () => {
     )
 
     expect(source).toContain(':disabled="props.loading"')
-    expect(source).toContain(':loading="props.loading"')
+    expect(source).toContain('loading: Boolean(props.loading)')
     expect(source).toContain('submitDisabled = computed')
-    expect(source).toContain(':disabled="submitDisabled"')
+    expect(source).toContain('disabled: submitDisabled.value')
   })
 })
