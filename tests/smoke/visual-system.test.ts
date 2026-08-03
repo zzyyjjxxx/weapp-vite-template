@@ -42,6 +42,8 @@ describe('land-demand visual system', () => {
     expect(home).not.toContain('landPlanningHero')
     expect(home).toContain('stepNumbers')
     expect(home).toContain('home__step--active')
+    expect(home).toContain('home__step--selected')
+    expect(home).toContain('grid-template-columns: repeat(5, minmax(0, 1fr))')
     expect(home).toContain('home__steps-progress')
     expect(home).toContain('initializeFromLocalDraft')
     expect(shell).toContain('page-shell--compact')

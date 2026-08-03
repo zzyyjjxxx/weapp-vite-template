@@ -5,6 +5,7 @@ import type {
   LandDemandForm,
   YesNo,
 } from '@/features/land-demand/models'
+import type { LandDemandStep } from '@/router/query'
 
 import { computed, onLoad, ref, watchEffect } from 'wevu'
 import AppError from '@/components/ui/app-error/index.vue'
@@ -41,7 +42,7 @@ import {
 import { readPatchDetail } from '@/platform/event-detail'
 import { replace } from '@/router/navigation'
 import { runProtectedAction, useProtectedPage } from '@/router/protected-page'
-import { parseLandDemandMode } from '@/router/query'
+import { parseLandDemandMode, parseLandDemandStep } from '@/router/query'
 import { useAuthStore } from '@/stores/auth'
 import { useLandDemandStore } from '@/stores/land-demand'
 
@@ -77,6 +78,7 @@ const challenge = ref<NonNullable<typeof sendCodeMutation.data.value>>()
 const verificationCode = ref('')
 const verificationError = ref('')
 const mode = ref<'edit' | 'view'>('edit')
+const requestedStep = ref<LandDemandStep | undefined>(undefined)
 const routeReady = ref(false)
 let initialized = false
 
@@ -111,6 +113,7 @@ const clearDialogContent = computed(() => {
 
 onLoad((query) => {
   mode.value = parseLandDemandMode(query?.mode)
+  requestedStep.value = parseLandDemandStep(query?.step)
   routeReady.value = true
 })
 
@@ -132,6 +135,9 @@ watchEffect(() => {
   }
   else {
     store.initializeFromLocalDraft(profile, query.data.value ?? undefined)
+    if (requestedStep.value) {
+      store.goToStep(requestedStep.value)
+    }
   }
   initialized = true
   ready.value = true

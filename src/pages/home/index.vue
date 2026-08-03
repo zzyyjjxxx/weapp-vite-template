@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed, watchEffect } from 'wevu'
+import type { LandDemandStep } from '@/router/query'
+
+import { computed, ref, watchEffect } from 'wevu'
 import PageShell from '@/components/ui/page-shell/index.vue'
 import { useLandDemandQuery } from '@/features/land-demand/queries'
 import { navigate, replace } from '@/router/navigation'
@@ -20,12 +22,13 @@ const landDemandStore = useLandDemandStore()
 const record = landDemandQuery.data
 const submitted = computed(() => record.value?.landusedemand === '1')
 const stepNumbers = [1, 2, 3, 4, 5] as const
+const selectedStep = ref<LandDemandStep | undefined>(undefined)
 const currentProgressStep = computed(() => submitted.value
   ? 5
   : Math.min(5, Math.max(1, landDemandStore.currentStep.value)))
 const progressLabel = computed(() => submitted.value
   ? '已完成全部填报'
-  : `当前第 ${currentProgressStep.value} 步 / 共 5 步`)
+  : `已填写至第 ${currentProgressStep.value} 步 / 共 5 步`)
 let draftInitialized = false
 
 watchEffect(() => {
@@ -51,7 +54,10 @@ const primaryLabel = computed(() => {
   if (!record.value) {
     return '开始填报'
   }
-  return record.value.landusedemand === '1' ? '查看填报' : '继续填写'
+  if (record.value.landusedemand === '1') {
+    return '查看填报'
+  }
+  return selectedStep.value ? `进入第 ${selectedStep.value} 步` : '继续填写'
 })
 const statusLabel = computed(() => {
   if (!record.value) {
@@ -61,7 +67,9 @@ const statusLabel = computed(() => {
 })
 
 async function openLandDemand(): Promise<void> {
-  await navigate('/pages/land-demand/index')
+  await navigate('/pages/land-demand/index', {
+    step: selectedStep.value ?? (record.value ? currentProgressStep.value : undefined),
+  })
 }
 
 async function viewLandDemand(): Promise<void> {
@@ -69,7 +77,16 @@ async function viewLandDemand(): Promise<void> {
 }
 
 async function editLandDemand(): Promise<void> {
-  await replace('/pages/land-demand/index', { mode: 'edit' })
+  await replace('/pages/land-demand/index', {
+    mode: 'edit',
+    step: selectedStep.value ?? 5,
+  })
+}
+
+function selectStep(step: LandDemandStep): void {
+  if (step <= currentProgressStep.value) {
+    selectedStep.value = step
+  }
 }
 
 async function logout(): Promise<void> {
@@ -136,11 +153,15 @@ async function logout(): Promise<void> {
         <view
           v-for="number in stepNumbers"
           :key="number"
+          :data-testid="`home-step-${number}`"
           class="home__step"
           :class="{
             'home__step--active': number <= currentProgressStep,
             'home__step--current': number === currentProgressStep,
+            'home__step--selected': number === (selectedStep || currentProgressStep),
+            'home__step--disabled': number > currentProgressStep,
           }"
+          @tap="selectStep(number)"
         >
           <text class="home__step-number">{{ number }}</text>
         </view>
@@ -366,27 +387,37 @@ async function logout(): Promise<void> {
 }
 
 .home__steps {
-  display: flex;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: center;
+  width: 100%;
   margin-top: $space-3;
 }
 
 .home__step {
   position: relative;
   display: flex;
-  flex: 1;
   align-items: center;
+  justify-content: center;
+  min-width: 0;
 }
 
 .home__step:not(:last-child)::after {
-  flex: 1;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 0;
+  width: 100%;
   height: 2rpx;
-  margin: 0 8rpx;
   content: '';
   background: #d9e6fa;
+  transform: translateY(-50%);
 }
 
 .home__step-number {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -407,6 +438,15 @@ async function logout(): Promise<void> {
 
 .home__step--current .home__step-number {
   border-color: #cfe0ff;
+}
+
+.home__step--selected .home__step-number {
+  border-color: #7aa9f8;
+  box-shadow: 0 0 0 5rpx rgb(56 113 224 / 14%);
+}
+
+.home__step--disabled {
+  opacity: 0.5;
 }
 
 .home__step--active:not(:last-child)::after {

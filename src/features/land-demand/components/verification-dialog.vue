@@ -18,26 +18,18 @@ const emit = defineEmits<{
 }>()
 const challengePhone = computed(() => props.challenge?.phone ?? '')
 const challengeMockCode = computed(() => props.challenge?.mockCode ?? '')
-const submitDisabled = computed(() => Boolean(props.loading) || props.code.length !== 6)
-const cancelButton = computed(() => ({
-  content: '取消',
-  disabled: Boolean(props.loading),
-  tId: 'verification-cancel',
-  variant: 'text' as const,
-}))
-const confirmButton = computed(() => ({
-  content: '确认提交',
-  disabled: submitDisabled.value,
-  loading: Boolean(props.loading),
-  tId: 'verification-submit',
-  variant: 'text' as const,
-}))
 
 defineComponentJson({ component: true })
 
 function close(): void {
   if (!props.loading) {
     emit('close')
+  }
+}
+
+function confirm(): void {
+  if (!props.loading) {
+    emit('submit')
   }
 }
 </script>
@@ -49,10 +41,10 @@ function close(): void {
     content=""
     button-layout="horizontal"
     :close-on-overlay-click="false"
-    :confirm-btn="confirmButton"
-    :cancel-btn="cancelButton"
+    confirm-btn="确认提交"
+    cancel-btn="取消"
     @close="close"
-    @confirm="emit('submit')"
+    @confirm="confirm"
   >
     <template #title>
       <view class="verification-dialog__title">

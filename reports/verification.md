@@ -295,3 +295,17 @@
 - `pnpm verify` 退出 0（47.8 秒）：35 个测试文件、153 个测试通过，主包 766 KB。
 - 构建后运行时扫描结果：`RUNTIME_PATH=pages/home/index`、`RUNTIME_BLOCKING=[]`。
 - 最新验证码弹窗截图：`.tmp/verification-dialog-native.png`。
+
+## 首页步骤轨道与已填步骤跳转（2026-08-03，本轮最终结果）
+
+- 首页五步进度轨道改为五列等宽布局，连接线从节点中心延伸，已填步骤增加可选中态；
+  `.tmp/home-step-selection.png` 为实机截图。
+- 已填进度以内的节点可点击选择；点击首页主操作会携带 `step` 查询参数，填报页解析后
+  定位到对应步骤。实机验证点击第 1 步后进入 `pages/land-demand/index?step=1`，
+  运行时 `currentStep=1`。
+- `pnpm verify` 退出 0（58.3 秒）：35 个测试文件、154 个测试通过，类型检查、
+  零警告 lint、stylelint、生成运行时契约和包体预算全部通过，主包 767 KB。
+- 微信开发者工具服务端口 `40637`、Automator `9651`；最新运行时扫描结果为
+  `RUNTIME_PATH=pages/home/index`、`RUNTIME_BLOCKING=[]`。
+- `pnpm test:e2e` 退出 0：9/9 场景通过（42.3 秒），包含已有填报、步骤切换、融资条件、
+  验证码提交、详情查看及修改再保存回归。用户已有的 `skills-lock.json` 未暂存。
