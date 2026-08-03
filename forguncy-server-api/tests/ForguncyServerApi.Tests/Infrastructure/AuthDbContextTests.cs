@@ -4,12 +4,52 @@ using ForguncyServerApi.Infrastructure;
 using ForguncyServerApi.Security;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Storage;
 using Xunit;
 
 namespace ForguncyServerApi.Tests.Infrastructure;
 
 public sealed class AuthDbContextTests
 {
+    [Fact]
+    public void MySql_model_matches_the_jwt_users_schema_contract()
+    {
+        using var context = CreateMySqlModelContext();
+
+        var user = Assert.IsAssignableFrom<IReadOnlyEntityType>(
+            context.Model.FindEntityType(typeof(AuthUser)));
+        Assert.Equal("jwt_users", user.GetTableName());
+        Assert.Equal("utf8mb4", user.FindAnnotation("MySql:CharSet")?.Value);
+        Assert.Equal("utf8mb4_unicode_ci", user.FindAnnotation("Relational:Collation")?.Value);
+
+        var table = StoreObjectIdentifier.Table("jwt_users", schema: null);
+        AssertColumn(user, table, nameof(AuthUser.Id), "id", "BIGINT");
+        AssertColumn(user, table, nameof(AuthUser.Username), "username", "varchar(100)");
+        AssertColumn(user, table, nameof(AuthUser.PasswordHash), "password_hash", "varchar(512)");
+        AssertColumn(user, table, nameof(AuthUser.IsEnabled), "is_enabled", "tinyint(1)");
+        AssertColumn(user, table, nameof(AuthUser.CreatedAtUtc), "created_at", "datetime(6)");
+        AssertColumn(user, table, nameof(AuthUser.UpdatedAtUtc), "updated_at", "datetime(6)");
+
+        var id = Assert.IsAssignableFrom<IReadOnlyProperty>(user.FindProperty(nameof(AuthUser.Id)));
+        Assert.Equal(ValueGenerated.OnAdd, id.ValueGenerated);
+
+        var username = Assert.IsAssignableFrom<IReadOnlyProperty>(user.FindProperty(nameof(AuthUser.Username)));
+        Assert.Equal(100, username.GetMaxLength());
+        var usernameIndex = Assert.Single(user.GetIndexes(), index =>
+            index.Properties.Count == 1 && index.Properties[0].Name == nameof(AuthUser.Username));
+        Assert.True(usernameIndex.IsUnique);
+
+        var passwordHash = Assert.IsAssignableFrom<IReadOnlyProperty>(
+            user.FindProperty(nameof(AuthUser.PasswordHash)));
+        Assert.Equal(512, passwordHash.GetMaxLength());
+
+        var isEnabled = Assert.IsAssignableFrom<IReadOnlyProperty>(
+            user.FindProperty(nameof(AuthUser.IsEnabled)));
+        Assert.Equal(true, isEnabled.GetDefaultValue());
+    }
+
     [Fact]
     public async Task EnsureCreatedAsync_creates_the_jwt_users_table()
     {
@@ -23,6 +63,25 @@ public sealed class AuthDbContextTests
         var tableName = await command.ExecuteScalarAsync();
 
         Assert.Equal("jwt_users", tableName);
+    }
+
+    [Fact]
+    public async Task EnsureCreatedAsync_gives_is_enabled_a_default_of_one()
+    {
+        await using var connection = CreateOpenConnection();
+        await using var context = CreateContext(connection);
+        await context.Database.EnsureCreatedAsync();
+
+        await using var insert = connection.CreateCommand();
+        insert.CommandText = @"
+            INSERT INTO jwt_users (username, password_hash, created_at, updated_at)
+            VALUES ('default-enabled', 'synthetic-hash', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);";
+        await insert.ExecuteNonQueryAsync();
+
+        await using var select = connection.CreateCommand();
+        select.CommandText = "SELECT is_enabled FROM jwt_users WHERE username = 'default-enabled';";
+
+        Assert.Equal(1L, await select.ExecuteScalarAsync());
     }
 
     [Fact]
@@ -133,6 +192,28 @@ public sealed class AuthDbContextTests
         return new AuthDbContext(options);
     }
 
+    private static AuthDbContext CreateMySqlModelContext()
+    {
+        var options = new DbContextOptionsBuilder<AuthDbContext>()
+            .UseSqlite("Data Source=:memory:")
+            .ReplaceService<IDatabaseProvider, MySqlModelDatabaseProvider>()
+            .Options;
+        return new AuthDbContext(options);
+    }
+
+    private static void AssertColumn(
+        IReadOnlyEntityType entity,
+        StoreObjectIdentifier table,
+        string propertyName,
+        string columnName,
+        string columnType)
+    {
+        var property = Assert.IsAssignableFrom<IReadOnlyProperty>(entity.FindProperty(propertyName));
+        Assert.Equal(columnName, property.GetColumnName(table));
+        Assert.Equal(columnType, property.GetColumnType());
+        Assert.False(property.IsNullable);
+    }
+
     private static async Task CreateCaseInsensitiveUsersTableAsync(SqliteConnection connection)
     {
         await using var command = connection.CreateCommand();
@@ -142,10 +223,19 @@ public sealed class AuthDbContextTests
                 username TEXT COLLATE NOCASE NOT NULL UNIQUE,
                 password_hash TEXT NOT NULL,
                 is_enabled INTEGER NOT NULL,
-                created_at_utc TEXT NOT NULL,
-                updated_at_utc TEXT NOT NULL
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
             );";
         await command.ExecuteNonQueryAsync();
+    }
+
+    private sealed class MySqlModelDatabaseProvider : IDatabaseProvider
+    {
+        public string Name => "Pomelo.EntityFrameworkCore.MySql";
+
+        public string Version => "synthetic-model-only-provider";
+
+        public bool IsConfigured(IDbContextOptions options) => true;
     }
 
     private static AuthOptions CreateOptions() => new(

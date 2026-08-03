@@ -30,22 +30,27 @@ public sealed class AuthDbContext : DbContext
             .ValueGeneratedOnAdd();
         user.Property(entity => entity.Username)
             .HasColumnName("username")
+            .HasColumnType(isSqlite ? "TEXT" : "varchar(100)")
             .HasMaxLength(100)
             .IsRequired();
         user.HasIndex(entity => entity.Username).IsUnique();
         user.Property(entity => entity.PasswordHash)
             .HasColumnName("password_hash")
+            .HasColumnType(isSqlite ? "TEXT" : "varchar(512)")
             .HasMaxLength(512)
             .IsRequired();
         user.Property(entity => entity.IsEnabled)
             .HasColumnName("is_enabled")
+            .HasColumnType(isSqlite ? "INTEGER" : "tinyint(1)")
+            .HasDefaultValue(true)
+            .ValueGeneratedNever()
             .IsRequired();
         user.Property(entity => entity.CreatedAtUtc)
-            .HasColumnName("created_at_utc")
+            .HasColumnName("created_at")
             .HasColumnType(isSqlite ? "TEXT" : "datetime(6)")
             .IsRequired();
         user.Property(entity => entity.UpdatedAtUtc)
-            .HasColumnName("updated_at_utc")
+            .HasColumnName("updated_at")
             .HasColumnType(isSqlite ? "TEXT" : "datetime(6)")
             .IsRequired();
     }
