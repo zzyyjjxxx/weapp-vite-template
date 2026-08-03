@@ -37,8 +37,16 @@ watchEffect(() => {
   draftInitialized = true
 })
 const enterpriseName = computed(() => enterprise.value?.businessname ?? '企业信息加载中')
-const enterpriseSubtitle = computed(() => enterprise.value?.businessname ?? '企业服务')
 const enterpriseCreditcode = computed(() => enterprise.value?.creditcode ?? '--')
+const fillingDateRange = computed(() => {
+  const timestamp = record.value?.updatetime
+  const base = timestamp ? new Date(timestamp) : new Date()
+  const start = new Date(base.getFullYear(), base.getMonth(), 1)
+  const end = new Date(base.getFullYear(), base.getMonth() + 1, 0)
+  const twoDigits = (value: number) => value < 10 ? `0${value}` : String(value)
+  const format = (date: Date) => `${date.getFullYear()}.${twoDigits(date.getMonth() + 1)}.${twoDigits(date.getDate())}`
+  return `${format(start)} — ${format(end)}`
+})
 const primaryLabel = computed(() => {
   if (!record.value) {
     return '开始填报'
@@ -74,7 +82,6 @@ async function logout(): Promise<void> {
   <PageShell
     v-if="authorized"
     title="企业服务工作台"
-    :subtitle="enterpriseSubtitle"
     icon="home"
   >
     <template #actions>
@@ -91,7 +98,6 @@ async function logout(): Promise<void> {
       <view class="home__hero-content">
         <text class="home__hero-kicker">企业用地需求服务</text>
         <text class="home__hero-title">让项目需求更清晰</text>
-        <text class="home__hero-copy">在线填报、随时暂存，提交后由相关部门跟进服务</text>
       </view>
     </view>
 
@@ -120,14 +126,12 @@ async function logout(): Promise<void> {
         <view>
           <text class="home__product-title">企业项目用地需求</text>
           <text class="home__product-caption">五步完成信息填报</text>
+          <text class="home__date-range">填报时间：{{ fillingDateRange }}</text>
         </view>
         <text data-testid="land-demand-status" class="home__product-status">
           {{ statusLabel }}
         </text>
       </view>
-      <text class="home__product-copy">
-        依次填写基本信息、用地需求、投资项目、融资及联系人，确认无误后提交。
-      </text>
       <view class="home__steps">
         <view
           v-for="number in stepNumbers"
@@ -216,17 +220,23 @@ async function logout(): Promise<void> {
 
 .home__logout {
   flex: 0 0 auto;
-  padding: 10rpx 0 10rpx $space-2;
-  font-size: 22rpx;
+  min-width: 128rpx;
+  padding: 14rpx 18rpx;
+  font-size: 24rpx;
   font-weight: 600;
   line-height: 1.3;
   color: $color-text;
+  text-align: center;
   white-space: nowrap;
+  background: $color-card;
+  border: 1rpx solid $color-border;
+  border-radius: 999rpx;
 }
 
 .home__hero-kicker,
 .home__hero-title,
 .home__hero-copy,
+.home__date-range,
 .home__enterprise-label,
 .home__product-caption,
 .home__section-caption {
@@ -253,6 +263,13 @@ async function logout(): Promise<void> {
   font-size: 23rpx;
   line-height: 1.6;
   color: $color-text-secondary;
+}
+
+.home__date-range {
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  line-height: 1.45;
+  color: $color-text-placeholder;
 }
 
 .home__enterprise {

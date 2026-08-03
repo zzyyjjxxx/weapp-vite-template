@@ -79,6 +79,11 @@ const CHANGE_EVENT_TEST_IDS = new Set([
   'project-hydm-cascader',
 ])
 
+// Date values are edited through TDesign's picker.  Keep the stable field
+// bridge for the runtime contract so tests can set a month without depending
+// on picker column coordinates.
+const DATE_FIELD_TEST_IDS = new Set(['expect-time', 'financing-time'])
+
 const NAVIGATION_TAP_TEST_IDS = new Set([
   'back-home',
   'detail-back-home',
@@ -535,8 +540,18 @@ class AutomatorLocator implements MiniProgramLocator {
   }
 
   async fill(value: string): Promise<void> {
-    const direct = await this.findElementOnce()
     const bridge = COMPONENT_FIELD_BRIDGES[this.id]
+    if (DATE_FIELD_TEST_IDS.has(this.id) && bridge) {
+      await waitFor(
+        async () => await this.changeComponent(bridge, parseControlValue(value))
+          ? true
+          : undefined,
+        `component field data-testid=${this.id}`,
+      )
+      return
+    }
+
+    const direct = await this.findElementOnce()
     if (!direct && bridge) {
       await waitFor(
         async () => await this.changeComponent(bridge, parseControlValue(value))

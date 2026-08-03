@@ -54,20 +54,27 @@ function changeIndustry(detail: unknown): void {
   <view class="step-card">
     <text class="step-card__title">投资项目</text>
     <text class="step-card__description">请按项目实际情况填写投资、行业、产出和建设内容等核心指标。</text>
-    <t-input
-      data-testid="investment"
-      label="固定资产投资额（万元）"
-      type="digit"
-      :value="props.form.investment"
-      status="default"
-      tips=""
-      @change="changeText('investment', $event)"
-    />
+
+    <view class="field field--control">
+      <text class="field__label"><text class="field__required">*</text>固定资产投资额（万元）</text>
+      <t-input
+        data-testid="investment"
+        label=""
+        type="digit"
+        :value="props.form.investment"
+        status="default"
+        tips=""
+        @change="changeText('investment', $event)"
+      />
+      <text v-if="fieldError('investment')" class="field__error">{{ fieldError('investment') }}</text>
+    </view>
+
     <view v-if="optionsReady" class="field field--selector">
       <t-cell
         data-testid="project-hydm"
         title="国民经济行业"
         :note="industryNote"
+        required
         arrow
         @tap="openIndustrySelector"
       />
@@ -85,8 +92,9 @@ function changeIndustry(detail: unknown): void {
         @close="closeIndustrySelector"
       />
     </view>
+
     <view v-if="optionsReady" class="field">
-      <text class="field__label">重点产业赛道</text>
+      <text class="field__label"><text class="field__required">*</text>重点产业赛道</text>
       <t-radio-group
         data-testid="keyindustry"
         :value="props.form.keyindustry"
@@ -96,7 +104,7 @@ function changeIndustry(detail: unknown): void {
       <text v-if="fieldError('keyindustry')" class="field__error">{{ fieldError('keyindustry') }}</text>
     </view>
     <view v-if="optionsReady" class="field">
-      <text class="field__label">细分方向</text>
+      <text class="field__label"><text class="field__required">*</text>细分方向</text>
       <t-radio-group
         data-testid="futureindustry"
         :value="props.form.futureindustry"
@@ -105,51 +113,70 @@ function changeIndustry(detail: unknown): void {
       />
       <text v-if="fieldError('futureindustry')" class="field__error">{{ fieldError('futureindustry') }}</text>
     </view>
-    <t-input
-      data-testid="pred-ys"
-      label="预计年营收（万元）"
-      type="digit"
-      :value="props.form.pred_ys"
-      status="default"
-      tips=""
-      @change="changeText('pred_ys', $event)"
-    />
-    <t-input
-      data-testid="pred-tax"
-      label="预计年税收（万元）"
-      type="digit"
-      :value="props.form.pred_tax"
-      status="default"
-      tips=""
-      @change="changeText('pred_tax', $event)"
-    />
-    <t-input
-      data-testid="pred-rdex"
-      label="预计研发投入（万元）"
-      type="digit"
-      :value="props.form.pred_rdex"
-      status="default"
-      tips=""
-      @change="changeText('pred_rdex', $event)"
-    />
-    <t-input
-      data-testid="pred-unitenergy"
-      label="项目单位能耗增加值（万元/吨标煤）"
-      type="digit"
-      :value="props.form.pred_unitenergy"
-      status="default"
-      tips=""
-      @change="changeText('pred_unitenergy', $event)"
-    />
-    <t-textarea
-      data-testid="projectdata"
-      label="项目建设内容"
-      :value="props.form.projectdata"
-      status="default"
-      tips=""
-      placeholder="请说明主要产品、建设规模和工艺"
-      @change="changeText('projectdata', $event)"
-    />
+
+    <view class="field field--control">
+      <text class="field__label"><text class="field__required">*</text>预计年营业收入（万元）</text>
+      <t-input
+        data-testid="pred-ys"
+        label=""
+        type="digit"
+        :value="props.form.pred_ys"
+        status="default"
+        tips=""
+        @change="changeText('pred_ys', $event)"
+      />
+      <text v-if="fieldError('pred_ys')" class="field__error">{{ fieldError('pred_ys') }}</text>
+    </view>
+    <view class="field field--control">
+      <text class="field__label"><text class="field__required">*</text>预计年税收（万元）</text>
+      <t-input
+        data-testid="pred-tax"
+        label=""
+        type="digit"
+        :value="props.form.pred_tax"
+        status="default"
+        tips=""
+        @change="changeText('pred_tax', $event)"
+      />
+      <text v-if="fieldError('pred_tax')" class="field__error">{{ fieldError('pred_tax') }}</text>
+    </view>
+    <view class="field field--control">
+      <text class="field__label"><text class="field__required">*</text>预计研发投入（万元）</text>
+      <t-input
+        data-testid="pred-rdex"
+        label=""
+        type="digit"
+        :value="props.form.pred_rdex"
+        status="default"
+        tips=""
+        @change="changeText('pred_rdex', $event)"
+      />
+      <text v-if="fieldError('pred_rdex')" class="field__error">{{ fieldError('pred_rdex') }}</text>
+    </view>
+    <view class="field field--control">
+      <text class="field__label"><text class="field__required">*</text>项目单位能耗增加值（万元/吨标煤）</text>
+      <t-input
+        data-testid="pred-unitenergy"
+        label=""
+        type="digit"
+        :value="props.form.pred_unitenergy"
+        status="default"
+        tips=""
+        @change="changeText('pred_unitenergy', $event)"
+      />
+      <text v-if="fieldError('pred_unitenergy')" class="field__error">{{ fieldError('pred_unitenergy') }}</text>
+    </view>
+    <view class="field field--control">
+      <text class="field__label"><text class="field__required">*</text>项目建设内容</text>
+      <t-textarea
+        data-testid="projectdata"
+        label=""
+        :value="props.form.projectdata"
+        placeholder="请说明主要产品、建设规模和工艺"
+        @change="changeText('projectdata', $event)"
+      />
+      <text v-if="fieldError('projectdata')" class="field__error">{{ fieldError('projectdata') }}</text>
+    </view>
   </view>
 </template>
 

@@ -31,7 +31,7 @@ import {
   resolveSubmissionTarget,
 } from '@/features/land-demand/step-controller'
 import { createSubmitController } from '@/features/land-demand/submit'
-import { validateDraft } from '@/features/land-demand/validation'
+import { validateDraft, validateStep } from '@/features/land-demand/validation'
 import {
   applyFinancingChoice,
   applySpecialUseChoice,
@@ -270,6 +270,15 @@ function goPrevious(): void {
 }
 
 function goNext(): void {
+  const stepErrors = validateStep(form.value, currentStep.value)
+  errors.value = errors.value
+    .filter(error => error.step !== currentStep.value)
+    .concat(stepErrors)
+  if (stepErrors.length > 0) {
+    feedback.value = `请先完成第 ${currentStep.value} 步的必填项`
+    return
+  }
+  feedback.value = ''
   goToStep(nextStep(currentStep.value))
 }
 
@@ -351,7 +360,7 @@ async function requestVerificationAuthorized(): Promise<void> {
     acceptanceError.value = result.acceptanceError ?? ''
     const target = resolveSubmissionTarget(result.errors)
     if (target) {
-      feedback.value = ''
+      feedback.value = `请先完成第 ${target} 步的必填项`
       goToStep(target)
       return
     }
@@ -531,15 +540,27 @@ async function editDetail(): Promise<void> {
         :visible="clearDialogVisible"
         title="确认清空已有内容"
         :content="clearDialogContent || ''"
-        cancel-btn="取消"
+        :cancel-btn="false"
         :confirm-btn="false"
         :close-on-overlay-click="false"
         @cancel="cancelDestructiveClear"
         @close="cancelDestructiveClear"
       >
+        <template #cancel-btn>
+          <t-button
+            data-testid="destructive-clear-cancel"
+            class="land-demand-dialog__button"
+            theme="default"
+            variant="text"
+            @tap="cancelDestructiveClear"
+          >
+            取消
+          </t-button>
+        </template>
         <template #confirm-btn>
           <t-button
             data-testid="destructive-clear-confirm"
+            class="land-demand-dialog__button"
             theme="primary"
             @tap="confirmDestructiveClear"
           >
@@ -627,5 +648,12 @@ async function editDetail(): Promise<void> {
 .land-demand-page__error {
   color: $color-error;
   background: $color-error-soft;
+}
+
+.land-demand-dialog__button {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: $radius-md;
 }
 </style>

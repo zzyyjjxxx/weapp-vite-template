@@ -164,7 +164,7 @@ async function submit(): Promise<void> {
 
 .login__hero {
   position: relative;
-  height: 520rpx;
+  height: 390rpx;
   overflow: hidden;
   background: $gradient-hero;
 }
@@ -182,7 +182,7 @@ async function submit(): Promise<void> {
 
 .login__hero-copy {
   position: absolute;
-  top: 58rpx;
+  top: 42rpx;
   left: $space-4;
   z-index: 2;
 }
@@ -224,11 +224,11 @@ async function submit(): Promise<void> {
 
 .login__illustration {
   position: absolute;
-  right: -46rpx;
-  bottom: -18rpx;
+  top: 0;
+  left: 0;
   z-index: 1;
-  width: 730rpx;
-  height: 410rpx;
+  width: 100%;
+  height: 100%;
   opacity: 0.96;
 }
 
@@ -240,8 +240,8 @@ async function submit(): Promise<void> {
 .login__panel {
   position: relative;
   z-index: 3;
-  padding: $space-5 $space-4 $space-4;
-  margin: -54rpx $space-4 0;
+  padding: $space-4 $space-4 $space-3;
+  margin: -38rpx $space-4 0;
   background: rgb(255 255 255 / 97%);
   border: 1rpx solid rgb(220 230 245 / 86%);
   border-radius: $radius-xl;
@@ -296,7 +296,7 @@ async function submit(): Promise<void> {
 }
 
 .login__field-label {
-  padding-left: $space-3;
+  padding-left: 68rpx;
   margin-bottom: 2rpx;
   font-size: 23rpx;
   font-weight: 600;

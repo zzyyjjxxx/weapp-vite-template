@@ -101,7 +101,8 @@ describe('land demand wizard component contract', () => {
     expect(project).toContain('const industryOptions = ref([...NATIONAL_INDUSTRY_OPTIONS])')
     expect(project).toContain('filter-placeholder="搜索行业"')
     expect(project).toContain('const industryNote = ref')
-    expect(basic).toContain('status="default" tips=""')
+    expect(basic).toContain('status="default"')
+    expect(basic).toContain('tips=""')
     expect(verificationDialog).toContain('status="default"')
     expect(verificationDialog).toContain('tips=""')
   })
@@ -172,10 +173,10 @@ describe('land demand wizard component contract', () => {
   it('uses the confirmed investment and unit-energy labels', () => {
     const source = readFileSync(`${componentRoot}/project-info-step.vue`, 'utf8')
 
-    expect(source).toContain('label="固定资产投资额（万元）"')
-    expect(source).toContain('label="项目单位能耗增加值（万元/吨标煤）"')
-    expect(source).not.toContain('label="项目总投资（万元）"')
-    expect(source).not.toContain('label="预计单位能耗"')
+    expect(source).toContain('固定资产投资额（万元）')
+    expect(source).toContain('项目单位能耗增加值（万元/吨标煤）')
+    expect(source).not.toContain('项目总投资（万元）')
+    expect(source).not.toContain('预计单位能耗')
   })
 
   it('loads local drafts through the Store boundary instead of the page repository', () => {

@@ -82,7 +82,6 @@ test.describe.serial('企业用地需求填报', () => {
     await miniProgram.getByTestId('next-step').tap()
     await miniProgram.getByTestId('is-financing-yes').tap()
     await miniProgram.getByTestId('next-step').tap()
-    await miniProgram.getByTestId('review-submit').tap()
     await miniProgram.getByTestId('financing-money-error').expectVisible()
     await miniProgram.getByTestId('financing-time-error').expectVisible()
 

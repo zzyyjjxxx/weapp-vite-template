@@ -106,6 +106,12 @@
   border-bottom: 1rpx solid $color-border-soft;
 }
 
+.field--control {
+  --td-input-vertical-padding: 20rpx;
+
+  padding-top: $space-2;
+}
+
 .field__label,
 .field__selection,
 .field__error {
@@ -117,6 +123,11 @@
   font-size: 26rpx;
   font-weight: 500;
   color: $color-text;
+}
+
+.field__required {
+  margin-right: 4rpx;
+  color: $color-error;
 }
 
 .field__selection {

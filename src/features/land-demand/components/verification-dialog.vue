@@ -39,7 +39,7 @@ function close(): void {
     :cancel-btn="false"
     @close="close"
   >
-    <view class="verification-dialog">
+    <view slot="content" class="verification-dialog">
       <view class="verification-dialog__mark">验</view>
       <text class="verification-dialog__copy">
         验证码已发送至 {{ challengePhone }}
@@ -60,26 +60,30 @@ function close(): void {
         <text>{{ challengeMockCode }}</text>
       </view>
       <text v-if="props.error" class="verification-dialog__error">{{ props.error }}</text>
-      <view class="verification-dialog__actions">
-        <t-button
-          theme="default"
-          variant="outline"
-          :disabled="props.loading"
-          @tap="close"
-        >
-          取消
-        </t-button>
-        <t-button
-          data-testid="verification-submit"
-          theme="primary"
-          :loading="props.loading"
-          :disabled="submitDisabled"
-          @tap="emit('submit')"
-        >
-          确认提交
-        </t-button>
-      </view>
     </view>
+    <template #cancel-btn>
+      <t-button
+        class="verification-dialog__action"
+        theme="default"
+        variant="text"
+        :disabled="props.loading"
+        @tap="close"
+      >
+        取消
+      </t-button>
+    </template>
+    <template #confirm-btn>
+      <t-button
+        data-testid="verification-submit"
+        class="verification-dialog__action"
+        theme="primary"
+        :loading="props.loading"
+        :disabled="submitDisabled"
+        @tap="emit('submit')"
+      >
+        确认提交
+      </t-button>
+    </template>
   </t-dialog>
 </template>
 
@@ -131,10 +135,10 @@ function close(): void {
   color: $color-error;
 }
 
-.verification-dialog__actions {
-  display: flex;
-  gap: $space-2;
-  justify-content: flex-end;
-  margin-top: $space-3;
+.verification-dialog__action {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: $radius-md;
 }
 </style>

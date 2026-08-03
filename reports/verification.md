@@ -250,3 +250,17 @@
 - 页面完成渲染后采集并人工复核：`.tmp/login-visual-current.png`、
   `.tmp/home-visual-current.png`、`.tmp/fill-visual-current.png`；其中填报截图已滚动
   至底部，内容卡片与固定底栏之间可见留白。用户已有的 `skills-lock.json` 未暂存。
+
+## UI 重构与运行时复核（2026-08-03，本轮最终结果）
+
+- `pnpm verify` 退出 0（57.4 秒）：35 个测试文件、153 个单元测试通过；类型检查、
+  零警告 lint、stylelint、微信构建、生成运行时契约和包体预算全部通过，主包 766 KB。
+- 微信开发者工具服务端口为 `40637`，Automator 端口为 `9643`。构建后重新打开项目，
+  扫描登录、工作台、填报第 1–5 步和成功页，控制台结果为 `RUNTIME_BLOCKING=[]`。
+- 清理运行时日志后执行 `pnpm test:e2e`，退出 0：9/9 场景通过（48.1 秒），覆盖当前步骤
+  必填拦截、融资条件、验证码弹窗、输入 `123456`、验证提交、成功页、详情查看和修改再保存。
+- 实机截图已写入正确目录 `C:\Users\hp\.codex\worktrees\f809\weapp-vite-template\.tmp`：
+  `login-visual-current.png`、`home-visual-current.png`、`fill-visual-current.png`、
+  `verification-dialog-current.png`；截图确认插画、输入图标、日期区间、步骤进度、底栏留白和
+  验证码弹窗正文均已渲染。
+- `skills-lock.json` 为用户已有修改，未暂存。

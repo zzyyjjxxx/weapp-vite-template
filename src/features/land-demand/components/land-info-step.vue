@@ -11,6 +11,7 @@ defineComponentJson({ component: true, styleIsolation: 'apply-shared' })
 
 const yesNoOptions = ref(['是', '否'])
 const emptyOptions = ref<string[]>([])
+const expectTimeVisible = ref(false)
 const parkOptions = [
   { value: '330200', label: '宁波市' },
   { value: '330203', label: '海曙区' },
@@ -53,6 +54,22 @@ function changeDeployParks(detail: unknown): void {
 function changeSpecialUse(detail: unknown): void {
   emit('change', { is_specialuse: readStringDetail(detail) as YesNo })
 }
+
+function openExpectTime(): void {
+  expectTimeVisible.value = true
+}
+
+function closeExpectTime(): void {
+  expectTimeVisible.value = false
+}
+
+function changeExpectTime(detail: unknown): void {
+  const value = readStringDetail(detail)
+  if (value) {
+    emit('change', { expect_time: value })
+  }
+  closeExpectTime()
+}
 </script>
 
 <template>
@@ -60,26 +77,35 @@ function changeSpecialUse(detail: unknown): void {
     <text class="step-card__title">用地需求</text>
     <text class="step-card__description">请填写项目所需空间、时间与调剂意向，选填项可按实际情况补充。</text>
 
-    <t-input
-      data-testid="area"
-      label="用地面积（亩）"
-      type="digit"
-      :value="props.form.area"
-      status="default"
-      tips=""
-      @change="changeText('area', $event)"
-    />
-    <t-input
-      data-testid="building-area"
-      label="建筑面积（平方米）"
-      type="digit"
-      :value="props.form.building_area"
-      status="default"
-      tips=""
-      @change="changeText('building_area', $event)"
-    />
+    <view class="field field--control">
+      <text class="field__label"><text class="field__required">*</text>用地面积（亩）</text>
+      <t-input
+        data-testid="area"
+        label=""
+        type="digit"
+        :value="props.form.area"
+        status="default"
+        tips=""
+        @change="changeText('area', $event)"
+      />
+      <text v-if="fieldError('area')" class="field__error">{{ fieldError('area') }}</text>
+    </view>
+    <view class="field field--control">
+      <text class="field__label"><text class="field__required">*</text>建筑面积（平方米）</text>
+      <t-input
+        data-testid="building-area"
+        label=""
+        type="digit"
+        :value="props.form.building_area"
+        status="default"
+        tips=""
+        @change="changeText('building_area', $event)"
+      />
+      <text v-if="fieldError('building_area')" class="field__error">{{ fieldError('building_area') }}</text>
+    </view>
+
     <view class="field">
-      <text class="field__label">意向园区</text>
+      <text class="field__label"><text class="field__required">*</text>意向园区</text>
       <t-radio-group
         data-testid="expect-park"
         :value="props.form.expect_park"
@@ -88,16 +114,34 @@ function changeSpecialUse(detail: unknown): void {
       />
       <text v-if="fieldError('expect_park')" class="field__error">{{ fieldError('expect_park') }}</text>
     </view>
-    <t-input
-      data-testid="expect-time"
-      label="预计用地时间（YYYY-MM）"
-      :value="props.form.expect_time"
-      status="default"
-      tips=""
-      @change="changeText('expect_time', $event)"
-    />
+
+    <view class="field field--selector">
+      <t-cell
+        data-testid="expect-time"
+        title="预计用地时间"
+        :note="props.form.expect_time || '请选择年月'"
+        arrow
+        required
+        @tap="openExpectTime"
+      />
+      <t-date-time-picker
+        data-testid="expect-time-picker"
+        :visible="expectTimeVisible"
+        :value="props.form.expect_time || ''"
+        mode="month"
+        format="YYYY-MM"
+        start="2020-01-01"
+        end="2040-12-31"
+        title="选择预计用地时间"
+        @change="changeExpectTime"
+        @cancel="closeExpectTime"
+        @close="closeExpectTime"
+      />
+      <text v-if="fieldError('expect_time')" class="field__error">{{ fieldError('expect_time') }}</text>
+    </view>
+
     <view class="field">
-      <text class="field__label">是否接受跨区域调剂</text>
+      <text class="field__label"><text class="field__required">*</text>是否接受跨区域调剂</text>
       <t-radio-group
         data-testid="is-deploy"
         :value="props.form.is_deploy"
@@ -107,7 +151,7 @@ function changeSpecialUse(detail: unknown): void {
       <text v-if="fieldError('is_deploy')" class="field__error">{{ fieldError('is_deploy') }}</text>
     </view>
     <view v-if="props.form.is_deploy === '是'" class="field">
-      <text class="field__label">可调剂园区</text>
+      <text class="field__label"><text class="field__required">*</text>可调剂园区</text>
       <t-checkbox-group
         data-testid="deploy-park"
         :value="props.form.deploy_park"
@@ -120,27 +164,35 @@ function changeSpecialUse(detail: unknown): void {
       <text v-if="fieldError('deploy_park')" class="field__error">{{ fieldError('deploy_park') }}</text>
     </view>
 
-    <t-input
-      data-testid="deploy-height"
-      label="层高要求（米，选填）"
-      type="digit"
-      :value="props.form.deploy_height"
-      status="default"
-      tips=""
-      @change="changeText('deploy_height', $event)"
-    />
-    <t-input
-      data-testid="deploy-weight"
-      label="承重要求（吨/平方米，选填）"
-      type="digit"
-      :value="props.form.deploy_weight"
-      status="default"
-      tips=""
-      @change="changeText('deploy_weight', $event)"
-    />
+    <view class="field field--control">
+      <text class="field__label">层高要求（米，选填）</text>
+      <t-input
+        data-testid="deploy-height"
+        label=""
+        type="digit"
+        :value="props.form.deploy_height"
+        status="default"
+        tips=""
+        @change="changeText('deploy_height', $event)"
+      />
+      <text v-if="fieldError('deploy_height')" class="field__error">{{ fieldError('deploy_height') }}</text>
+    </view>
+    <view class="field field--control">
+      <text class="field__label">承重要求（吨/平方米，选填）</text>
+      <t-input
+        data-testid="deploy-weight"
+        label=""
+        type="digit"
+        :value="props.form.deploy_weight"
+        status="default"
+        tips=""
+        @change="changeText('deploy_weight', $event)"
+      />
+      <text v-if="fieldError('deploy_weight')" class="field__error">{{ fieldError('deploy_weight') }}</text>
+    </view>
 
     <view class="field">
-      <text class="field__label">是否有特殊用地需求</text>
+      <text class="field__label"><text class="field__required">*</text>是否有特殊用地需求</text>
       <t-radio-group
         data-testid="is-specialuse"
         :value="props.form.is_specialuse"
@@ -153,7 +205,7 @@ function changeSpecialUse(detail: unknown): void {
       <text v-if="fieldError('is_specialuse')" class="field__error">{{ fieldError('is_specialuse') }}</text>
     </view>
     <view v-if="props.form.is_specialuse === '是'" class="field">
-      <text class="field__label">特殊用地类型</text>
+      <text class="field__label"><text class="field__required">*</text>特殊用地类型</text>
       <t-radio-group
         data-testid="deploy-landtype"
         :value="props.form.deploy_landtype"
