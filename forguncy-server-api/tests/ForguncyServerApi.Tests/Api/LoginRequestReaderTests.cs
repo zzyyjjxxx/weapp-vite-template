@@ -34,6 +34,25 @@ public sealed class LoginRequestReaderTests
     }
 
     [Fact]
+    public async Task ReadAsync_rejects_multipart_form_data()
+    {
+        const string boundary = "----synthetic-boundary";
+        var context = new DefaultHttpContext();
+        context.Request.ContentType = $"multipart/form-data; boundary={boundary}";
+        context.Request.Body = Body(
+            $"--{boundary}\r\n" +
+            "Content-Disposition: form-data; name=\"username\"\r\n\r\n" +
+            "demo\r\n" +
+            $"--{boundary}\r\n" +
+            "Content-Disposition: form-data; name=\"password\"\r\n\r\n" +
+            "demo123\r\n" +
+            $"--{boundary}--\r\n");
+
+        await Assert.ThrowsAsync<LoginRequestFormatException>(
+            () => LoginRequestReader.ReadAsync(context.Request, CancellationToken.None));
+    }
+
+    [Fact]
     public async Task ReadAsync_raises_a_format_exception_for_malformed_json()
     {
         var context = new DefaultHttpContext();

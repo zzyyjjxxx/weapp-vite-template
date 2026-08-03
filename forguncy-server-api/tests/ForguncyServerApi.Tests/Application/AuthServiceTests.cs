@@ -57,10 +57,43 @@ public sealed class AuthServiceTests
     public async Task LoginAsync_trims_only_the_username_before_authentication()
     {
         var result = await TestService().LoginAsync(
-            new LoginRequest(" demo ", "demo123 "),
+            new LoginRequest(" demo ", "demo123"),
+            CancellationToken.None);
+
+        Assert.Equal(LoginStatus.Success, result.Status);
+        Assert.Equal("signed-token", result.AccessToken);
+    }
+
+    [Fact]
+    public async Task LoginAsync_does_not_trim_a_trailing_space_from_the_password()
+    {
+        var result = await TestService().LoginAsync(
+            new LoginRequest("demo", "demo123 "),
             CancellationToken.None);
 
         Assert.Equal(LoginStatus.InvalidCredentials, result.Status);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Constructor_rejects_a_non_positive_token_lifetime(int seconds)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new AuthService(
+            new StubUsers(null),
+            new StubPasswords(false),
+            new StubTokens("signed-token"),
+            TimeSpan.FromSeconds(seconds)));
+    }
+
+    [Fact]
+    public void Constructor_rejects_a_token_lifetime_that_exceeds_int_seconds()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new AuthService(
+            new StubUsers(null),
+            new StubPasswords(false),
+            new StubTokens("signed-token"),
+            TimeSpan.FromSeconds((double)int.MaxValue + 1)));
     }
 
     private static AuthService TestService() => new(

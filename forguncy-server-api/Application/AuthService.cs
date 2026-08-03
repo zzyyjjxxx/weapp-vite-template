@@ -20,6 +20,13 @@ public sealed class AuthService
         this.users = users ?? throw new ArgumentNullException(nameof(users));
         this.passwords = passwords ?? throw new ArgumentNullException(nameof(passwords));
         this.tokens = tokens ?? throw new ArgumentNullException(nameof(tokens));
+        if (tokenLifetime <= TimeSpan.Zero || tokenLifetime.TotalSeconds > int.MaxValue)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(tokenLifetime),
+                "Token lifetime must be positive and fit in Int32 seconds.");
+        }
+
         this.tokenLifetime = tokenLifetime;
     }
 

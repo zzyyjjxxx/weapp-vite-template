@@ -22,29 +22,24 @@ public sealed class AuthApi : ForguncyApi
             return;
         }
 
-        var auth = await AuthCompositionRoot.CreateAsync(cancellationToken);
-        var result = await auth.LoginAsync(request, cancellationToken);
-        switch (result.Status)
+        LoginResult result;
+        try
         {
-            case LoginStatus.Success:
-                await WriteJsonAsync(
-                    200,
-                    new LoginResponse(
-                        result.AccessToken!,
-                        "Bearer",
-                        result.ExpiresInSeconds,
-                        new LoginUserResponse(result.User!.Id, result.User.Username)),
-                    cancellationToken);
-                return;
-            case LoginStatus.InvalidRequest:
-                await WriteJsonAsync(400, new ErrorResponse("invalid_request"), cancellationToken);
-                return;
-            case LoginStatus.InvalidCredentials:
-                await WriteJsonAsync(401, new ErrorResponse("invalid_credentials"), cancellationToken);
-                return;
-            default:
-                throw new InvalidOperationException("The login result status is not supported.");
+            var auth = await AuthCompositionRoot.CreateAsync(cancellationToken);
+            result = await auth.LoginAsync(request, cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            await WriteJsonAsync(500, CreateServerErrorResponse(), cancellationToken);
+            return;
+        }
+
+        var response = CreateLoginResponse(result);
+        await WriteJsonAsync(response.StatusCode, response.Payload, cancellationToken);
     }
 
     private async Task WriteJsonAsync(int statusCode, object value, CancellationToken cancellationToken)
@@ -53,6 +48,29 @@ public sealed class AuthApi : ForguncyApi
         Context.Response.ContentType = "application/json; charset=utf-8";
         await JsonSerializer.SerializeAsync(Context.Response.Body, value, cancellationToken: cancellationToken);
     }
+
+    private static ErrorResponse CreateServerErrorResponse() => new("server_error");
+
+    private static ApiResponse CreateLoginResponse(LoginResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        return result.Status switch
+        {
+            LoginStatus.Success => new ApiResponse(
+                200,
+                new LoginResponse(
+                    result.AccessToken!,
+                    "Bearer",
+                    result.ExpiresInSeconds,
+                    new LoginUserResponse(result.User!.Id, result.User.Username))),
+            LoginStatus.InvalidRequest => new ApiResponse(400, new ErrorResponse("invalid_request")),
+            LoginStatus.InvalidCredentials => new ApiResponse(401, new ErrorResponse("invalid_credentials")),
+            _ => throw new InvalidOperationException("The login result status is not supported.")
+        };
+    }
+
+    private sealed record ApiResponse(int StatusCode, object Payload);
 
     private sealed record LoginResponse(
         [property: JsonPropertyName("access_token")] string AccessToken,

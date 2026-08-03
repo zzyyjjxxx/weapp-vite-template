@@ -24,7 +24,7 @@ public static class LoginRequestReader
             return await ReadJsonAsync(request, cancellationToken);
         }
 
-        if (request.HasFormContentType)
+        if (IsUrlEncodedForm(request))
         {
             return await ReadFormAsync(request, cancellationToken);
         }
@@ -64,6 +64,12 @@ public static class LoginRequestReader
         username is not null && password is not null
             ? new LoginRequest(username, password)
             : throw new LoginRequestFormatException();
+
+    private static bool IsUrlEncodedForm(HttpRequest request)
+    {
+        var mediaType = request.ContentType?.Split(';', 2)[0].Trim();
+        return string.Equals(mediaType, "application/x-www-form-urlencoded", StringComparison.OrdinalIgnoreCase);
+    }
 
     private sealed record LoginRequestPayload(
         [property: JsonPropertyName("username")] string? Username,
