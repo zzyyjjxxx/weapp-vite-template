@@ -2,13 +2,9 @@
 # by `pnpm mcp:print`; keep the user-level generated block managed by weapp-vite.
 
 [mcp_servers.weapp_vite]
-command = "pnpm"
+command = "node"
 args = [
-  "exec",
-  "wv",
-  "mcp",
-  "--workspace-root",
-  "."
+  "scripts/weapp-vite-mcp.mjs"
 ]
 enabled = true
 required = true
