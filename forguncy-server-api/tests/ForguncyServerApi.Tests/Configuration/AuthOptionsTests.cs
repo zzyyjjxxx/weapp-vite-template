@@ -45,6 +45,18 @@ public sealed class AuthOptionsTests
         Assert.Equal(TimeSpan.FromMinutes(15), AuthOptions.From(values).JwtLifetime);
     }
 
+    [Theory]
+    [InlineData("0")]
+    [InlineData("-1")]
+    [InlineData("not-a-number")]
+    public void From_rejects_non_positive_and_non_numeric_expiration(string expiration)
+    {
+        var values = ValidValues();
+        values["FGC_JWT_EXPIRES_MINUTES"] = expiration;
+
+        Assert.Throws<ArgumentException>(() => AuthOptions.From(values));
+    }
+
     [Fact]
     public void From_accepts_bootstrap_values_only_as_an_optional_pair()
     {
@@ -58,6 +70,10 @@ public sealed class AuthOptionsTests
         Assert.Equal("synthetic-password", options.BootstrapPassword);
 
         values.Remove("FGC_BOOTSTRAP_PASSWORD");
+        Assert.Throws<ArgumentException>(() => AuthOptions.From(values));
+
+        values = ValidValues();
+        values["FGC_BOOTSTRAP_PASSWORD"] = "synthetic-password";
         Assert.Throws<ArgumentException>(() => AuthOptions.From(values));
     }
 
