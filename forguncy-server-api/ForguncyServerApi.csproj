@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="tests\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <Reference Include="GrapeCity.Forguncy.ServerApi">
       <HintPath>$(ForguncyBin)\GrapeCity.Forguncy.ServerApi.dll</HintPath>
