@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <RootNamespace>ForguncyServerApi</RootNamespace>
+    <AssemblyName>ForguncyServerApi</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>10.0</LangVersion>
+    <ForguncyBin Condition="'$(ForguncyBin)' == ''">D:\Program Files\Forguncy 8.0.4\Website\bin</ForguncyBin>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <Reference Include="GrapeCity.Forguncy.ServerApi">
+      <HintPath>$(ForguncyBin)\GrapeCity.Forguncy.ServerApi.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Microsoft.EntityFrameworkCore">
+      <HintPath>$(ForguncyBin)\Microsoft.EntityFrameworkCore.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Microsoft.EntityFrameworkCore.Relational">
+      <HintPath>$(ForguncyBin)\Microsoft.EntityFrameworkCore.Relational.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Pomelo.EntityFrameworkCore.MySql">
+      <HintPath>$(ForguncyBin)\Pomelo.EntityFrameworkCore.MySql.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="MySqlConnector">
+      <HintPath>$(ForguncyBin)\MySqlConnector.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="System.IdentityModel.Tokens.Jwt">
+      <HintPath>$(ForguncyBin)\System.IdentityModel.Tokens.Jwt.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Microsoft.IdentityModel.Tokens">
+      <HintPath>$(ForguncyBin)\Microsoft.IdentityModel.Tokens.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Microsoft.IdentityModel.JsonWebTokens">
+      <HintPath>$(ForguncyBin)\Microsoft.IdentityModel.JsonWebTokens.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>
