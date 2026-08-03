@@ -23,12 +23,12 @@ public sealed record AuthOptions(
 
         var issuer = Optional(values, "FGC_JWT_ISSUER") ?? "forguncy-server-api";
         var lifetime = ParseLifetime(values);
-        var bootstrapUsername = Optional(values, "FGC_BOOTSTRAP_USERNAME");
-        var bootstrapPassword = Optional(values, "FGC_BOOTSTRAP_PASSWORD");
+        var bootstrapUsername = Optional(values, "FGC_AUTH_BOOTSTRAP_USERNAME");
+        var bootstrapPassword = Optional(values, "FGC_AUTH_BOOTSTRAP_PASSWORD");
         if ((bootstrapUsername is null) != (bootstrapPassword is null))
         {
             throw new ArgumentException(
-                "FGC_BOOTSTRAP_USERNAME and FGC_BOOTSTRAP_PASSWORD must be provided together.",
+                "FGC_AUTH_BOOTSTRAP_USERNAME and FGC_AUTH_BOOTSTRAP_PASSWORD must be provided together.",
                 nameof(values));
         }
 
@@ -49,8 +49,8 @@ public sealed record AuthOptions(
             "FGC_JWT_SIGNING_KEY",
             "FGC_JWT_ISSUER",
             "FGC_JWT_EXPIRES_MINUTES",
-            "FGC_BOOTSTRAP_USERNAME",
-            "FGC_BOOTSTRAP_PASSWORD"
+            "FGC_AUTH_BOOTSTRAP_USERNAME",
+            "FGC_AUTH_BOOTSTRAP_PASSWORD"
         };
 
         return From(names.ToDictionary(name => name, Environment.GetEnvironmentVariable));

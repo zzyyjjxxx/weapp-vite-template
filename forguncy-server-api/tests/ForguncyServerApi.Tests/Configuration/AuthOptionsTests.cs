@@ -61,20 +61,61 @@ public sealed class AuthOptionsTests
     public void From_accepts_bootstrap_values_only_as_an_optional_pair()
     {
         var values = ValidValues();
-        values["FGC_BOOTSTRAP_USERNAME"] = "synthetic-admin";
-        values["FGC_BOOTSTRAP_PASSWORD"] = "synthetic-password";
+        values["FGC_AUTH_BOOTSTRAP_USERNAME"] = "synthetic-admin";
+        values["FGC_AUTH_BOOTSTRAP_PASSWORD"] = "synthetic-password";
 
         var options = AuthOptions.From(values);
 
         Assert.Equal("synthetic-admin", options.BootstrapUsername);
         Assert.Equal("synthetic-password", options.BootstrapPassword);
 
-        values.Remove("FGC_BOOTSTRAP_PASSWORD");
-        Assert.Throws<ArgumentException>(() => AuthOptions.From(values));
+        values.Remove("FGC_AUTH_BOOTSTRAP_PASSWORD");
+        var missingPassword = Assert.Throws<ArgumentException>(() => AuthOptions.From(values));
+        Assert.Contains("FGC_AUTH_BOOTSTRAP_USERNAME", missingPassword.Message);
+        Assert.Contains("FGC_AUTH_BOOTSTRAP_PASSWORD", missingPassword.Message);
 
         values = ValidValues();
-        values["FGC_BOOTSTRAP_PASSWORD"] = "synthetic-password";
-        Assert.Throws<ArgumentException>(() => AuthOptions.From(values));
+        values["FGC_AUTH_BOOTSTRAP_PASSWORD"] = "synthetic-password";
+        var missingUsername = Assert.Throws<ArgumentException>(() => AuthOptions.From(values));
+        Assert.Contains("FGC_AUTH_BOOTSTRAP_USERNAME", missingUsername.Message);
+        Assert.Contains("FGC_AUTH_BOOTSTRAP_PASSWORD", missingUsername.Message);
+    }
+
+    [Fact]
+    public void FromEnvironment_reads_the_approved_bootstrap_environment_names()
+    {
+        var names = new[]
+        {
+            "FGC_AUTH_MYSQL_CONNECTION",
+            "FGC_JWT_SIGNING_KEY",
+            "FGC_JWT_ISSUER",
+            "FGC_JWT_EXPIRES_MINUTES",
+            "FGC_AUTH_BOOTSTRAP_USERNAME",
+            "FGC_AUTH_BOOTSTRAP_PASSWORD"
+        };
+        var previous = names.ToDictionary(name => name, Environment.GetEnvironmentVariable);
+
+        try
+        {
+            Environment.SetEnvironmentVariable("FGC_AUTH_MYSQL_CONNECTION", "Server=synthetic;Database=environment");
+            Environment.SetEnvironmentVariable("FGC_JWT_SIGNING_KEY", new string('e', 32));
+            Environment.SetEnvironmentVariable("FGC_JWT_ISSUER", null);
+            Environment.SetEnvironmentVariable("FGC_JWT_EXPIRES_MINUTES", null);
+            Environment.SetEnvironmentVariable("FGC_AUTH_BOOTSTRAP_USERNAME", "synthetic-environment-admin");
+            Environment.SetEnvironmentVariable("FGC_AUTH_BOOTSTRAP_PASSWORD", "synthetic-environment-password");
+
+            var options = AuthOptions.FromEnvironment();
+
+            Assert.Equal("synthetic-environment-admin", options.BootstrapUsername);
+            Assert.Equal("synthetic-environment-password", options.BootstrapPassword);
+        }
+        finally
+        {
+            foreach (var entry in previous)
+            {
+                Environment.SetEnvironmentVariable(entry.Key, entry.Value);
+            }
+        }
     }
 
     private static Dictionary<string, string?> ValidValues() => new()
