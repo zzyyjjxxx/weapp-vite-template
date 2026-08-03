@@ -8,6 +8,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\ForguncyServerApi.csproj" />
+    <Reference Include="Pomelo.EntityFrameworkCore.MySql">
+      <HintPath>D:\Program Files\Forguncy 8.0.4\Website\bin\Pomelo.EntityFrameworkCore.MySql.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.21" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.7.2" />
     <PackageReference Include="xunit" Version="2.4.2" />
