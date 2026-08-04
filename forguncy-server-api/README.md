@@ -27,10 +27,9 @@ the application model. Do not add a second SQL definition for that table.
 
 Set these process or machine environment variables in the deployment
 environment, secret manager, or Forguncy host configuration. Do not commit
-their values, connection strings, signing keys, or bootstrap credentials.
+their values, signing keys, or bootstrap credentials.
 
 ```powershell
-[Environment]::SetEnvironmentVariable('FGC_AUTH_MYSQL_CONNECTION', '<mysql-connection-string-from-secret-store>', 'User')
 [Environment]::SetEnvironmentVariable('FGC_JWT_SIGNING_KEY', '<strong-random-secret-at-least-32-chars>', 'User')
 [Environment]::SetEnvironmentVariable('FGC_JWT_ISSUER', '<issuer-name>', 'User')
 [Environment]::SetEnvironmentVariable('FGC_JWT_EXPIRES_MINUTES', '<positive-integer-minutes>', 'User')
@@ -38,13 +37,20 @@ their values, connection strings, signing keys, or bootstrap credentials.
 [Environment]::SetEnvironmentVariable('FGC_AUTH_BOOTSTRAP_PASSWORD', '<initial-password-from-secret-store>', 'User')
 ```
 
-`FGC_AUTH_MYSQL_CONNECTION` and `FGC_JWT_SIGNING_KEY` are required. The
-signing key must contain at least 32 characters. `FGC_JWT_ISSUER` defaults to
-`forguncy-server-api`, and `FGC_JWT_EXPIRES_MINUTES` defaults to 60 minutes and
-must be a positive integer when supplied. `FGC_AUTH_BOOTSTRAP_USERNAME` and
-`FGC_AUTH_BOOTSTRAP_PASSWORD` are optional, but must be supplied together. If both
-are set, the first initialization creates that enabled user when the username
-does not already exist.
+`FGC_JWT_SIGNING_KEY` is required and must contain at least 32 characters.
+`FGC_JWT_ISSUER` defaults to `forguncy-server-api`, and
+`FGC_JWT_EXPIRES_MINUTES` defaults to 60 minutes and must be a positive integer
+when supplied. `FGC_AUTH_BOOTSTRAP_USERNAME` and `FGC_AUTH_BOOTSTRAP_PASSWORD`
+are optional, but must be supplied together. If both are set, the first
+initialization creates that enabled user when the username does not already
+exist.
+
+The MySQL connection is not configured with
+`FGC_AUTH_MYSQL_CONNECTION`. In the Forguncy config table, set the connection
+string in the `value` column of the row where `item='ssl'`. The Forguncy 8.0.4
+SDK reads that row and passes its `value` unchanged to EF Core/MySQL. The lookup
+intentionally does not filter on `enable`. Keep the connection string and its
+credentials out of environment variables, documentation, diagnostics, and logs.
 
 Restart the Forguncy application process after changing environment variables.
 
@@ -128,8 +134,8 @@ database connection information, signing keys, or credentials.
 From `forguncy-server-api`, run:
 
 ```powershell
-dotnet test .\ForguncyServerApi.sln
-dotnet build .\ForguncyServerApi.csproj --configuration Release
+dotnet test .\ForguncyServerApi.sln --configuration Release --no-restore -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+dotnet build .\ForguncyServerApi.csproj --configuration Release --no-restore -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
 ```
 
 The Release build produces:
@@ -146,7 +152,9 @@ In the Forguncy designer, use:
 File -> Settings -> Custom Web API -> Upload Web API Assembly
 ```
 
-Upload `bin\Release\net6.0\ForguncyServerApi.dll`, then configure the
-environment variables in the host that runs the Forguncy application. The
-designer integration intentionally contains only the single login route;
-issue and validate routes are intentionally absent by design.
+Upload `bin\Release\net6.0\ForguncyServerApi.dll`, then configure the JWT and
+optional bootstrap environment variables in the host that runs the Forguncy
+application. Configure the MySQL connection only through the Forguncy `config`
+table row where `item='ssl'`. The designer integration intentionally contains
+only the single login route; issue and validate routes are intentionally absent
+by design.

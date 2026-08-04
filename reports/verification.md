@@ -313,3 +313,71 @@ the historical evidence above; it does not describe the clean `01a36d8` build.
 2. Upload and HTTP verification remain blocked because no usable, active Forguncy 8.0.4 designer/runtime is available. No DLL upload, live login request, direct HTTP request, or route-absence smoke check was performed.
 
 These blockers are not passes, and the unit/build evidence above is not a claim of live MySQL, HTTP, upload, or Forguncy runtime verification.
+
+## Forguncy config connection documentation and final verification - 2026-08-04
+
+All commands below were run in
+`D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login`. No
+connection string, credential, signing key, or bootstrap value was printed or
+recorded.
+
+### Documentation assertions (RED then GREEN)
+
+Before editing `forguncy-server-api/README.md`, focused `rg` scans found the
+old `FGC_AUTH_MYSQL_CONNECTION` environment-setting command, while the exact
+`config.item='ssl'` and `config table` source phrases were absent. This was the
+expected RED state. The generic word `value` already appeared elsewhere in the
+README, so it was not treated as proof of the required config-source guidance.
+
+After the edit, focused scans verified that the README contains the Forguncy
+config table source, `item='ssl'`, `value`, and the existing HTTPS/trusted
+network-boundary warning. Separate absence scans confirmed that neither the old
+`FGC_AUTH_MYSQL_CONNECTION` setting command nor its former required-variable
+wording remains. The documentation states that `enable` is intentionally not a
+lookup condition.
+
+### Release unit tests
+
+Command (run from `forguncy-server-api`):
+
+```powershell
+dotnet test .\ForguncyServerApi.sln --configuration Release --no-restore --logger "console;verbosity=normal" -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+- Exit code: `0`.
+- Test runner result: total `63`; passed `63`; failed `0`.
+
+### Release production build and artifact
+
+Command (run from `forguncy-server-api`):
+
+```powershell
+dotnet build .\ForguncyServerApi.csproj --configuration Release --no-restore -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+Get-ChildItem .\bin\Release\net6.0 -File | Select-Object Name,Length
+```
+
+- Build exit code: `0`.
+- Build result: `0` warnings and `0` errors.
+
+| Name | Length (bytes) |
+|---|---:|
+| `ForguncyServerApi.deps.json` | 443 |
+| `ForguncyServerApi.dll` | 49664 |
+| `ForguncyServerApi.pdb` | 28424 |
+
+### Reachable-history credential scan
+
+A read-only scan over revisions reachable from `HEAD` searched for MySQL-style
+connection strings containing a host/source and a user or password field. It
+reported `22` candidate file revisions. No candidate filename content or value
+was printed or recorded, and this pattern-only scan does not classify those
+historical candidates as live credentials. The Task 3 README and verification
+changes contain no connection-string or credential literal.
+
+### Runtime boundaries
+
+This evidence is limited to documentation assertions, unit tests, and the
+Release artifact. No live MySQL schema, database-backed login, active Forguncy
+8.0.4 designer upload, or HTTP login request was performed. The existing
+blockers remain: no usable local MySQL client or task-scoped credentials, and
+no usable active Forguncy 8.0.4 designer/runtime. These are not passes.
