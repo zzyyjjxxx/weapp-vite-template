@@ -29,7 +29,7 @@ public sealed class AuthApi : ForguncyApi
                 return;
             }
 
-            var auth = await AuthCompositionRoot.CreateAsync(cancellationToken);
+            var auth = await AuthCompositionRoot.CreateAsync(DataAccess, cancellationToken);
             var result = await auth.LoginAsync(request, cancellationToken);
             var response = CreateLoginResponse(result);
             await WriteJsonAsync(response.StatusCode, response.Payload, cancellationToken);

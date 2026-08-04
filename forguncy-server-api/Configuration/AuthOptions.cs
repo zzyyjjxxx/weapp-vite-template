@@ -3,18 +3,27 @@ using System.Globalization;
 namespace ForguncyServerApi.Configuration;
 
 public sealed record AuthOptions(
-    string MySqlConnectionString,
     string JwtSigningKey,
     string JwtIssuer,
     TimeSpan JwtLifetime,
     string? BootstrapUsername,
     string? BootstrapPassword)
 {
+    public AuthOptions(
+        string ignoredConnectionString,
+        string jwtSigningKey,
+        string jwtIssuer,
+        TimeSpan jwtLifetime,
+        string? bootstrapUsername,
+        string? bootstrapPassword)
+        : this(jwtSigningKey, jwtIssuer, jwtLifetime, bootstrapUsername, bootstrapPassword)
+    {
+    }
+
     public static AuthOptions From(IReadOnlyDictionary<string, string?> values)
     {
         ArgumentNullException.ThrowIfNull(values);
 
-        var connectionString = Required(values, "FGC_AUTH_MYSQL_CONNECTION");
         var signingKey = Required(values, "FGC_JWT_SIGNING_KEY");
         if (signingKey.Length < 32)
         {
@@ -33,7 +42,6 @@ public sealed record AuthOptions(
         }
 
         return new AuthOptions(
-            connectionString,
             signingKey,
             issuer,
             lifetime,
@@ -45,7 +53,6 @@ public sealed record AuthOptions(
     {
         var names = new[]
         {
-            "FGC_AUTH_MYSQL_CONNECTION",
             "FGC_JWT_SIGNING_KEY",
             "FGC_JWT_ISSUER",
             "FGC_JWT_EXPIRES_MINUTES",

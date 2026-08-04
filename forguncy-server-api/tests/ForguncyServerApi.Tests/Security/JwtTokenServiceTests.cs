@@ -85,7 +85,6 @@ public sealed class JwtTokenServiceTests
     private static AuthOptions TestOptions(string signingKey = "test-signing-key-that-is-at-least-32-chars") =>
         AuthOptions.From(new Dictionary<string, string?>
         {
-            ["FGC_AUTH_MYSQL_CONNECTION"] = "Server=synthetic;Database=test",
             ["FGC_JWT_SIGNING_KEY"] = signingKey,
             ["FGC_JWT_ISSUER"] = "synthetic-issuer"
         });

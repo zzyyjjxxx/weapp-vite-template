@@ -34,6 +34,26 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
+    public void AuthCompositionRoot_requires_forguncy_data_access_before_initialization()
+    {
+        WithAuthApiType(type =>
+        {
+            var compositionRoot = type.Assembly.GetType("ForguncyServerApi.Api.AuthCompositionRoot");
+            Assert.NotNull(compositionRoot);
+
+            var createAsync = compositionRoot!.GetMethod(
+                "CreateAsync",
+                BindingFlags.Public | BindingFlags.Static);
+            Assert.NotNull(createAsync);
+
+            var parameters = createAsync!.GetParameters();
+            Assert.Equal(2, parameters.Length);
+            Assert.Equal("GrapeCity.Forguncy.ServerApi.IDataAccess", parameters[0].ParameterType.FullName);
+            Assert.Equal(typeof(CancellationToken), parameters[1].ParameterType);
+        });
+    }
+
+    [Fact]
     public void AuthApi_server_error_payload_is_fixed_and_contains_no_sensitive_detail()
     {
         WithAuthApiType(type =>

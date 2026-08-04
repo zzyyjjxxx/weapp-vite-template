@@ -6,15 +6,17 @@ namespace ForguncyServerApi.Tests.Configuration;
 public sealed class AuthOptionsTests
 {
     [Fact]
-    public void From_requires_connection_string_and_signing_key()
+    public void From_requires_a_signing_key_but_not_a_connection_string()
     {
-        Assert.Throws<ArgumentException>(() => AuthOptions.From(new Dictionary<string, string?>
+        var options = AuthOptions.From(new Dictionary<string, string?>
         {
             ["FGC_JWT_SIGNING_KEY"] = new string('k', 32)
-        }));
+        });
+
+        Assert.Equal(new string('k', 32), options.JwtSigningKey);
         Assert.Throws<ArgumentException>(() => AuthOptions.From(new Dictionary<string, string?>
         {
-            ["FGC_AUTH_MYSQL_CONNECTION"] = "Server=synthetic;Database=test"
+            ["FGC_JWT_ISSUER"] = "synthetic-issuer"
         }));
     }
 
@@ -86,7 +88,6 @@ public sealed class AuthOptionsTests
     {
         var names = new[]
         {
-            "FGC_AUTH_MYSQL_CONNECTION",
             "FGC_JWT_SIGNING_KEY",
             "FGC_JWT_ISSUER",
             "FGC_JWT_EXPIRES_MINUTES",
@@ -97,7 +98,6 @@ public sealed class AuthOptionsTests
 
         try
         {
-            Environment.SetEnvironmentVariable("FGC_AUTH_MYSQL_CONNECTION", "Server=synthetic;Database=environment");
             Environment.SetEnvironmentVariable("FGC_JWT_SIGNING_KEY", new string('e', 32));
             Environment.SetEnvironmentVariable("FGC_JWT_ISSUER", null);
             Environment.SetEnvironmentVariable("FGC_JWT_EXPIRES_MINUTES", null);
@@ -120,7 +120,6 @@ public sealed class AuthOptionsTests
 
     private static Dictionary<string, string?> ValidValues() => new()
     {
-        ["FGC_AUTH_MYSQL_CONNECTION"] = "Server=synthetic;Database=test",
         ["FGC_JWT_SIGNING_KEY"] = new string('k', 32)
     };
 }

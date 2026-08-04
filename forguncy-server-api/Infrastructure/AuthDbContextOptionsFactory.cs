@@ -1,18 +1,20 @@
-using ForguncyServerApi.Configuration;
 using Microsoft.EntityFrameworkCore;
 
 namespace ForguncyServerApi.Infrastructure;
 
 public static class AuthDbContextOptionsFactory
 {
-    public static DbContextOptions<AuthDbContext> Create(AuthOptions options)
+    public static DbContextOptions<AuthDbContext> Create(string connectionString)
     {
-        ArgumentNullException.ThrowIfNull(options);
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new ArgumentException("A connection string is required.", nameof(connectionString));
+        }
 
         return new DbContextOptionsBuilder<AuthDbContext>()
             .UseMySql(
-                options.MySqlConnectionString,
-                ServerVersion.AutoDetect(options.MySqlConnectionString))
+                connectionString,
+                ServerVersion.AutoDetect(connectionString))
             .Options;
     }
 }

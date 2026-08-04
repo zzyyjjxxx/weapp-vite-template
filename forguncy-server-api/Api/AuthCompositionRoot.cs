@@ -2,6 +2,7 @@ using ForguncyServerApi.Application;
 using ForguncyServerApi.Configuration;
 using ForguncyServerApi.Infrastructure;
 using ForguncyServerApi.Security;
+using GrapeCity.Forguncy.ServerApi;
 using Microsoft.EntityFrameworkCore;
 
 namespace ForguncyServerApi.Api;
@@ -15,10 +16,11 @@ public sealed class AuthCompositionRoot
         this.authService = authService;
     }
 
-    public static async Task<AuthCompositionRoot> CreateAsync(CancellationToken cancellationToken)
+    public static async Task<AuthCompositionRoot> CreateAsync(IDataAccess dataAccess, CancellationToken cancellationToken)
     {
+        var connectionString = ForguncyConfigConnectionStringReader.ReadRequired(dataAccess);
         var options = AuthOptions.FromEnvironment();
-        var dbContextOptions = AuthDbContextOptionsFactory.Create(options);
+        var dbContextOptions = AuthDbContextOptionsFactory.Create(connectionString);
         Func<AuthDbContext> contextFactory = () => new AuthDbContext(dbContextOptions);
         var initializer = new AuthDbInitializer(contextFactory, options);
         await initializer.EnsureCreatedAndBootstrapAsync(cancellationToken);
