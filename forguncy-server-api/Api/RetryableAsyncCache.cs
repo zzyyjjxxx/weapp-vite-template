@@ -5,7 +5,10 @@ internal sealed class RetryableAsyncCache<T>
     private readonly object gate = new();
     private Lazy<Task<T>>? cachedInitialization;
 
-    public async Task<T> GetOrCreateAsync(Func<Task<T>> factory)
+    public Task<T> GetOrCreateAsync(Func<Task<T>> factory) =>
+        GetOrCreateAsync(factory, CancellationToken.None);
+
+    public async Task<T> GetOrCreateAsync(Func<Task<T>> factory, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(factory);
 
@@ -17,21 +20,43 @@ internal sealed class RetryableAsyncCache<T>
                 LazyThreadSafetyMode.ExecutionAndPublication);
         }
 
+        Task<T> initializationTask;
         try
         {
-            return await initialization.Value;
+            initializationTask = initialization.Value;
         }
         catch
         {
-            lock (gate)
-            {
-                if (ReferenceEquals(cachedInitialization, initialization))
-                {
-                    cachedInitialization = null;
-                }
-            }
-
+            RemoveIfCurrent(initialization);
             throw;
+        }
+
+        try
+        {
+            return await initializationTask.WaitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (
+            cancellationToken.IsCancellationRequested
+            && !initializationTask.IsCanceled
+            && !initializationTask.IsFaulted)
+        {
+            throw;
+        }
+        catch
+        {
+            RemoveIfCurrent(initialization);
+            throw;
+        }
+    }
+
+    private void RemoveIfCurrent(Lazy<Task<T>> initialization)
+    {
+        lock (gate)
+        {
+            if (ReferenceEquals(cachedInitialization, initialization))
+            {
+                cachedInitialization = null;
+            }
         }
     }
 }

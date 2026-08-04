@@ -421,3 +421,16 @@ dotnet build .\ForguncyServerApi.csproj --configuration Release --no-restore -p:
 
 This verification did not use a live MySQL database or Forguncy runtime and
 does not claim an uploaded or HTTP-observed login flow.
+
+## Shared initialization cancellation fix - 2026-08-04
+
+The new regression test first failed against the cached implementation: the
+focused run had `1` failed and `3` passed because the cancellation-aware cache
+overload did not exist. After the fix, the focused Release run passed `4/4`.
+The test verifies that one canceled waiter does not cancel the shared
+initialization observed by another waiter.
+
+The full Release suite then passed `68/68` with `0` failures and `0` skipped.
+The Release production build completed with `0` warnings and `0` errors, and
+`git diff --check` completed successfully. No live MySQL, Forguncy designer,
+upload, or HTTP verification was performed.
