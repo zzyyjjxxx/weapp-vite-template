@@ -1,59 +1,45 @@
 using System.Security.Cryptography;
+using System.Text;
 
 namespace ForguncyServerApi.Security;
 
 public sealed class PasswordHasher : IPasswordHasher
 {
-    private const string Algorithm = "PBKDF2-SHA256";
-    private const int Iterations = 100_000;
-    private const int SaltSize = 16;
-    private const int KeySize = 32;
-
     public string Hash(string password)
     {
         ArgumentNullException.ThrowIfNull(password);
 
-        var salt = RandomNumberGenerator.GetBytes(SaltSize);
-        var key = Rfc2898DeriveBytes.Pbkdf2(password, salt, Iterations, HashAlgorithmName.SHA256, KeySize);
-        return string.Join('$', Algorithm, Iterations, Convert.ToBase64String(salt), Convert.ToBase64String(key));
+        var digest = MD5.HashData(Encoding.UTF8.GetBytes(password));
+        return Convert.ToHexString(digest).ToLowerInvariant().Substring(8, 16);
     }
 
     public bool Verify(string password, string encodedHash)
     {
-        if (password is null || encodedHash is null)
+        if (password is null || !IsLowercaseHex16(encodedHash))
         {
             return false;
         }
 
-        try
+        var expected = Encoding.UTF8.GetBytes(Hash(password));
+        var stored = Encoding.UTF8.GetBytes(encodedHash);
+        return CryptographicOperations.FixedTimeEquals(expected, stored);
+    }
+
+    private static bool IsLowercaseHex16(string? value)
+    {
+        if (value is null || value.Length != 16)
         {
-            var parts = encodedHash.Split('$');
-            if (parts.Length != 4 || parts[0] != Algorithm || parts[1] != Iterations.ToString())
+            return false;
+        }
+
+        foreach (var character in value)
+        {
+            if ((character < '0' || character > '9') && (character < 'a' || character > 'f'))
             {
                 return false;
             }
+        }
 
-            var salt = Convert.FromBase64String(parts[2]);
-            var expectedKey = Convert.FromBase64String(parts[3]);
-            if (salt.Length != SaltSize || expectedKey.Length != KeySize)
-            {
-                return false;
-            }
-
-            var actualKey = Rfc2898DeriveBytes.Pbkdf2(password, salt, Iterations, HashAlgorithmName.SHA256, KeySize);
-            return CryptographicOperations.FixedTimeEquals(actualKey, expectedKey);
-        }
-        catch (FormatException)
-        {
-            return false;
-        }
-        catch (OverflowException)
-        {
-            return false;
-        }
-        catch (CryptographicException)
-        {
-            return false;
-        }
+        return true;
     }
 }
