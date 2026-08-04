@@ -90,6 +90,25 @@ public sealed class ForguncyConfigConnectionStringReaderTests
         });
     }
 
+    [Fact]
+    public void ReadRequired_throws_a_fixed_configuration_error_when_the_sdk_query_fails()
+    {
+        WithReader(readerType =>
+        {
+            const string sensitiveDetail = "Server=should-not-escape;Password=should-not-escape;";
+            var fake = CapturingDataAccess.CreateThrowing(new InvalidOperationException(sensitiveDetail));
+
+            var exception = Assert.Throws<InvalidOperationException>(
+                () => ReadRequired(readerType, fake.DataAccess));
+
+            Assert.Equal("The Forguncy authentication connection configuration is invalid.", exception.Message);
+            Assert.DoesNotContain(sensitiveDetail, exception.Message);
+            Assert.Equal("config", fake.TableName);
+            Assert.Equal("item", fake.FilterColumnName);
+            Assert.Equal("ssl", fake.FilterValue);
+        });
+    }
+
     private static void WithReader(Action<Type> action)
     {
         ResolveEventHandler handler = ResolveForguncyServerApi;
@@ -143,6 +162,8 @@ public sealed class ForguncyConfigConnectionStringReaderTests
 
         public object? FilterValue { get; private set; }
 
+        public Exception? QueryException { get; private set; }
+
         public static CapturingDataAccess Create(Dictionary<string, object>? row)
         {
             var dataAccessType = Assembly.Load("GrapeCity.Forguncy.ServerApi")
@@ -159,6 +180,15 @@ public sealed class ForguncyConfigConnectionStringReaderTests
             return proxy;
         }
 
+        public static CapturingDataAccess CreateThrowing(Exception exception)
+        {
+            ArgumentNullException.ThrowIfNull(exception);
+
+            var proxy = Create(row: null);
+            proxy.QueryException = exception;
+            return proxy;
+        }
+
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
             if (targetMethod?.Name == "GetTableData"
@@ -170,6 +200,11 @@ public sealed class ForguncyConfigConnectionStringReaderTests
                 TableName = tableName;
                 FilterColumnName = filter.GetType().GetProperty("ColumnName")?.GetValue(filter) as string;
                 FilterValue = filter.GetType().GetProperty("Value")?.GetValue(filter);
+                if (QueryException is not null)
+                {
+                    throw QueryException;
+                }
+
                 return Row;
             }
 

@@ -11,9 +11,17 @@ public static class ForguncyConfigConnectionStringReader
     {
         ArgumentNullException.ThrowIfNull(dataAccess);
 
-        var row = dataAccess.GetTableData(
-            "config",
-            new ColumnValuePair { ColumnName = "item", Value = "ssl" });
+        Dictionary<string, object>? row;
+        try
+        {
+            row = dataAccess.GetTableData(
+                "config",
+                new ColumnValuePair { ColumnName = "item", Value = "ssl" });
+        }
+        catch (Exception)
+        {
+            throw new InvalidOperationException(InvalidConfigurationMessage);
+        }
 
         if (row is null
             || !row.TryGetValue("value", out var value)
