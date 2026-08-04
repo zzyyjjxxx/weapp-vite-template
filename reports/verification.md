@@ -381,3 +381,43 @@ Release artifact. No live MySQL schema, database-backed login, active Forguncy
 8.0.4 designer upload, or HTTP login request was performed. The existing
 blockers remain: no usable local MySQL client or task-scoped credentials, and
 no usable active Forguncy 8.0.4 designer/runtime. These are not passes.
+
+## Forguncy auth final-review cache fix - 2026-08-04
+
+All commands below were run in
+`D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login`. No
+connection string, credential, signing key, or bootstrap value was printed or
+recorded.
+
+### Focused RED/GREEN coverage
+
+The initial focused Release run exited `1` with `13` tests discovered: `9`
+passed and `4` failed for the expected reasons. The public `AuthOptions`
+constructor assertion found the obsolete second overload, and the three cache
+tests could not load the not-yet-implemented cache type.
+
+After the implementation, the focused Release run exited `0`: `27` tests
+passed, with `0` failed and `0` skipped. The selection covered `AuthOptions`,
+the retryable async cache, the public auth API surface, and database context
+initialization behavior.
+
+### Full Release unit tests
+
+```powershell
+dotnet test .\ForguncyServerApi.sln --configuration Release --no-restore --logger "console;verbosity=normal" -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+- Exit code: `0`.
+- Test runner result: total `67`; passed `67`; failed `0`; skipped `0`.
+
+### Release production build
+
+```powershell
+dotnet build .\ForguncyServerApi.csproj --configuration Release --no-restore -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+- Exit code: `0`.
+- Result: Release production build succeeded with `0` warnings and `0` errors.
+
+This verification did not use a live MySQL database or Forguncy runtime and
+does not claim an uploaded or HTTP-observed login flow.

@@ -9,17 +9,6 @@ public sealed record AuthOptions(
     string? BootstrapUsername,
     string? BootstrapPassword)
 {
-    public AuthOptions(
-        string ignoredConnectionString,
-        string jwtSigningKey,
-        string jwtIssuer,
-        TimeSpan jwtLifetime,
-        string? bootstrapUsername,
-        string? bootstrapPassword)
-        : this(jwtSigningKey, jwtIssuer, jwtLifetime, bootstrapUsername, bootstrapPassword)
-    {
-    }
-
     public static AuthOptions From(IReadOnlyDictionary<string, string?> values)
     {
         ArgumentNullException.ThrowIfNull(values);

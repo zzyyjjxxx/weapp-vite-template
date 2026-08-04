@@ -239,7 +239,6 @@ public sealed class AuthDbContextTests
     }
 
     private static AuthOptions CreateOptions() => new(
-        "Server=synthetic;Database=synthetic;User Id=synthetic;",
         "synthetic-signing-key-that-is-at-least-thirty-two-characters",
         "forguncy-test",
         TimeSpan.FromMinutes(60),

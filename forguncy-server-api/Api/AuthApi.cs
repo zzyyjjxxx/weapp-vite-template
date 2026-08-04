@@ -11,6 +11,8 @@ public sealed class AuthApi : ForguncyApi
 {
     private const string UnexpectedLoginOperationCode = "auth.login.unexpected_failure";
     private static readonly EventId UnexpectedLoginEvent = new(1001, "AuthLoginUnexpectedFailure");
+    // Forguncy hosts a custom API assembly for one site, so this cache is scoped to that host lifetime.
+    private static readonly RetryableAsyncCache<AuthCompositionRoot> AuthCompositionCache = new();
 
     [Post]
     public async Task Login()
@@ -29,7 +31,8 @@ public sealed class AuthApi : ForguncyApi
                 return;
             }
 
-            var auth = await AuthCompositionRoot.CreateAsync(DataAccess, cancellationToken);
+            var auth = await AuthCompositionCache.GetOrCreateAsync(
+                () => AuthCompositionRoot.CreateAsync(DataAccess, cancellationToken));
             var result = await auth.LoginAsync(request, cancellationToken);
             var response = CreateLoginResponse(result);
             await WriteJsonAsync(response.StatusCode, response.Payload, cancellationToken);

@@ -6,6 +6,23 @@ namespace ForguncyServerApi.Tests.Configuration;
 public sealed class AuthOptionsTests
 {
     [Fact]
+    public void AuthOptions_exposes_only_the_current_five_argument_constructor()
+    {
+        var constructor = Assert.Single(typeof(AuthOptions).GetConstructors());
+
+        Assert.Equal(
+            new[]
+            {
+                typeof(string),
+                typeof(string),
+                typeof(TimeSpan),
+                typeof(string),
+                typeof(string)
+            },
+            constructor.GetParameters().Select(parameter => parameter.ParameterType));
+    }
+
+    [Fact]
     public void From_requires_a_signing_key_but_not_a_connection_string()
     {
         var options = AuthOptions.From(new Dictionary<string, string?>
