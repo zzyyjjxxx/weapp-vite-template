@@ -15,6 +15,14 @@ namespace ForguncyServerApi.Tests.Infrastructure;
 public sealed class AuthDbContextTests
 {
     [Fact]
+    public void AuthUser_exposes_only_the_c_userinfo_fields()
+    {
+        Assert.Equal(
+            new[] { "Id", "IsOpen", "PasswordHash", "Username" },
+            typeof(AuthUser).GetProperties().Select(property => property.Name).OrderBy(name => name));
+    }
+
+    [Fact]
     public void MySql_model_matches_the_c_userinfo_schema_contract()
     {
         using var context = CreateMySqlModelContext();

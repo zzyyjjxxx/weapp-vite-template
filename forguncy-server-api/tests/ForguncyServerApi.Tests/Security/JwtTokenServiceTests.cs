@@ -12,7 +12,7 @@ public sealed class JwtTokenServiceTests
     [Fact]
     public void CreateToken_contains_user_claims_and_validate_returns_them()
     {
-        var user = new AuthUser { Id = 7, Username = "demo", IsEnabled = true };
+        var user = new AuthUser { Id = 7, Username = "demo", IsOpen = 1 };
         var service = new JwtTokenService(TestOptions());
 
         var token = service.CreateToken(user);

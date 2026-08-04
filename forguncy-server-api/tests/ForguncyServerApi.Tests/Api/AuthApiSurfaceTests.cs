@@ -54,6 +54,41 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
+    public void AuthCompositionRoot_has_no_database_initializer_or_startup_schema_writes()
+    {
+        WithAuthApiType(type =>
+        {
+            Assert.Null(type.Assembly.GetType("ForguncyServerApi.Infrastructure.AuthDbInitializer"));
+
+            var source = File.ReadAllText(SourceFile("Api", "AuthCompositionRoot.cs"));
+            Assert.DoesNotContain("AuthDbInitializer", source);
+            Assert.DoesNotContain("EnsureCreated", source);
+        });
+    }
+
+    [Fact]
+    public void Real_user_deployment_surface_has_no_legacy_bootstrap_assets_or_guidance()
+    {
+        var projectRoot = ProjectRoot();
+        var productionFiles = Directory
+            .EnumerateFiles(projectRoot, "*", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}tests{Path.DirectorySeparatorChar}"))
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"))
+            .Where(path => Path.GetExtension(path) is ".cs" or ".md" or ".sql")
+            .ToArray();
+        var deploymentSurface = string.Join(
+            Environment.NewLine,
+            productionFiles.Select(File.ReadAllText));
+
+        Assert.DoesNotContain("jwt_users", deploymentSurface);
+        Assert.DoesNotContain("EnsureCreated", deploymentSurface);
+        Assert.DoesNotContain("FGC_AUTH_BOOTSTRAP_", deploymentSurface);
+        Assert.DoesNotContain("AuthDbInitializer", deploymentSurface);
+        Assert.DoesNotContain(Path.Combine(projectRoot, "sql", "001-create-database.sql"), productionFiles);
+    }
+
+    [Fact]
     public void AuthApi_server_error_payload_is_fixed_and_contains_no_sensitive_detail()
     {
         WithAuthApiType(type =>
@@ -253,6 +288,12 @@ public sealed class AuthApiSurfaceTests
             ? Assembly.LoadFrom("D:\\Program Files\\Forguncy 8.0.4\\Website\\bin\\GrapeCity.Forguncy.ServerApi.dll")
             : null;
     }
+
+    private static string ProjectRoot() =>
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+
+    private static string SourceFile(params string[] segments) => Path.Combine(
+        new[] { ProjectRoot() }.Concat(segments).ToArray());
 
     private sealed class SingleServiceProvider : IServiceProvider
     {

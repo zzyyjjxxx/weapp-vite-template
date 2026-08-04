@@ -5,9 +5,7 @@ namespace ForguncyServerApi.Configuration;
 public sealed record AuthOptions(
     string JwtSigningKey,
     string JwtIssuer,
-    TimeSpan JwtLifetime,
-    string? BootstrapUsername,
-    string? BootstrapPassword)
+    TimeSpan JwtLifetime)
 {
     public static AuthOptions From(IReadOnlyDictionary<string, string?> values)
     {
@@ -21,21 +19,8 @@ public sealed record AuthOptions(
 
         var issuer = Optional(values, "FGC_JWT_ISSUER") ?? "forguncy-server-api";
         var lifetime = ParseLifetime(values);
-        var bootstrapUsername = Optional(values, "FGC_AUTH_BOOTSTRAP_USERNAME");
-        var bootstrapPassword = Optional(values, "FGC_AUTH_BOOTSTRAP_PASSWORD");
-        if ((bootstrapUsername is null) != (bootstrapPassword is null))
-        {
-            throw new ArgumentException(
-                "FGC_AUTH_BOOTSTRAP_USERNAME and FGC_AUTH_BOOTSTRAP_PASSWORD must be provided together.",
-                nameof(values));
-        }
 
-        return new AuthOptions(
-            signingKey,
-            issuer,
-            lifetime,
-            bootstrapUsername,
-            bootstrapPassword);
+        return new AuthOptions(signingKey, issuer, lifetime);
     }
 
     public static AuthOptions FromEnvironment()
@@ -44,9 +29,7 @@ public sealed record AuthOptions(
         {
             "FGC_JWT_SIGNING_KEY",
             "FGC_JWT_ISSUER",
-            "FGC_JWT_EXPIRES_MINUTES",
-            "FGC_AUTH_BOOTSTRAP_USERNAME",
-            "FGC_AUTH_BOOTSTRAP_PASSWORD"
+            "FGC_JWT_EXPIRES_MINUTES"
         };
 
         return From(names.ToDictionary(name => name, Environment.GetEnvironmentVariable));

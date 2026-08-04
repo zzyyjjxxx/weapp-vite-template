@@ -434,3 +434,102 @@ The full Release suite then passed `68/68` with `0` failures and `0` skipped.
 The Release production build completed with `0` warnings and `0` errors, and
 `git diff --check` completed successfully. No live MySQL, Forguncy designer,
 upload, or HTTP verification was performed.
+
+## c_userinfo bootstrap removal and deployment evidence - 2026-08-04
+
+All commands below were run in
+`D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login`. No live
+database operation, Forguncy upload, or HTTP request was performed, and no
+credential or connection-string value was introduced or recorded.
+
+### TDD RED/GREEN evidence
+
+The unchanged focused baseline passed `16/16`. After updating the required
+configuration and API/source-surface assertions, the exact focused Release
+filter exited `1`: total `17`, passed `13`, failed `4`. The failures identified
+the obsolete five-argument `AuthOptions` constructor, bootstrap environment
+reads, the initializer type/startup schema write, and legacy database guidance.
+
+The first GREEN rerun found one stale test fixture that still assigned the
+removed `AuthUser.IsEnabled` compatibility field. The fixture was updated to
+the real `c_userinfo.isopen` model. The exact focused filter then exited `0`:
+total `17`, passed `17`, failed `0`, skipped `0`.
+
+```powershell
+dotnet test .\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~AuthOptionsTests|FullyQualifiedName~AuthApiSurfaceTests" -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+### Final Release unit tests and build
+
+```powershell
+dotnet test .\ForguncyServerApi.sln --configuration Release --no-restore --logger "console;verbosity=minimal" -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+dotnet build .\ForguncyServerApi.csproj --configuration Release --no-restore -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+- Final test exit code: `0`; total `62`, passed `62`, failed `0`, skipped `0`.
+- Final build exit code: `0`; `0` warnings and `0` errors.
+
+The final `bin\Release\net6.0` production artifact listing was:
+
+| Name | Length (bytes) |
+|---|---:|
+| `ForguncyServerApi.deps.json` | 443 |
+| `ForguncyServerApi.dll` | 43008 |
+| `ForguncyServerApi.pdb` | 27484 |
+
+### Source and repository checks
+
+A case-insensitive scan of maintained production `*.cs`, `*.md`, and `*.sql`
+under `forguncy-server-api`, excluding tests and generated `bin`/`obj` output,
+found no stale legacy table, PBKDF2, initializer, schema-creation, bootstrap
+environment, or deleted SQL-script guidance. `git diff --check` exited `0`;
+Git printed only expected LF-to-CRLF working-copy notices and reported no
+whitespace errors.
+
+The verified deployment contract is read-only: Forguncy supplies the existing
+database and `c_userinfo` table selected through `config.item='ssl'`.
+`username` maps to `creditCode`, passwords use lowercase middle-16 MD5, and
+`isopen` must equal integer `1`. The API does not create, alter, seed, or
+initialize database content.
+
+## c_userinfo MD5 login refactor - 2026-08-04
+
+The Task 3 RED run was intentionally executed before removing the legacy
+initializer. The focused configuration/API-surface run discovered `17` tests:
+`13` passed and `4` failed on the expected obsolete constructor, bootstrap
+environment reads, initializer type, and legacy deployment guidance.
+
+After the refactor, the focused Release run was:
+
+```powershell
+dotnet test .\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~AuthOptionsTests|FullyQualifiedName~AuthApiSurfaceTests|FullyQualifiedName~AuthDbContextTests" -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin' --logger "console;verbosity=minimal"
+```
+
+- Exit code: `0`.
+- Result: `21` passed, `0` failed, `0` skipped.
+
+The full Release suite then passed `62/62` with `0` failures and `0` skipped:
+
+```powershell
+dotnet test .\ForguncyServerApi.sln --configuration Release --no-restore --logger "console;verbosity=minimal" -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+The production Release build passed with `0` warnings and `0` errors:
+
+```powershell
+dotnet build .\ForguncyServerApi.csproj --configuration Release --no-restore -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+The resulting `bin\Release\net6.0` artifact listing was:
+
+| Name | Length (bytes) |
+|---|---:|
+| `ForguncyServerApi.deps.json` | 443 |
+| `ForguncyServerApi.dll` | 43008 |
+| `ForguncyServerApi.pdb` | 27484 |
+
+`git diff --check` completed with exit code `0`. A source scan over production
+files (excluding tests and generated `bin`/`obj`) found no
+`AuthDbInitializer`, `EnsureCreated`, `jwt_users`, bootstrap environment,
+`forguncy_auth`, or PBKDF2 references. No live MySQL, Forguncy upload, or HTTP
+verification was performed.

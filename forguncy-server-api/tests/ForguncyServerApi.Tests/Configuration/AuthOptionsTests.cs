@@ -6,7 +6,7 @@ namespace ForguncyServerApi.Tests.Configuration;
 public sealed class AuthOptionsTests
 {
     [Fact]
-    public void AuthOptions_exposes_only_the_current_five_argument_constructor()
+    public void AuthOptions_exposes_only_the_jwt_configuration_constructor()
     {
         var constructor = Assert.Single(typeof(AuthOptions).GetConstructors());
 
@@ -15,9 +15,7 @@ public sealed class AuthOptionsTests
             {
                 typeof(string),
                 typeof(string),
-                typeof(TimeSpan),
-                typeof(string),
-                typeof(string)
+                typeof(TimeSpan)
             },
             constructor.GetParameters().Select(parameter => parameter.ParameterType));
     }
@@ -77,66 +75,20 @@ public sealed class AuthOptionsTests
     }
 
     [Fact]
-    public void From_accepts_bootstrap_values_only_as_an_optional_pair()
+    public void AuthOptions_source_does_not_read_obsolete_bootstrap_environment_names()
     {
-        var values = ValidValues();
-        values["FGC_AUTH_BOOTSTRAP_USERNAME"] = "synthetic-admin";
-        values["FGC_AUTH_BOOTSTRAP_PASSWORD"] = "synthetic-password";
+        var source = File.ReadAllText(SourceFile("Configuration", "AuthOptions.cs"));
 
-        var options = AuthOptions.From(values);
-
-        Assert.Equal("synthetic-admin", options.BootstrapUsername);
-        Assert.Equal("synthetic-password", options.BootstrapPassword);
-
-        values.Remove("FGC_AUTH_BOOTSTRAP_PASSWORD");
-        var missingPassword = Assert.Throws<ArgumentException>(() => AuthOptions.From(values));
-        Assert.Contains("FGC_AUTH_BOOTSTRAP_USERNAME", missingPassword.Message);
-        Assert.Contains("FGC_AUTH_BOOTSTRAP_PASSWORD", missingPassword.Message);
-
-        values = ValidValues();
-        values["FGC_AUTH_BOOTSTRAP_PASSWORD"] = "synthetic-password";
-        var missingUsername = Assert.Throws<ArgumentException>(() => AuthOptions.From(values));
-        Assert.Contains("FGC_AUTH_BOOTSTRAP_USERNAME", missingUsername.Message);
-        Assert.Contains("FGC_AUTH_BOOTSTRAP_PASSWORD", missingUsername.Message);
-    }
-
-    [Fact]
-    public void FromEnvironment_reads_the_approved_bootstrap_environment_names()
-    {
-        var names = new[]
-        {
-            "FGC_JWT_SIGNING_KEY",
-            "FGC_JWT_ISSUER",
-            "FGC_JWT_EXPIRES_MINUTES",
-            "FGC_AUTH_BOOTSTRAP_USERNAME",
-            "FGC_AUTH_BOOTSTRAP_PASSWORD"
-        };
-        var previous = names.ToDictionary(name => name, Environment.GetEnvironmentVariable);
-
-        try
-        {
-            Environment.SetEnvironmentVariable("FGC_JWT_SIGNING_KEY", new string('e', 32));
-            Environment.SetEnvironmentVariable("FGC_JWT_ISSUER", null);
-            Environment.SetEnvironmentVariable("FGC_JWT_EXPIRES_MINUTES", null);
-            Environment.SetEnvironmentVariable("FGC_AUTH_BOOTSTRAP_USERNAME", "synthetic-environment-admin");
-            Environment.SetEnvironmentVariable("FGC_AUTH_BOOTSTRAP_PASSWORD", "synthetic-environment-password");
-
-            var options = AuthOptions.FromEnvironment();
-
-            Assert.Equal("synthetic-environment-admin", options.BootstrapUsername);
-            Assert.Equal("synthetic-environment-password", options.BootstrapPassword);
-        }
-        finally
-        {
-            foreach (var entry in previous)
-            {
-                Environment.SetEnvironmentVariable(entry.Key, entry.Value);
-            }
-        }
+        Assert.DoesNotContain("FGC_AUTH_BOOTSTRAP_", source);
     }
 
     private static Dictionary<string, string?> ValidValues() => new()
     {
         ["FGC_JWT_SIGNING_KEY"] = new string('k', 32)
     };
+
+    private static string SourceFile(params string[] segments) => Path.Combine(
+        new[] { Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..")) }
+            .Concat(segments)
+            .ToArray());
 }

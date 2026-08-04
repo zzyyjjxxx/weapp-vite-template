@@ -16,21 +16,20 @@ public sealed class AuthCompositionRoot
         this.authService = authService;
     }
 
-    public static async Task<AuthCompositionRoot> CreateAsync(IDataAccess dataAccess, CancellationToken cancellationToken)
+    public static Task<AuthCompositionRoot> CreateAsync(IDataAccess dataAccess, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var connectionString = ForguncyConfigConnectionStringReader.ReadRequired(dataAccess);
         var options = AuthOptions.FromEnvironment();
         var dbContextOptions = AuthDbContextOptionsFactory.Create(connectionString);
         Func<AuthDbContext> contextFactory = () => new AuthDbContext(dbContextOptions);
-        var initializer = new AuthDbInitializer(contextFactory, options);
-        await initializer.EnsureCreatedAndBootstrapAsync(cancellationToken);
 
         var authService = new AuthService(
             new UserRepository(contextFactory),
             new PasswordHasher(),
             new JwtTokenService(options),
             options.JwtLifetime);
-        return new AuthCompositionRoot(authService);
+        return Task.FromResult(new AuthCompositionRoot(authService));
     }
 
     public Task<LoginResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken) =>
