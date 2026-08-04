@@ -48,9 +48,10 @@ exist.
 The MySQL connection is not configured with
 `FGC_AUTH_MYSQL_CONNECTION`. In the Forguncy config table, set the connection
 string in the `value` column of the row where `item='ssl'`. The Forguncy 8.0.4
-SDK reads that row and passes its `value` unchanged to EF Core/MySQL. The lookup
-intentionally does not filter on `enable`. Keep the connection string and its
-credentials out of environment variables, documentation, diagnostics, and logs.
+SDK `IDataAccess` reads that row. The application uses the row's `value` as the
+EF Core/MySQL connection string. The lookup intentionally does not filter on
+`enable`. Keep the connection string and its credentials out of environment
+variables, documentation, diagnostics, and logs.
 
 Restart the Forguncy application process after changing environment variables.
 
