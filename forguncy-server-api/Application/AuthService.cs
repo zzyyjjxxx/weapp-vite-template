@@ -44,7 +44,7 @@ public sealed class AuthService
 
         var user = await users.FindByUsernameAsync(creditCode, cancellationToken);
         var passwordIsValid = passwords.Verify(request.Password, user?.PasswordHash ?? DummyPasswordHash);
-        if (user is null || !user.IsEnabled || !passwordIsValid)
+        if (user is null || user.IsOpen != 1 || !passwordIsValid)
         {
             return InvalidCredentials();
         }

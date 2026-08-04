@@ -37,7 +37,7 @@ public sealed class AuthDbContext : DbContext
             .HasColumnType("varchar(255)")
             .HasMaxLength(255)
             .IsRequired();
-        user.Property(entity => entity.IsEnabled)
+        user.Property(entity => entity.IsOpen)
             .HasColumnName("isopen")
             .HasColumnType("int")
             .ValueGeneratedNever()

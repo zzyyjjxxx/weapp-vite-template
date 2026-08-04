@@ -156,7 +156,7 @@ public sealed class AuthServiceTests
         Id = 3,
         Username = "91330200SYNTHETIC",
         PasswordHash = passwordHash,
-        IsEnabled = isEnabled
+        IsOpen = isEnabled ? 1 : 0
     };
 
     private sealed class StubUsers : IUserRepository

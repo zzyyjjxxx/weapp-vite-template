@@ -1,5 +1,8 @@
+using System.Security.Claims;
+using ForguncyServerApi.Application;
 using ForguncyServerApi.Domain;
 using ForguncyServerApi.Infrastructure;
+using ForguncyServerApi.Security;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -26,7 +29,7 @@ public sealed class AuthDbContextTests
         AssertColumn(user, table, nameof(AuthUser.Id), "id", "int");
         AssertColumn(user, table, nameof(AuthUser.Username), "creditCode", "varchar(255)");
         AssertColumn(user, table, nameof(AuthUser.PasswordHash), "password", "varchar(255)");
-        AssertColumn(user, table, nameof(AuthUser.IsEnabled), "isopen", "int");
+        AssertColumn(user, table, nameof(AuthUser.IsOpen), "isopen", "int");
 
         Assert.Empty(user.GetIndexes());
 
@@ -50,8 +53,34 @@ public sealed class AuthDbContextTests
         Assert.Equal(17, user.Id);
         Assert.Equal("91330200SYNTHETIC", user.Username);
         Assert.Equal("synthetic-password", user.PasswordHash);
-        Assert.False(user.IsEnabled);
+        Assert.Equal(0, user.IsOpen);
         Assert.Null(await repository.FindByUsernameAsync("91330200synthetic", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task LoginAsync_rejects_a_mapped_isopen_value_other_than_one()
+    {
+        await using var connection = CreateOpenConnection();
+        await CreateCUserinfoTableAsync(connection);
+        var creditCode = nameof(AuthDbContextTests);
+        await InsertUserAsync(connection, 19, creditCode, nameof(IPasswordHasher), 2);
+
+        var service = new AuthService(
+            new UserRepository(() => CreateContext(connection)),
+            new AcceptingPasswords(),
+            new StubTokens(),
+            TimeSpan.FromMinutes(60));
+
+        var mappedUser = await new UserRepository(() => CreateContext(connection))
+            .FindByUsernameAsync(creditCode, CancellationToken.None);
+        Assert.Equal(2, mappedUser?.IsOpen);
+
+        var result = await service.LoginAsync(
+            new LoginRequest(creditCode, nameof(LoginRequest)),
+            CancellationToken.None);
+
+        Assert.Equal(LoginStatus.InvalidCredentials, result.Status);
+        Assert.Null(result.AccessToken);
     }
 
     private static SqliteConnection CreateOpenConnection()
@@ -129,5 +158,19 @@ public sealed class AuthDbContextTests
         public string Version => "synthetic-model-only-provider";
 
         public bool IsConfigured(IDbContextOptions options) => true;
+    }
+
+    private sealed class AcceptingPasswords : IPasswordHasher
+    {
+        public string Hash(string password) => string.Empty;
+
+        public bool Verify(string password, string encodedHash) => true;
+    }
+
+    private sealed class StubTokens : IJwtTokenService
+    {
+        public string CreateToken(AuthUser user) => string.Empty;
+
+        public ClaimsPrincipal ValidateToken(string token) => new();
     }
 }
