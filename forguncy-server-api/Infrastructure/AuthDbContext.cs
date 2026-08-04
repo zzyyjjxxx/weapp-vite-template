@@ -14,9 +14,8 @@ public sealed class AuthDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        var isSqlite = Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite";
         var user = modelBuilder.Entity<AuthUser>();
-        user.ToTable("jwt_users");
+        user.ToTable("c_userinfo");
         if (Database.ProviderName == "Pomelo.EntityFrameworkCore.MySql")
         {
             user.Metadata.SetAnnotation("MySql:CharSet", "utf8mb4");
@@ -26,32 +25,22 @@ public sealed class AuthDbContext : DbContext
         user.HasKey(entity => entity.Id);
         user.Property(entity => entity.Id)
             .HasColumnName("id")
-            .HasColumnType(isSqlite ? "INTEGER" : "BIGINT")
-            .ValueGeneratedOnAdd();
+            .HasColumnType("int")
+            .ValueGeneratedNever();
         user.Property(entity => entity.Username)
-            .HasColumnName("username")
-            .HasColumnType(isSqlite ? "TEXT" : "varchar(100)")
-            .HasMaxLength(100)
+            .HasColumnName("creditCode")
+            .HasColumnType("varchar(255)")
+            .HasMaxLength(255)
             .IsRequired();
-        user.HasIndex(entity => entity.Username).IsUnique();
         user.Property(entity => entity.PasswordHash)
-            .HasColumnName("password_hash")
-            .HasColumnType(isSqlite ? "TEXT" : "varchar(512)")
-            .HasMaxLength(512)
+            .HasColumnName("password")
+            .HasColumnType("varchar(255)")
+            .HasMaxLength(255)
             .IsRequired();
         user.Property(entity => entity.IsEnabled)
-            .HasColumnName("is_enabled")
-            .HasColumnType(isSqlite ? "INTEGER" : "tinyint(1)")
-            .HasDefaultValue(true)
+            .HasColumnName("isopen")
+            .HasColumnType("int")
             .ValueGeneratedNever()
-            .IsRequired();
-        user.Property(entity => entity.CreatedAtUtc)
-            .HasColumnName("created_at")
-            .HasColumnType(isSqlite ? "TEXT" : "datetime(6)")
-            .IsRequired();
-        user.Property(entity => entity.UpdatedAtUtc)
-            .HasColumnName("updated_at")
-            .HasColumnType(isSqlite ? "TEXT" : "datetime(6)")
             .IsRequired();
     }
 }

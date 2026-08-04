@@ -10,27 +10,29 @@ namespace ForguncyServerApi.Tests.Application;
 public sealed class AuthServiceTests
 {
     [Fact]
-    public async Task LoginAsync_returns_a_token_for_an_enabled_user_with_a_valid_password()
+    public async Task LoginAsync_returns_the_existing_jwt_response_for_an_open_credit_code_with_a_valid_password()
     {
-        var user = new AuthUser { Id = 3, Username = "demo", IsEnabled = true };
+        var user = CreateUser(isEnabled: true);
         var service = new AuthService(
             new StubUsers(user),
-            new StubPasswords(true, "demo123"),
+            new StubPasswords(true, "synthetic-submitted-password"),
             new StubTokens("signed-token"),
             TimeSpan.FromMinutes(60));
 
-        var result = await service.LoginAsync(new LoginRequest("demo", "demo123"), CancellationToken.None);
+        var result = await service.LoginAsync(
+            new LoginRequest("91330200SYNTHETIC", "synthetic-submitted-password"),
+            CancellationToken.None);
 
         Assert.Equal(LoginStatus.Success, result.Status);
         Assert.Equal("signed-token", result.AccessToken);
         Assert.Equal(3600, result.ExpiresInSeconds);
         Assert.Equal(3, result.User?.Id);
-        Assert.Equal("demo", result.User?.Username);
+        Assert.Equal("91330200SYNTHETIC", result.User?.Username);
     }
 
     [Theory]
-    [InlineData("", "password")]
-    [InlineData("demo", "")]
+    [InlineData("", "synthetic-submitted-password")]
+    [InlineData("91330200SYNTHETIC", "")]
     public async Task LoginAsync_rejects_missing_credentials(string username, string password)
     {
         var result = await TestService().LoginAsync(new LoginRequest(username, password), CancellationToken.None);
@@ -39,9 +41,9 @@ public sealed class AuthServiceTests
     }
 
     [Fact]
-    public async Task LoginAsync_verifies_once_and_rejects_a_missing_user()
+    public async Task LoginAsync_verifies_once_and_rejects_a_missing_credit_code()
     {
-        var passwords = new StubPasswords(true, "submitted-password");
+        var passwords = new StubPasswords(true, "synthetic-submitted-password");
         var service = new AuthService(
             new StubUsers(null),
             passwords,
@@ -49,26 +51,20 @@ public sealed class AuthServiceTests
             TimeSpan.FromMinutes(60));
 
         var result = await service.LoginAsync(
-            new LoginRequest("missing", "submitted-password"),
+            new LoginRequest("91330200MISSING", "synthetic-submitted-password"),
             CancellationToken.None);
 
         Assert.Equal(LoginStatus.InvalidCredentials, result.Status);
         Assert.Null(result.AccessToken);
         Assert.Equal(1, passwords.VerifyCallCount);
-        Assert.True(new PasswordHasher().Verify(string.Empty, passwords.LastEncodedHash!));
+        Assert.Equal("0000000000000000", passwords.LastEncodedHash);
     }
 
     [Fact]
-    public async Task LoginAsync_verifies_once_and_rejects_a_disabled_user()
+    public async Task LoginAsync_rejects_a_closed_credit_code_when_isopen_is_zero()
     {
-        var user = new AuthUser
-        {
-            Id = 3,
-            Username = "demo",
-            PasswordHash = "stored-disabled-hash",
-            IsEnabled = false
-        };
-        var passwords = new StubPasswords(true, "submitted-password");
+        var user = CreateUser(isEnabled: false, passwordHash: "synthetic-closed-password");
+        var passwords = new StubPasswords(true, "synthetic-submitted-password");
         var service = new AuthService(
             new StubUsers(user),
             passwords,
@@ -76,7 +72,7 @@ public sealed class AuthServiceTests
             TimeSpan.FromMinutes(60));
 
         var result = await service.LoginAsync(
-            new LoginRequest("demo", "submitted-password"),
+            new LoginRequest("91330200SYNTHETIC", "synthetic-submitted-password"),
             CancellationToken.None);
 
         Assert.Equal(LoginStatus.InvalidCredentials, result.Status);
@@ -86,15 +82,9 @@ public sealed class AuthServiceTests
     }
 
     [Fact]
-    public async Task LoginAsync_verifies_once_and_rejects_an_enabled_user_with_a_wrong_password()
+    public async Task LoginAsync_rejects_an_open_credit_code_with_a_wrong_password()
     {
-        var user = new AuthUser
-        {
-            Id = 3,
-            Username = "demo",
-            PasswordHash = "stored-enabled-hash",
-            IsEnabled = true
-        };
+        var user = CreateUser(isEnabled: true, passwordHash: "synthetic-open-password");
         var passwords = new StubPasswords(false);
         var service = new AuthService(
             new StubUsers(user),
@@ -103,7 +93,7 @@ public sealed class AuthServiceTests
             TimeSpan.FromMinutes(60));
 
         var result = await service.LoginAsync(
-            new LoginRequest("demo", "wrong"),
+            new LoginRequest("91330200SYNTHETIC", "synthetic-wrong-password"),
             CancellationToken.None);
 
         Assert.Equal(LoginStatus.InvalidCredentials, result.Status);
@@ -113,10 +103,10 @@ public sealed class AuthServiceTests
     }
 
     [Fact]
-    public async Task LoginAsync_trims_only_the_username_before_authentication()
+    public async Task LoginAsync_trims_only_the_username_before_credit_code_lookup()
     {
         var result = await TestService().LoginAsync(
-            new LoginRequest(" demo ", "demo123"),
+            new LoginRequest(" 91330200SYNTHETIC ", "synthetic-submitted-password"),
             CancellationToken.None);
 
         Assert.Equal(LoginStatus.Success, result.Status);
@@ -127,7 +117,7 @@ public sealed class AuthServiceTests
     public async Task LoginAsync_does_not_trim_a_trailing_space_from_the_password()
     {
         var result = await TestService().LoginAsync(
-            new LoginRequest("demo", "demo123 "),
+            new LoginRequest("91330200SYNTHETIC", "synthetic-submitted-password "),
             CancellationToken.None);
 
         Assert.Equal(LoginStatus.InvalidCredentials, result.Status);
@@ -156,10 +146,18 @@ public sealed class AuthServiceTests
     }
 
     private static AuthService TestService() => new(
-        new StubUsers(new AuthUser { Id = 3, Username = "demo", IsEnabled = true }),
-        new StubPasswords(true, "demo123"),
+        new StubUsers(CreateUser(isEnabled: true)),
+        new StubPasswords(true, "synthetic-submitted-password"),
         new StubTokens("signed-token"),
         TimeSpan.FromMinutes(60));
+
+    private static AuthUser CreateUser(bool isEnabled, string passwordHash = "synthetic-password") => new()
+    {
+        Id = 3,
+        Username = "91330200SYNTHETIC",
+        PasswordHash = passwordHash,
+        IsEnabled = isEnabled
+    };
 
     private sealed class StubUsers : IUserRepository
     {
@@ -170,13 +168,8 @@ public sealed class AuthServiceTests
             this.user = user;
         }
 
-        public Task<AuthUser?> FindByUsernameAsync(string username, CancellationToken cancellationToken) =>
-            Task.FromResult(user is not null && user.Username == username ? user : null);
-
-        public Task<bool> ExistsByUsernameAsync(string username, CancellationToken cancellationToken) =>
-            Task.FromResult(user is not null && user.Username == username);
-
-        public Task AddAsync(AuthUser user, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task<AuthUser?> FindByUsernameAsync(string creditCode, CancellationToken cancellationToken) =>
+            Task.FromResult(user is not null && user.Username == creditCode ? user : null);
     }
 
     private sealed class StubPasswords : IPasswordHasher
