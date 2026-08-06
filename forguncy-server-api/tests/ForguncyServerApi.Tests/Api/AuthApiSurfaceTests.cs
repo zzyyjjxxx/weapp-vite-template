@@ -82,6 +82,25 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
+    public void Readme_documents_refresh_route_request_response_and_stateless_limitations()
+    {
+        var readme = File.ReadAllText(Path.Combine(ProjectRoot(), "README.md"));
+
+        Assert.Contains("POST /customapi/authapi/refresh", readme);
+        Assert.Contains("refresh_token", readme);
+        Assert.Contains("refresh_expires_in", readme);
+        Assert.Contains("FGC_JWT_REFRESH_EXPIRES_MINUTES", readme);
+        Assert.Contains("stateless", readme);
+        Assert.Contains("cannot be revoked before expiry", readme);
+        Assert.Contains("does not repeat user details as a separate object", readme);
+
+        Assert.DoesNotContain("refresh token database persistence", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("refresh-token database persistence", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("database-backed refresh token revocation", readme, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("immediate refresh token disablement", readme, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void AuthApi_exposes_only_parameterless_login_and_refresh_post_methods()
     {
         WithAuthApiType(type =>

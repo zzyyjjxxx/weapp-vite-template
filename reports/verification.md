@@ -606,6 +606,187 @@ Commands run from `D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-lo
   successful `AuthApi` activation, and one `[Post]` parameterless `Task Login`
   route.
 
+## Forguncy JWT refresh documentation and release verification - 2026-08-06
+
+Worktree: `D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login`
+
+Scope for this cycle:
+
+- Updated `forguncy-server-api/README.md` to document both `login` and `refresh`.
+- Updated `forguncy-server-api/tests/ForguncyServerApi.Tests/Api/AuthApiSurfaceTests.cs` with README contract assertions before editing the README.
+- No live Forguncy designer upload, host interaction, or HTTP round-trip was claimed or observed in this cycle.
+- Secrets, connection strings, user passwords, and signing keys were not printed or recorded.
+
+### Focused RED
+
+Command:
+
+```powershell
+dotnet test .\forguncy-server-api\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~AuthApiSurfaceTests" -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+Exit code: `1`
+
+Output:
+
+```text
+  ForguncyServerApi -> D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login\forguncy-server-api\bin\Release\net472\ForguncyServerApi.dll
+  ForguncyServerApi.Tests -> D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login\forguncy-server-api\tests\ForguncyServerApi.Tests\bin\Release\net472\ForguncyServerApi.Tests.dll
+D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login\forguncy-server-api\tests\ForguncyServerApi.Tests\bin\Release\net472\ForguncyServerApi.Tests.dll (.NETFramework,Version=v4.7.2)的测试运行
+VSTest 版本 17.14.0 (x64)
+
+正在启动测试执行，请稍候...
+总共 1 个测试文件与指定模式相匹配。
+  失败 ForguncyServerApi.Tests.Api.AuthApiSurfaceTests.Readme_documents_refresh_route_request_response_and_stateless_limitations [3 ms]
+  错误消息:
+   Assert.Contains() Failure
+Not found: POST /customapi/authapi/refresh
+...
+失败!  - 失败:     1，通过:    16，已跳过:     0，总计:    17，持续时间: 1 s - ForguncyServerApi.Tests.dll (net472)
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。
+[xUnit.net 00:00:05.40]     ForguncyServerApi.Tests.Api.AuthApiSurfaceTests.Readme_documents_refresh_route_request_response_and_stateless_limitations [FAIL]
+```
+
+Observed RED reason: the README still documented only `POST /customapi/authapi/login` and explicitly said the API did not expose refresh.
+
+### Focused GREEN
+
+Command:
+
+```powershell
+dotnet test .\forguncy-server-api\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~AuthApiSurfaceTests" -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+Exit code: `0`
+
+Output:
+
+```text
+  ForguncyServerApi -> D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login\forguncy-server-api\bin\Release\net472\ForguncyServerApi.dll
+  ForguncyServerApi.Tests -> D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login\forguncy-server-api\tests\ForguncyServerApi.Tests\bin\Release\net472\ForguncyServerApi.Tests.dll
+D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login\forguncy-server-api\tests\ForguncyServerApi.Tests\bin\Release\net472\ForguncyServerApi.Tests.dll (.NETFramework,Version=v4.7.2)的测试运行
+VSTest 版本 17.14.0 (x64)
+
+正在启动测试执行，请稍候...
+总共 1 个测试文件与指定模式相匹配。
+
+已通过! - 失败:     0，通过:    17，已跳过:     0，总计:    17，持续时间: 1 s - ForguncyServerApi.Tests.dll (net472)
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。
+```
+
+### Full Release test
+
+Command:
+
+```powershell
+dotnet test .\forguncy-server-api\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj --configuration Release --no-restore -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+Exit code: `0`
+
+Output:
+
+```text
+  ForguncyServerApi -> D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login\forguncy-server-api\bin\Release\net472\ForguncyServerApi.dll
+  ForguncyServerApi.Tests -> D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login\forguncy-server-api\tests\ForguncyServerApi.Tests\bin\Release\net472\ForguncyServerApi.Tests.dll
+D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login\forguncy-server-api\tests\ForguncyServerApi.Tests\bin\Release\net472\ForguncyServerApi.Tests.dll (.NETFramework,Version=v4.7.2)的测试运行
+VSTest 版本 17.14.0 (x64)
+
+正在启动测试执行，请稍候...
+总共 1 个测试文件与指定模式相匹配。
+
+已通过! - 失败:     0，通过:   107，已跳过:     0，总计:   107，持续时间: 1 s - ForguncyServerApi.Tests.dll (net472)
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。
+```
+
+### Release build
+
+Command:
+
+```powershell
+dotnet build .\forguncy-server-api\ForguncyServerApi.csproj --configuration Release --no-restore -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+Exit code: `0`
+
+Output:
+
+```text
+  ForguncyServerApi -> D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login\forguncy-server-api\bin\Release\net472\ForguncyServerApi.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:00.80
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。
+```
+
+Final DLL path:
+
+```text
+D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login\forguncy-server-api\bin\Release\net472\ForguncyServerApi.dll
+```
+
+### Reflection check against the Forguncy 8.0.4 SDK assembly
+
+Command:
+
+```powershell
+$dllDir = 'D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login\forguncy-server-api\bin\Release\net472'
+$forguncyBin = 'D:\Program Files\Forguncy 8.0.4\Website\bin'
+$forguncyAssembly = Join-Path $forguncyBin 'GrapeCity.Forguncy.ServerApi.dll'
+[void][System.Reflection.Assembly]::LoadFrom($forguncyAssembly)
+Get-ChildItem -LiteralPath $dllDir -Filter '*.dll' | ForEach-Object {
+    [void][System.Reflection.Assembly]::LoadFrom($_.FullName)
+}
+$assembly = [System.Reflection.Assembly]::LoadFrom((Join-Path $dllDir 'ForguncyServerApi.dll'))
+$type = $assembly.GetType('ForguncyServerApi.Api.AuthApi', $true)
+Write-Output ("DLL=" + (Join-Path $dllDir 'ForguncyServerApi.dll'))
+Write-Output ("TYPE=" + $type.FullName)
+Write-Output ("BASE=" + $type.BaseType.FullName)
+foreach ($method in ($type.GetMethods([System.Reflection.BindingFlags]'Public, Instance, DeclaredOnly') | Where-Object { $_.Name -in @('Login', 'Refresh') } | Sort-Object Name)) {
+    $hasPost = [bool]($method.GetCustomAttributes($false) | Where-Object { $_.GetType().FullName -eq 'GrapeCity.Forguncy.ServerApi.PostAttribute' })
+    $paramCount = $method.GetParameters().Count
+    Write-Output (("METHOD={0};RET={1};PARAMS={2};POST={3}" -f $method.Name, $method.ReturnType.FullName, $paramCount, $hasPost))
+}
+```
+
+Exit code: `0`
+
+Output:
+
+```text
+DLL=D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login\forguncy-server-api\bin\Release\net472\ForguncyServerApi.dll
+TYPE=ForguncyServerApi.Api.AuthApi
+BASE=GrapeCity.Forguncy.ServerApi.ForguncyApi
+METHOD=Login;RET=System.Threading.Tasks.Task;PARAMS=0;POST=True
+METHOD=Refresh;RET=System.Threading.Tasks.Task;PARAMS=0;POST=True
+```
+
+### Diff check
+
+Command:
+
+```powershell
+git diff --check
+```
+
+Exit code: `0`
+
+Output:
+
+```text
+warning: in the working copy of 'forguncy-server-api/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'forguncy-server-api/tests/ForguncyServerApi.Tests/Api/AuthApiSurfaceTests.cs', LF will be replaced by CRLF the next time Git touches it
+```
+
+Observed result: no whitespace or patch-format errors; only Git line-ending warnings for the edited tracked files.
+
 ## 全面视觉重构验收（2026-07-31）
 
 - 视觉范围：登录页、企业工作台、五步填报、确认提交、提交成功、错误、

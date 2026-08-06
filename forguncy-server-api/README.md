@@ -1,13 +1,14 @@
 # Forguncy JWT login Web API
 
-This class library targets Forguncy 8.0.4 and exposes one custom Web API route:
+This class library targets Forguncy 8.0.4 and exposes two custom Web API routes:
 
 ```text
 POST /customapi/authapi/login
+POST /customapi/authapi/refresh
 ```
 
-The API accepts either JSON or URL-encoded form data. It does not expose issue,
-validate, refresh, logout, or any other external authentication route.
+Both routes accept either JSON or URL-encoded form data. The API does not
+expose issue, validate, logout, or any other external authentication route.
 
 ## Existing database contract
 
@@ -37,9 +38,10 @@ generates or fills the value and persists it before serving login requests.
 | `FGC_JWT_SIGNING_KEY` | HMAC signing key | Generates 32 cryptographically random bytes and stores them as Base64. |
 | `FGC_JWT_ISSUER` | JWT issuer | Generates `forguncy-server-api-` plus a new 32-character lowercase GUID. |
 | `FGC_JWT_EXPIRES_MINUTES` | Token lifetime in minutes | Stores `60`. |
+| `FGC_JWT_REFRESH_EXPIRES_MINUTES` | Refresh-token lifetime in minutes | Stores `10080`. |
 
 Existing non-blank values are used as-is. The signing key must contain at least
-32 characters and the expiration value must be a positive integer. Invalid
+32 characters and the expiration values must be positive integers. Invalid
 non-blank values fail initialization instead of being overwritten. Do not put
 JWT values in environment variables or commit them to source control.
 
@@ -92,8 +94,10 @@ Successful login returns `200 OK`:
 ```json
 {
   "access_token": "<jwt>",
+  "refresh_token": "<jwt>",
   "token_type": "Bearer",
-  "expires_in": 3600
+  "expires_in": 3600,
+  "refresh_expires_in": 604800
 }
 ```
 
@@ -127,6 +131,80 @@ with the same non-sensitive shape every time:
 
 The `500` response does not expose exception details, configuration values,
 database connection information, signing keys, or credentials.
+
+## Refresh contract
+
+### JSON request
+
+```http
+Content-Type: application/json
+```
+
+```json
+{
+  "refresh_token": "<jwt>"
+}
+```
+
+### Form request
+
+```http
+Content-Type: application/x-www-form-urlencoded
+```
+
+```text
+refresh_token=<jwt>
+```
+
+Multipart form data is not accepted.
+
+### Responses
+
+Successful refresh returns `200 OK`:
+
+```json
+{
+  "access_token": "<jwt>",
+  "refresh_token": "<jwt>",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "refresh_expires_in": 604800
+}
+```
+
+The refresh response contains exactly the same five token fields and does not
+include a user object.
+
+Malformed input, missing fields, or an empty refresh token return `400 Bad Request`:
+
+```json
+{
+  "error": "invalid_request"
+}
+```
+
+An expired, malformed, unsigned, wrong-issuer, wrong-use, or otherwise invalid
+refresh token returns `401 Unauthorized`:
+
+```json
+{
+  "error": "invalid_refresh_token"
+}
+```
+
+Unexpected server or configuration failures return `500 Internal Server Error`
+with the same non-sensitive shape every time:
+
+```json
+{
+  "error": "server_error"
+}
+```
+
+Refresh JWTs are stateless. They are not persisted for per-token tracking and
+cannot be revoked before expiry. This API does not promise refresh-token
+rotation enforcement, logout-triggered invalidation, persistence, or immediate
+disablement.
 
 ## Test and release build
 
@@ -193,5 +271,5 @@ Upload the DLL bundle from `bin\Release\net472`, including
 `config` table as described above.
 Configure the existing database connection only through the Forguncy `config`
 table row where `item='ssl'`; the API does not initialize that database. The
-designer integration intentionally contains only the single login route; issue
-and validate routes are intentionally absent by design.
+designer integration intentionally contains only the `login` and `refresh`
+routes; issue, validate, and logout routes are intentionally absent by design.
