@@ -86,6 +86,8 @@ public class AuthApi : ForguncyApi
     {
         Context.Response.StatusCode = statusCode;
         Context.Response.ContentType = "application/json; charset=utf-8";
+        Context.Response.Headers["Cache-Control"] = "no-store";
+        Context.Response.Headers["Pragma"] = "no-cache";
         var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(value));
         await Context.Response.Body.WriteAsync(bytes, 0, bytes.Length, cancellationToken);
     }

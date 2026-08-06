@@ -87,6 +87,18 @@ public sealed class AuthOptionsTests
         Assert.Throws<ArgumentException>(() => AuthOptions.From(values));
     }
 
+    [Theory]
+    [InlineData("0")]
+    [InlineData("-1")]
+    [InlineData("not-a-number")]
+    public void From_rejects_non_positive_and_non_numeric_refresh_expiration(string expiration)
+    {
+        var values = ValidValues();
+        values["FGC_JWT_REFRESH_EXPIRES_MINUTES"] = expiration;
+
+        Assert.Throws<ArgumentException>(() => AuthOptions.From(values));
+    }
+
     [Fact]
     public void AuthOptions_source_does_not_read_environment_variables()
     {

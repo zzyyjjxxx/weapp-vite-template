@@ -483,6 +483,8 @@ public sealed class AuthApiSurfaceTests
 
             Assert.Equal(StatusCodes.Status500InternalServerError, context.Response.StatusCode);
             Assert.Equal("application/json; charset=utf-8", context.Response.ContentType);
+            Assert.Equal("no-store", context.Response.Headers["Cache-Control"].ToString());
+            Assert.Equal("no-cache", context.Response.Headers["Pragma"].ToString());
             Assert.Equal("{\"error\":\"server_error\"}", responseBody);
             Assert.DoesNotContain(sensitiveDetail, responseBody);
 
@@ -491,6 +493,49 @@ public sealed class AuthApiSurfaceTests
             Assert.Equal(nameof(IOException), entry.State.Single(field => field.Key == "ExceptionType").Value);
             Assert.Null(entry.Exception);
             Assert.DoesNotContain(sensitiveDetail, entry.Message);
+        });
+    }
+
+    [Fact]
+    public async Task AuthApi_refresh_request_read_failure_sets_no_cache_headers_and_fixed_server_error()
+    {
+        await WithAuthApiTypeAsync(async type =>
+        {
+            var loggerFactory = new CapturingLoggerFactory();
+            var context = new DefaultHttpContext();
+            context.Request.ContentType = "application/json";
+            context.Request.Body = new ThrowingReadStream(new IOException("refresh-request-stream-failure"));
+            context.RequestServices = new SingleServiceProvider(typeof(ILoggerFactory), loggerFactory);
+            context.Response.Body = new MemoryStream();
+
+            var api = Activator.CreateInstance(type);
+            Assert.NotNull(api);
+            var contextProperty = type.BaseType?.GetProperty(
+                "Context",
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.NotNull(contextProperty);
+            contextProperty!.SetValue(api, context);
+
+            var refresh = type.GetMethod("Refresh", BindingFlags.Public | BindingFlags.Instance);
+            Assert.NotNull(refresh);
+            var refreshTask = Assert.IsAssignableFrom<Task>(refresh!.Invoke(api, null));
+
+            await refreshTask;
+
+            context.Response.Body.Position = 0;
+            using var responseReader = new StreamReader(context.Response.Body);
+            var responseBody = await responseReader.ReadToEndAsync();
+
+            Assert.Equal(StatusCodes.Status500InternalServerError, context.Response.StatusCode);
+            Assert.Equal("application/json; charset=utf-8", context.Response.ContentType);
+            Assert.Equal("no-store", context.Response.Headers["Cache-Control"].ToString());
+            Assert.Equal("no-cache", context.Response.Headers["Pragma"].ToString());
+            Assert.Equal("{\"error\":\"server_error\"}", responseBody);
+
+            var entry = Assert.Single(loggerFactory.Logger.Entries);
+            Assert.Equal(LogLevel.Error, entry.LogLevel);
+            Assert.Equal(nameof(IOException), entry.State.Single(field => field.Key == "ExceptionType").Value);
+            Assert.Null(entry.Exception);
         });
     }
 

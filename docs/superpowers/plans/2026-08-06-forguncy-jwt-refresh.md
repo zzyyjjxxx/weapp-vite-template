@@ -198,8 +198,12 @@ git commit -m "feat: issue and validate JWT refresh tokens"
 Add JSON and form tests for `ReadRefreshTokenAsync`, plus missing-field and malformed-JSON tests. Update the reflection test from “only the login post method” to exact `Login` and `Refresh` methods, both `[Post]` and neither `[Get]`. Update response-mapping tests to construct `LoginResult`/`RefreshResult` with a `TokenPair` and expect:
 
 ```json
-{"access_token":"signed-access","refresh_token":"signed-refresh","token_type":"Bearer","expires_in":3600,"refresh_expires_in":10080}
+{"access_token":"signed-access","refresh_token":"signed-refresh","token_type":"Bearer","expires_in":3600,"refresh_expires_in":604800}
 ```
+
+Both `expires_in` and `refresh_expires_in` are expressed in seconds. The
+configuration item `FGC_JWT_REFRESH_EXPIRES_MINUTES` remains in minutes, so
+the default `10080` minutes is represented as `604800` seconds in responses.
 
 Add assertions that serialized success JSON contains no `user` property, that invalid refresh results map to `400 invalid_request` and `401 invalid_refresh_token`, and that refresh exceptions use a fixed `500 server_error` response.
 

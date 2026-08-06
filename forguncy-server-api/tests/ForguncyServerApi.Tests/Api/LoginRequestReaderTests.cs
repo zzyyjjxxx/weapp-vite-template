@@ -115,6 +115,36 @@ public sealed class LoginRequestReaderTests
     }
 
     [Theory]
+    [InlineData("{ \"refresh_token\": 42 }")]
+    [InlineData("{ \"refresh_token\": true }")]
+    [InlineData("{ \"refresh_token\": null }")]
+    [InlineData("{ \"refresh_token\": {} }")]
+    [InlineData("{ \"refresh_token\": [] }")]
+    public async Task ReadRefreshTokenAsync_rejects_non_string_json_values(string body)
+    {
+        var context = new DefaultHttpContext();
+        context.Request.ContentType = "application/json";
+        context.Request.Body = Body(body);
+
+        await Assert.ThrowsAsync<LoginRequestFormatException>(
+            () => LoginRequestReader.ReadRefreshTokenAsync(context.Request, CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData("{ \"username\": 42, \"password\": \"demo123\" }")]
+    [InlineData("{ \"username\": \"demo\", \"password\": true }")]
+    [InlineData("{ \"username\": null, \"password\": \"demo123\" }")]
+    public async Task ReadAsync_rejects_non_string_json_values(string body)
+    {
+        var context = new DefaultHttpContext();
+        context.Request.ContentType = "application/json";
+        context.Request.Body = Body(body);
+
+        await Assert.ThrowsAsync<LoginRequestFormatException>(
+            () => LoginRequestReader.ReadAsync(context.Request, CancellationToken.None));
+    }
+
+    [Theory]
     [InlineData("{ \"username\": \"demo\" }")]
     [InlineData("username=demo")]
     public async Task ReadAsync_raises_a_format_exception_for_missing_fields(string body)

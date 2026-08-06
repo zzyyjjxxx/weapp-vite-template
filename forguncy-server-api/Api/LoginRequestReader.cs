@@ -2,6 +2,7 @@ using System.Text;
 using ForguncyServerApi.Application;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace ForguncyServerApi.Api;
 
@@ -63,8 +64,10 @@ public static class LoginRequestReader
             using var reader = new StreamReader(request.Body, Encoding.UTF8, true, 1024, true);
             var json = await reader.ReadToEndAsync();
             cancellationToken.ThrowIfCancellationRequested();
-            var payload = JsonConvert.DeserializeObject<LoginRequestPayload>(json);
-            return ToLoginRequest(payload?.Username, payload?.Password);
+            var payload = JObject.Parse(json);
+            return new LoginRequest(
+                ReadRequiredString(payload, "username"),
+                ReadRequiredString(payload, "password"));
         }
         catch (JsonException)
         {
@@ -95,10 +98,8 @@ public static class LoginRequestReader
             using var reader = new StreamReader(request.Body, Encoding.UTF8, true, 1024, true);
             var json = await reader.ReadToEndAsync();
             cancellationToken.ThrowIfCancellationRequested();
-            var payload = JsonConvert.DeserializeObject<RefreshRequestPayload>(json);
-            return payload?.RefreshToken is not null
-                ? payload.RefreshToken
-                : throw new LoginRequestFormatException();
+            var payload = JObject.Parse(json);
+            return ReadRequiredString(payload, "refresh_token");
         }
         catch (JsonException)
         {
@@ -121,10 +122,13 @@ public static class LoginRequestReader
         }
     }
 
-    private static LoginRequest ToLoginRequest(string? username, string? password) =>
-        username is not null && password is not null
-            ? new LoginRequest(username, password)
+    private static string ReadRequiredString(JObject payload, string name)
+    {
+        var token = payload[name];
+        return token?.Type == JTokenType.String
+            ? token.Value<string>()!
             : throw new LoginRequestFormatException();
+    }
 
     private static bool IsUrlEncodedForm(HttpRequest request)
     {
@@ -142,10 +146,4 @@ public static class LoginRequestReader
     private static string? GetMediaType(string? contentType) =>
         contentType?.Split(new[] { ';' }, 2)[0].Trim();
 
-    private sealed record LoginRequestPayload(
-        [property: JsonProperty("username")] string? Username,
-        [property: JsonProperty("password")] string? Password);
-
-    private sealed record RefreshRequestPayload(
-        [property: JsonProperty("refresh_token")] string? RefreshToken);
 }

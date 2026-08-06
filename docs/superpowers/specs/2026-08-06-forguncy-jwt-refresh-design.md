@@ -24,13 +24,17 @@ POST /customapi/authapi/login
 
 成功响应为：
 
+`expires_in` 和 `refresh_expires_in` 的单位均为 seconds。配置表中的有效期
+仍以 minutes 保存；默认 `FGC_JWT_REFRESH_EXPIRES_MINUTES=10080` minutes，
+因此默认刷新响应示例为 `refresh_expires_in=604800` seconds。
+
 ```json
 {
   "access_token": "<access-jwt>",
   "refresh_token": "<refresh-jwt>",
   "token_type": "Bearer",
   "expires_in": 3600,
-  "refresh_expires_in": 10080
+  "refresh_expires_in": 604800
 }
 ```
 
