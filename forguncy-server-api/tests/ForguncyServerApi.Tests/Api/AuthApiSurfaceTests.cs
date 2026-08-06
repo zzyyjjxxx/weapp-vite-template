@@ -82,22 +82,16 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
-    public void AuthApi_exposes_only_the_login_post_method()
+    public void AuthApi_exposes_only_parameterless_login_and_refresh_post_methods()
     {
         WithAuthApiType(type =>
         {
             var declaredPublicMethods = type.GetMethods(
                 BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-            var login = Assert.Single(declaredPublicMethods);
-            Assert.Equal("Login", login.Name);
-            Assert.Equal(typeof(Task), login.ReturnType);
-            Assert.Empty(login.GetParameters());
+            Assert.Equal(2, declaredPublicMethods.Length);
 
-            var attributes = login.GetCustomAttributes(inherit: false).ToArray();
-            Assert.Single(attributes.Where(attribute =>
-                attribute.GetType().FullName == "GrapeCity.Forguncy.ServerApi.PostAttribute"));
-            Assert.DoesNotContain(attributes, attribute =>
-                attribute.GetType().FullName == "GrapeCity.Forguncy.ServerApi.GetAttribute");
+            AssertPublicPostMethod(declaredPublicMethods, "Login");
+            AssertPublicPostMethod(declaredPublicMethods, "Refresh");
 
             Assert.Equal("GrapeCity.Forguncy.ServerApi.ForguncyApi", type.BaseType?.FullName);
             Assert.DoesNotContain(type.GetMethods(), method => method.Name is "Issue" or "Validate");
@@ -302,6 +296,54 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
+    public void AuthApi_refresh_unexpected_exception_records_only_a_sanitized_server_diagnostic()
+    {
+        WithAuthApiType(type =>
+        {
+            var recorder = type.GetMethod(
+                "RecordUnexpectedRefreshFailure",
+                BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.NotNull(recorder);
+
+            const string secret = "password=refresh-diagnostic-must-not-log-this";
+            var loggerFactory = new CapturingLoggerFactory();
+            var services = new SingleServiceProvider(typeof(ILoggerFactory), loggerFactory);
+
+            try
+            {
+                throw new InvalidOperationException(secret);
+            }
+            catch (Exception exception)
+            {
+                recorder!.Invoke(null, new object?[] { services, exception });
+            }
+
+            var entry = Assert.Single(loggerFactory.Logger.Entries);
+            Assert.Equal(LogLevel.Error, entry.LogLevel);
+            Assert.Equal(1002, entry.EventId.Id);
+            Assert.Equal("AuthRefreshUnexpectedFailure", entry.EventId.Name);
+            Assert.Null(entry.Exception);
+
+            var fields = entry.State
+                .Where(field => field.Key != "{OriginalFormat}")
+                .ToDictionary(field => field.Key, field => field.Value?.ToString());
+            Assert.Equal(2, fields.Count);
+            Assert.Equal("auth.refresh.unexpected_failure", fields["OperationCode"]);
+            Assert.Equal(nameof(InvalidOperationException), fields["ExceptionType"]);
+
+            var diagnostic = string.Join(
+                "|",
+                entry.Message,
+                string.Join("|", entry.State.Select(field => $"{field.Key}={field.Value}")));
+            var lowerDiagnostic = diagnostic.ToLowerInvariant();
+            Assert.DoesNotContain(secret, diagnostic);
+            Assert.DoesNotContain("password", lowerDiagnostic);
+            Assert.DoesNotContain("connection string", lowerDiagnostic);
+            Assert.DoesNotContain("stack trace", lowerDiagnostic);
+        });
+    }
+
+    [Fact]
     public async Task AuthApi_request_read_failure_returns_fixed_server_error_and_records_a_diagnostic()
     {
         await WithAuthApiTypeAsync(async type =>
@@ -357,10 +399,10 @@ public sealed class AuthApiSurfaceTests
                 mapper!,
                 new LoginResult(
                     LoginStatus.Success,
-                    new TokenPair("signed-token", string.Empty, 3600, 0),
+                    new TokenPair("signed-token", "refresh-token", 3600, 7200),
                     new AuthUser { Id = 3, Username = "demo" }),
                 200,
-                "{\"access_token\":\"signed-token\",\"token_type\":\"Bearer\",\"expires_in\":3600}");
+                "{\"access_token\":\"signed-token\",\"refresh_token\":\"refresh-token\",\"token_type\":\"Bearer\",\"expires_in\":3600,\"refresh_expires_in\":7200}");
             AssertMappedResponse(
                 mapper!,
                 new LoginResult(LoginStatus.InvalidRequest, null, null),
@@ -374,9 +416,37 @@ public sealed class AuthApiSurfaceTests
         });
     }
 
+    [Fact]
+    public void AuthApi_maps_refresh_outcomes_to_200_400_and_401_responses()
+    {
+        WithAuthApiType(type =>
+        {
+            var mapper = type.GetMethod("CreateRefreshResponse", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.NotNull(mapper);
+
+            AssertMappedResponse(
+                mapper!,
+                new RefreshResult(
+                    RefreshStatus.Success,
+                    new TokenPair("new-access-token", "new-refresh-token", 1800, 5400)),
+                200,
+                "{\"access_token\":\"new-access-token\",\"refresh_token\":\"new-refresh-token\",\"token_type\":\"Bearer\",\"expires_in\":1800,\"refresh_expires_in\":5400}");
+            AssertMappedResponse(
+                mapper!,
+                new RefreshResult(RefreshStatus.InvalidRequest, null),
+                400,
+                "{\"error\":\"invalid_request\"}");
+            AssertMappedResponse(
+                mapper!,
+                new RefreshResult(RefreshStatus.InvalidToken, null),
+                401,
+                "{\"error\":\"invalid_refresh_token\"}");
+        });
+    }
+
     private static void AssertMappedResponse(
         MethodInfo mapper,
-        LoginResult result,
+        object result,
         int expectedStatusCode,
         string expectedJson)
     {
@@ -389,6 +459,19 @@ public sealed class AuthApiSurfaceTests
         Assert.Equal(expectedStatusCode, statusCode);
         Assert.NotNull(payload);
         Assert.Equal(expectedJson, JsonConvert.SerializeObject(payload));
+    }
+
+    private static void AssertPublicPostMethod(IEnumerable<MethodInfo> declaredPublicMethods, string expectedName)
+    {
+        var method = Assert.Single(declaredPublicMethods.Where(candidate => candidate.Name == expectedName));
+        Assert.Equal(typeof(Task), method.ReturnType);
+        Assert.Empty(method.GetParameters());
+
+        var attributes = method.GetCustomAttributes(inherit: false).ToArray();
+        Assert.Single(attributes.Where(attribute =>
+            attribute.GetType().FullName == "GrapeCity.Forguncy.ServerApi.PostAttribute"));
+        Assert.DoesNotContain(attributes, attribute =>
+            attribute.GetType().FullName == "GrapeCity.Forguncy.ServerApi.GetAttribute");
     }
 
     private static void WithAuthApiType(Action<Type> action)

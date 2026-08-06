@@ -6,9 +6,21 @@ namespace ForguncyServerApi.Api;
 public static class AuthDiagnostics
 {
     private const string UnexpectedLoginOperationCode = "auth.login.unexpected_failure";
+    private const string UnexpectedRefreshOperationCode = "auth.refresh.unexpected_failure";
     private static readonly EventId UnexpectedLoginEvent = new(1001, "AuthLoginUnexpectedFailure");
+    private static readonly EventId UnexpectedRefreshEvent = new(1002, "AuthRefreshUnexpectedFailure");
 
-    public static void Record(IServiceProvider? services, Exception exception)
+    public static void RecordLogin(IServiceProvider? services, Exception exception) =>
+        Record(services, exception, UnexpectedLoginEvent, UnexpectedLoginOperationCode);
+
+    public static void RecordRefresh(IServiceProvider? services, Exception exception) =>
+        Record(services, exception, UnexpectedRefreshEvent, UnexpectedRefreshOperationCode);
+
+    private static void Record(
+        IServiceProvider? services,
+        Exception exception,
+        EventId eventId,
+        string operationCode)
     {
         var exceptionType = exception.GetType().Name;
 
@@ -24,9 +36,9 @@ public static class AuthDiagnostics
             if (logger is not null)
             {
                 logger.LogError(
-                    UnexpectedLoginEvent,
+                    eventId,
                     "Operation {OperationCode} failed with exception type {ExceptionType}.",
-                    UnexpectedLoginOperationCode,
+                    operationCode,
                     exceptionType);
                 return;
             }
@@ -40,7 +52,7 @@ public static class AuthDiagnostics
         {
             Trace.TraceError(
                 "Operation {0} failed with exception type {1}.",
-                UnexpectedLoginOperationCode,
+                operationCode,
                 exceptionType);
         }
         catch (Exception)

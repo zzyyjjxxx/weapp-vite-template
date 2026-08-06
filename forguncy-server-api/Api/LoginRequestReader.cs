@@ -35,6 +35,26 @@ public static class LoginRequestReader
         throw new LoginRequestFormatException();
     }
 
+    public static async Task<string> ReadRefreshTokenAsync(HttpRequest request, CancellationToken cancellationToken)
+    {
+        if (request is null)
+        {
+            throw new ArgumentNullException(nameof(request));
+        }
+
+        if (IsJsonContentType(request))
+        {
+            return await ReadRefreshTokenJsonAsync(request, cancellationToken);
+        }
+
+        if (IsUrlEncodedForm(request))
+        {
+            return await ReadRefreshTokenFormAsync(request, cancellationToken);
+        }
+
+        throw new LoginRequestFormatException();
+    }
+
     private static async Task<LoginRequest> ReadJsonAsync(HttpRequest request, CancellationToken cancellationToken)
     {
         try
@@ -67,6 +87,40 @@ public static class LoginRequestReader
         }
     }
 
+    private static async Task<string> ReadRefreshTokenJsonAsync(HttpRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            using var reader = new StreamReader(request.Body, Encoding.UTF8, true, 1024, true);
+            var json = await reader.ReadToEndAsync();
+            cancellationToken.ThrowIfCancellationRequested();
+            var payload = JsonConvert.DeserializeObject<RefreshRequestPayload>(json);
+            return payload?.RefreshToken is not null
+                ? payload.RefreshToken
+                : throw new LoginRequestFormatException();
+        }
+        catch (JsonException)
+        {
+            throw new LoginRequestFormatException();
+        }
+    }
+
+    private static async Task<string> ReadRefreshTokenFormAsync(HttpRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var form = await request.ReadFormAsync(cancellationToken);
+            return form.ContainsKey("refresh_token")
+                ? form["refresh_token"].ToString()
+                : throw new LoginRequestFormatException();
+        }
+        catch (InvalidDataException)
+        {
+            throw new LoginRequestFormatException();
+        }
+    }
+
     private static LoginRequest ToLoginRequest(string? username, string? password) =>
         username is not null && password is not null
             ? new LoginRequest(username, password)
@@ -91,4 +145,7 @@ public static class LoginRequestReader
     private sealed record LoginRequestPayload(
         [property: JsonProperty("username")] string? Username,
         [property: JsonProperty("password")] string? Password);
+
+    private sealed record RefreshRequestPayload(
+        [property: JsonProperty("refresh_token")] string? RefreshToken);
 }
