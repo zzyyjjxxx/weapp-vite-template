@@ -1,6 +1,8 @@
+using System.Security.Claims;
 using ForguncyServerApi.Domain;
 using ForguncyServerApi.Infrastructure;
 using ForguncyServerApi.Security;
+using Microsoft.IdentityModel.Tokens;
 
 namespace ForguncyServerApi.Application;
 
@@ -12,12 +14,14 @@ public sealed class AuthService
     private readonly IPasswordHasher passwords;
     private readonly IJwtTokenService tokens;
     private readonly TimeSpan tokenLifetime;
+    private readonly TimeSpan refreshTokenLifetime;
 
     public AuthService(
         IUserRepository users,
         IPasswordHasher passwords,
         IJwtTokenService tokens,
-        TimeSpan tokenLifetime)
+        TimeSpan tokenLifetime,
+        TimeSpan refreshTokenLifetime)
     {
         this.users = users ?? throw new ArgumentNullException(nameof(users));
         this.passwords = passwords ?? throw new ArgumentNullException(nameof(passwords));
@@ -29,7 +33,15 @@ public sealed class AuthService
                 "Token lifetime must be positive and fit in Int32 seconds.");
         }
 
+        if (refreshTokenLifetime <= TimeSpan.Zero || refreshTokenLifetime.TotalSeconds > int.MaxValue)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(refreshTokenLifetime),
+                "Refresh token lifetime must be positive and fit in Int32 seconds.");
+        }
+
         this.tokenLifetime = tokenLifetime;
+        this.refreshTokenLifetime = refreshTokenLifetime;
     }
 
     public async Task<LoginResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
@@ -54,14 +66,64 @@ public sealed class AuthService
 
         return new LoginResult(
             LoginStatus.Success,
-            CreateTokenPair(tokens.CreateToken(user)),
+            CreateTokenPair(user),
             new AuthUser { Id = user.Id, Username = user.Username });
+    }
+
+    public Task<RefreshResult> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            return Task.FromResult(InvalidRefreshRequest());
+        }
+
+        try
+        {
+            var principal = tokens.ValidateRefreshToken(refreshToken);
+            if (!TryCreateRefreshUser(principal, out var user))
+            {
+                return Task.FromResult(InvalidRefreshToken());
+            }
+
+            return Task.FromResult(new RefreshResult(RefreshStatus.Success, CreateTokenPair(user!)));
+        }
+        catch (SecurityTokenException)
+        {
+            return Task.FromResult(InvalidRefreshToken());
+        }
     }
 
     private static LoginResult InvalidRequest() => new(LoginStatus.InvalidRequest, null, null);
 
     private static LoginResult InvalidCredentials() => new(LoginStatus.InvalidCredentials, null, null);
 
-    private TokenPair CreateTokenPair(string accessToken) =>
-        new(accessToken, string.Empty, (int)tokenLifetime.TotalSeconds, 0);
+    private static RefreshResult InvalidRefreshRequest() => new(RefreshStatus.InvalidRequest, null);
+
+    private static RefreshResult InvalidRefreshToken() => new(RefreshStatus.InvalidToken, null);
+
+    private bool TryCreateRefreshUser(ClaimsPrincipal principal, out AuthUser? user)
+    {
+        user = null;
+        var subject = principal.FindFirst("sub")?.Value;
+        var username = principal.FindFirst("name")?.Value;
+        if (!int.TryParse(subject, out var id) || id <= 0 || string.IsNullOrWhiteSpace(username))
+        {
+            return false;
+        }
+
+        user = new AuthUser
+        {
+            Id = id,
+            Username = username!
+        };
+        return true;
+    }
+
+    private TokenPair CreateTokenPair(AuthUser user) =>
+        new(
+            tokens.CreateToken(user),
+            tokens.CreateRefreshToken(user),
+            (int)tokenLifetime.TotalSeconds,
+            (int)refreshTokenLifetime.TotalSeconds);
 }

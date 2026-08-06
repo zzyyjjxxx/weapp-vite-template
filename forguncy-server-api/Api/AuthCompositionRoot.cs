@@ -27,7 +27,8 @@ public sealed class AuthCompositionRoot
             new UserRepository(clientFactory),
             new PasswordHasher(),
             new JwtTokenService(options),
-            options.JwtLifetime);
+            options.JwtLifetime,
+            options.JwtRefreshLifetime);
         return Task.FromResult(new AuthCompositionRoot(authService));
     }
 

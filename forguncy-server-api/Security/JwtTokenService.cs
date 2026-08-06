@@ -20,7 +20,24 @@ public sealed class JwtTokenService : IJwtTokenService
         signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(options.JwtSigningKey));
     }
 
-    public string CreateToken(AuthUser user)
+    public string CreateToken(AuthUser user) => CreateToken(user, options.JwtLifetime, "access");
+
+    public string CreateRefreshToken(AuthUser user) => CreateToken(user, options.JwtRefreshLifetime, "refresh");
+
+    public ClaimsPrincipal ValidateToken(string token) => ValidateSignedToken(token);
+
+    public ClaimsPrincipal ValidateRefreshToken(string token)
+    {
+        var principal = ValidateSignedToken(token);
+        if (!string.Equals(principal.FindFirst("token_use")?.Value, "refresh", StringComparison.Ordinal))
+        {
+            throw new SecurityTokenException("The JWT is not a refresh token.");
+        }
+
+        return principal;
+    }
+
+    private string CreateToken(AuthUser user, TimeSpan lifetime, string tokenUse)
     {
         if (user is null)
         {
@@ -32,6 +49,7 @@ public sealed class JwtTokenService : IJwtTokenService
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString(CultureInfo.InvariantCulture)),
             new Claim("name", user.Username),
+            new Claim("token_use", tokenUse),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")),
             new Claim(JwtRegisteredClaimNames.Iat, new DateTimeOffset(now).ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture), ClaimValueTypes.Integer64)
         };
@@ -40,13 +58,13 @@ public sealed class JwtTokenService : IJwtTokenService
             issuer: options.JwtIssuer,
             claims: claims,
             notBefore: now,
-            expires: now.Add(options.JwtLifetime),
+            expires: now.Add(lifetime),
             signingCredentials: credentials);
 
         return tokenHandler.WriteToken(token);
     }
 
-    public ClaimsPrincipal ValidateToken(string token)
+    private ClaimsPrincipal ValidateSignedToken(string token)
     {
         try
         {

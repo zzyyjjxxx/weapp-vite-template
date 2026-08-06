@@ -1,5 +1,6 @@
-using System.Security.Cryptography;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using ForguncyServerApi.Configuration;
 using ForguncyServerApi.Domain;
 using ForguncyServerApi.Security;
@@ -16,10 +17,51 @@ public sealed class JwtTokenServiceTests
         var service = new JwtTokenService(TestOptions());
 
         var token = service.CreateToken(user);
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         var principal = service.ValidateToken(token);
 
+        Assert.Equal("access", Assert.Single(jwt.Claims.Where(claim => claim.Type == "token_use")).Value);
         Assert.Equal("7", principal.FindFirst("sub")?.Value);
         Assert.Equal("demo", principal.FindFirst("name")?.Value);
+    }
+
+    [Fact]
+    public void CreateRefreshToken_contains_refresh_claims_and_validate_refresh_returns_them()
+    {
+        var user = new AuthUser { Id = 7, Username = "demo", IsOpen = 1 };
+        var service = new JwtTokenService(TestOptions());
+
+        var token = service.CreateRefreshToken(user);
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+        var principal = service.ValidateRefreshToken(token);
+
+        Assert.Equal("refresh", Assert.Single(jwt.Claims.Where(claim => claim.Type == "token_use")).Value);
+        Assert.Equal("7", principal.FindFirst("sub")?.Value);
+        Assert.Equal("demo", principal.FindFirst("name")?.Value);
+    }
+
+    [Fact]
+    public void ValidateRefreshToken_rejects_an_access_token()
+    {
+        var service = new JwtTokenService(TestOptions());
+        var token = service.CreateToken(new AuthUser { Id = 1, Username = "demo" });
+
+        AssertIdentityModelException(
+            () => service.ValidateRefreshToken(token),
+            "SecurityTokenException");
+    }
+
+    [Fact]
+    public void CreateToken_and_CreateRefreshToken_use_the_configured_lifetimes()
+    {
+        var service = new JwtTokenService(TestOptions(accessLifetimeMinutes: 15, refreshLifetimeMinutes: 120));
+        var user = new AuthUser { Id = 7, Username = "demo", IsOpen = 1 };
+
+        var access = new JwtSecurityTokenHandler().ReadJwtToken(service.CreateToken(user));
+        var refresh = new JwtSecurityTokenHandler().ReadJwtToken(service.CreateRefreshToken(user));
+
+        Assert.Equal(15 * 60L, LifetimeSeconds(access));
+        Assert.Equal(120 * 60L, LifetimeSeconds(refresh));
     }
 
     [Fact]
@@ -82,11 +124,16 @@ public sealed class JwtTokenServiceTests
             "SecurityTokenNotYetValidException");
     }
 
-    private static AuthOptions TestOptions(string signingKey = "test-signing-key-that-is-at-least-32-chars") =>
+    private static AuthOptions TestOptions(
+        string signingKey = "test-signing-key-that-is-at-least-32-chars",
+        int accessLifetimeMinutes = 60,
+        int refreshLifetimeMinutes = 10080) =>
         AuthOptions.From(new Dictionary<string, string?>
         {
             ["FGC_JWT_SIGNING_KEY"] = signingKey,
-            ["FGC_JWT_ISSUER"] = "synthetic-issuer"
+            ["FGC_JWT_ISSUER"] = "synthetic-issuer",
+            ["FGC_JWT_EXPIRES_MINUTES"] = accessLifetimeMinutes.ToString(),
+            ["FGC_JWT_REFRESH_EXPIRES_MINUTES"] = refreshLifetimeMinutes.ToString()
         });
 
     private static string TestExpiredHs256Token()
@@ -137,4 +184,8 @@ public sealed class JwtTokenServiceTests
         .TrimEnd('=')
         .Replace('+', '-')
         .Replace('/', '_');
+
+    private static long LifetimeSeconds(JwtSecurityToken token) =>
+        long.Parse(token.Claims.Single(claim => claim.Type == "exp").Value) -
+        long.Parse(token.Claims.Single(claim => claim.Type == "nbf").Value);
 }
