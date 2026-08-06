@@ -2,6 +2,9 @@ using System.Reflection;
 using ForguncyServerApi.Application;
 using ForguncyServerApi.Domain;
 using ForguncyServerApi.Infrastructure;
+using MySql.Data.MySqlClient;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace ForguncyServerApi.Tests.Application;
@@ -53,6 +56,91 @@ public sealed class LandDemandServiceTests
                 "Updatetime"
             },
             propertyNames);
+    }
+
+    [Fact]
+    public void LandDemand_response_serializes_with_the_exact_approved_snake_and_lower_case_keys()
+    {
+        var response = new LandDemandResponse
+        {
+            Businessname = "Synthetic Enterprise",
+            Creditcode = "91330200SYNTHETIC",
+            County = "Yinzhou",
+            Region = "Shounan",
+            Area = "80",
+            BuildingArea = 1200.50m,
+            ExpectPark = "Ningbo Industrial Park",
+            ExpectTime = "2026-08",
+            IsDeploy = "0",
+            DeployPark = null,
+            IsSpecialuse = "0",
+            DeployLandtype = null,
+            DeployHeight = 12.5m,
+            DeployWeight = 2.5m,
+            Investment = 6000m,
+            ProjectHydm = "A0111",
+            Keyindustry = "Synthetic Key Industry",
+            Futureindustry = "Synthetic Future Industry",
+            PredYs = 7000m,
+            PredTax = 800m,
+            PredRdex = 300m,
+            PredUnitenergy = 15m,
+            Projectdata = "Build a new production line.",
+            IsFinancing = "没有",
+            FinancingMoney = 99999999999999.999999m,
+            FinancingTime = "2027-12",
+            Contact = "Alice",
+            Office = "General Manager",
+            Phone = "13800000000",
+            Landusedemand = "1",
+            Updatetime = "2026-08-06 10:20:30"
+        };
+
+        var json = JsonConvert.SerializeObject(response);
+        var propertyNames = JObject.Parse(json)
+            .Properties()
+            .Select(property => property.Name)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(
+            new[]
+            {
+                "area",
+                "building_area",
+                "businessname",
+                "contact",
+                "county",
+                "creditcode",
+                "deploy_height",
+                "deploy_landtype",
+                "deploy_park",
+                "deploy_weight",
+                "expect_park",
+                "expect_time",
+                "financing_money",
+                "financing_time",
+                "futureindustry",
+                "investment",
+                "is_deploy",
+                "is_financing",
+                "is_specialuse",
+                "keyindustry",
+                "landusedemand",
+                "office",
+                "phone",
+                "pred_rdex",
+                "pred_tax",
+                "pred_unitenergy",
+                "pred_ys",
+                "project_hydm",
+                "projectdata",
+                "region",
+                "updatetime"
+            },
+            propertyNames);
+        Assert.DoesNotContain("Businessname", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("BuildingArea", json, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -179,6 +267,28 @@ public sealed class LandDemandServiceTests
     }
 
     [Fact]
+    public async Task AddAsync_returns_exists_when_insert_throws_a_wrapped_duplicate_key_exception()
+    {
+        var enterpriseRepository = new StubEnterpriseRepository(CreateEnterpriseProfile());
+        var landDemandRepository = new StubLandDemandRepository
+        {
+            InsertException = new InvalidOperationException(
+                "wrapped duplicate",
+                CreateMySqlDuplicateKeyException())
+        };
+        var service = CreateService(enterpriseRepository, landDemandRepository);
+
+        var result = await service.AddAsync(
+            new EnterpriseIdentity(7, "91330200SYNTHETIC"),
+            ValidDraftRequest() with { Landusedemand = " 2 ", Projectdata = "  Save draft.  " },
+            CancellationToken.None);
+
+        Assert.Equal(LandDemandOperationStatus.Exists, result.Status);
+        Assert.Null(result.Record);
+        Assert.Equal(1, landDemandRepository.InsertCalls);
+    }
+
+    [Fact]
     public async Task UpdateAsync_returns_not_found_when_the_authenticated_credit_code_has_no_existing_record()
     {
         var enterpriseRepository = new StubEnterpriseRepository(CreateEnterpriseProfile());
@@ -260,6 +370,46 @@ public sealed class LandDemandServiceTests
         Assert.Equal("Shounan", landDemandRepository.CurrentRecord.Region);
         Assert.Equal("2026-08-07 09:08:07", landDemandRepository.CurrentRecord.Updatetime);
         Assert.Equal("91330200SYNTHETIC", landDemandRepository.CurrentRecord.Updateuser);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_normalizes_writable_string_values_before_repository_update_and_response_mapping()
+    {
+        var enterpriseRepository = new StubEnterpriseRepository(CreateEnterpriseProfile());
+        var landDemandRepository = new StubLandDemandRepository
+        {
+            CurrentRecord = CreateStoredRecord()
+        };
+        var service = CreateService(
+            enterpriseRepository,
+            landDemandRepository,
+            () => new DateTimeOffset(2026, 8, 7, 9, 8, 7, TimeSpan.FromHours(8)));
+
+        var request = ValidSubmittedRequest() with
+        {
+            Area = " 80 ",
+            ExpectPark = "  Ningbo Industrial Park  ",
+            Projectdata = "  Expanded project description.  ",
+            Landusedemand = " 2 "
+        };
+
+        var result = await service.UpdateAsync(
+            new EnterpriseIdentity(7, "91330200SYNTHETIC"),
+            request,
+            CancellationToken.None);
+
+        Assert.Equal(LandDemandOperationStatus.Success, result.Status);
+        Assert.NotNull(landDemandRepository.LastUpdateRequest);
+        Assert.Equal("80", landDemandRepository.LastUpdateRequest!.Area);
+        Assert.Equal("Ningbo Industrial Park", landDemandRepository.LastUpdateRequest.ExpectPark);
+        Assert.Equal("Expanded project description.", landDemandRepository.LastUpdateRequest.Projectdata);
+        Assert.Equal("2", landDemandRepository.LastUpdateRequest.Landusedemand);
+        Assert.Equal("80", result.Record!.Area);
+        Assert.Equal("Expanded project description.", result.Record.Projectdata);
+        Assert.Equal("2", result.Record.Landusedemand);
+        Assert.Equal("80", landDemandRepository.CurrentRecord!.Area);
+        Assert.Equal("Expanded project description.", landDemandRepository.CurrentRecord.Projectdata);
+        Assert.Equal("2", landDemandRepository.CurrentRecord.Landusedemand);
     }
 
     private static LandDemandService CreateService(
@@ -395,6 +545,8 @@ public sealed class LandDemandServiceTests
 
         public LandDemandRecord? LastInsertedRecord { get; private set; }
 
+        public Exception? InsertException { get; set; }
+
         public Task<LandDemandRecord?> FindByCreditCodeAsync(string creditCode, CancellationToken cancellationToken)
         {
             LastFindCreditCode = creditCode;
@@ -404,6 +556,11 @@ public sealed class LandDemandServiceTests
         public Task<LandDemandRecord> InsertAsync(LandDemandRecord record, CancellationToken cancellationToken)
         {
             InsertCalls++;
+            if (InsertException is not null)
+            {
+                throw InsertException;
+            }
+
             LastInsertedRecord = Clone(record);
             CurrentRecord = Clone(record);
             CurrentRecord.Id = record.Id == 0 ? 101 : record.Id;
@@ -495,5 +652,16 @@ public sealed class LandDemandServiceTests
                 Updatetime = record.Updatetime,
                 Updateuser = record.Updateuser
             };
+    }
+
+    private static Exception CreateMySqlDuplicateKeyException()
+    {
+        var constructor = typeof(MySqlException).GetConstructor(
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+            binder: null,
+            new[] { typeof(string), typeof(int) },
+            modifiers: null);
+        Assert.NotNull(constructor);
+        return (Exception)constructor!.Invoke(new object[] { "Duplicate entry", 1062 });
     }
 }

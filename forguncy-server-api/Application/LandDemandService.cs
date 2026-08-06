@@ -41,6 +41,7 @@ public sealed class LandDemandService
         LandDemandWriteRequest request,
         CancellationToken cancellationToken)
     {
+        var normalizedRequest = request.Normalize();
         var enterprise = await enterpriseService.GetProfileAsync(identity, cancellationToken);
         if (enterprise is null)
         {
@@ -53,13 +54,13 @@ public sealed class LandDemandService
             return new(LandDemandOperationStatus.Exists, null);
         }
 
-        if (LandDemandValidation.Validate(request).Count > 0)
+        if (LandDemandValidation.ValidateNormalized(normalizedRequest).Count > 0)
         {
             return new(LandDemandOperationStatus.InvalidRequest, null);
         }
 
         var timestamp = clock().ToString(TimestampFormat);
-        var record = CreateRecord(enterprise, request, timestamp);
+        var record = CreateRecord(enterprise, normalizedRequest, timestamp);
 
         try
         {
@@ -77,6 +78,7 @@ public sealed class LandDemandService
         LandDemandWriteRequest request,
         CancellationToken cancellationToken)
     {
+        var normalizedRequest = request.Normalize();
         var enterprise = await enterpriseService.GetProfileAsync(identity, cancellationToken);
         if (enterprise is null)
         {
@@ -89,16 +91,16 @@ public sealed class LandDemandService
             return new(LandDemandOperationStatus.NotFound, null);
         }
 
-        if (LandDemandValidation.Validate(request).Count > 0)
+        if (LandDemandValidation.ValidateNormalized(normalizedRequest).Count > 0)
         {
             return new(LandDemandOperationStatus.InvalidRequest, null);
         }
 
         var timestamp = clock().ToString(TimestampFormat);
-        var updated = ApplyWritableFields(existing, request, timestamp, enterprise.CreditCode);
+        var updated = ApplyWritableFields(existing, normalizedRequest, timestamp, enterprise.CreditCode);
         var saved = await repository.UpdateWritableFieldsAsync(
             enterprise.CreditCode,
-            request,
+            normalizedRequest,
             timestamp,
             enterprise.CreditCode,
             cancellationToken);
@@ -143,45 +145,35 @@ public sealed class LandDemandService
         string timestamp,
         string updateUser)
     {
-        target.Area = Normalize(request.Area);
+        target.Area = request.Area;
         target.BuildingArea = request.BuildingArea;
-        target.ExpectPark = Normalize(request.ExpectPark);
-        target.ExpectTime = Normalize(request.ExpectTime);
-        target.IsDeploy = Normalize(request.IsDeploy);
-        target.DeployPark = Normalize(request.DeployPark);
-        target.IsSpecialuse = Normalize(request.IsSpecialuse);
-        target.DeployLandtype = Normalize(request.DeployLandtype);
+        target.ExpectPark = request.ExpectPark;
+        target.ExpectTime = request.ExpectTime;
+        target.IsDeploy = request.IsDeploy;
+        target.DeployPark = request.DeployPark;
+        target.IsSpecialuse = request.IsSpecialuse;
+        target.DeployLandtype = request.DeployLandtype;
         target.DeployHeight = request.DeployHeight;
         target.DeployWeight = request.DeployWeight;
         target.Investment = request.Investment;
-        target.ProjectHydm = Normalize(request.ProjectHydm);
-        target.Keyindustry = Normalize(request.Keyindustry);
-        target.Futureindustry = Normalize(request.Futureindustry);
+        target.ProjectHydm = request.ProjectHydm;
+        target.Keyindustry = request.Keyindustry;
+        target.Futureindustry = request.Futureindustry;
         target.PredYs = request.PredYs;
         target.PredTax = request.PredTax;
         target.PredRdex = request.PredRdex;
         target.PredUnitenergy = request.PredUnitenergy;
-        target.Projectdata = Normalize(request.Projectdata);
-        target.IsFinancing = Normalize(request.IsFinancing);
+        target.Projectdata = request.Projectdata;
+        target.IsFinancing = request.IsFinancing;
         target.FinancingMoney = request.FinancingMoney;
-        target.FinancingTime = Normalize(request.FinancingTime);
-        target.Contact = Normalize(request.Contact);
-        target.Office = Normalize(request.Office);
-        target.Phone = Normalize(request.Phone);
-        target.Landusedemand = Normalize(request.Landusedemand);
+        target.FinancingTime = request.FinancingTime;
+        target.Contact = request.Contact;
+        target.Office = request.Office;
+        target.Phone = request.Phone;
+        target.Landusedemand = request.Landusedemand;
         target.Updatetime = timestamp;
         target.Updateuser = updateUser;
         return target;
-    }
-
-    private static string? Normalize(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return null;
-        }
-
-        return value!.Trim();
     }
 
     private static LandDemandResponse MapResponse(LandDemandRecord record) =>

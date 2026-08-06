@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Globalization;
 using ForguncyServerApi.Application;
 using Xunit;
 
@@ -139,6 +140,22 @@ public sealed class LandDemandValidationTests
     }
 
     [Fact]
+    public void Validate_submission_requires_financing_fields_when_financing_is_affirmative_you()
+    {
+        var request = ValidSubmittedRequest() with
+        {
+            IsFinancing = " 有 ",
+            FinancingMoney = null,
+            FinancingTime = null
+        };
+
+        var errors = LandDemandValidation.Validate(request);
+
+        Assert.Contains("financing_money", errors.Select(error => error.Field));
+        Assert.Contains("financing_time", errors.Select(error => error.Field));
+    }
+
+    [Fact]
     public void Validate_submission_requires_deploy_park_when_deploy_is_one()
     {
         var request = ValidSubmittedRequest() with
@@ -172,7 +189,7 @@ public sealed class LandDemandValidationTests
         var request = ValidSubmittedRequest() with
         {
             BuildingArea = -1m,
-            FinancingMoney = 100000000m,
+            FinancingMoney = 100000000000000m,
             PredYs = 100000000000000m
         };
 
@@ -191,12 +208,12 @@ public sealed class LandDemandValidationTests
             BuildingArea = 99999999.99m,
             DeployHeight = 99999999.99m,
             DeployWeight = 99999999.99m,
-            FinancingMoney = 99999999.99m,
-            Investment = 99999999999999.99m,
-            PredTax = 99999999999999.99m,
-            PredRdex = 99999999999999.99m,
-            PredYs = 99999999999999.99m,
-            PredUnitenergy = 99999999999999.99m,
+            FinancingMoney = decimal.Parse("99999999999999.999999", CultureInfo.InvariantCulture),
+            Investment = decimal.Parse("99999999999999.999999", CultureInfo.InvariantCulture),
+            PredTax = decimal.Parse("99999999999999.999999", CultureInfo.InvariantCulture),
+            PredRdex = decimal.Parse("99999999999999.999999", CultureInfo.InvariantCulture),
+            PredYs = decimal.Parse("99999999999999.999999", CultureInfo.InvariantCulture),
+            PredUnitenergy = decimal.Parse("99999999999999.999999", CultureInfo.InvariantCulture),
             ExpectTime = "2026-08",
             FinancingTime = "2027-12"
         };
@@ -204,6 +221,19 @@ public sealed class LandDemandValidationTests
         var errors = LandDemandValidation.Validate(request);
 
         Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void Validate_rejects_financing_money_that_exceeds_decimal_20_6_precision()
+    {
+        var request = ValidSubmittedRequest() with
+        {
+            FinancingMoney = decimal.Parse("99999999999999.9999999", CultureInfo.InvariantCulture)
+        };
+
+        var errors = LandDemandValidation.Validate(request);
+
+        Assert.Contains(errors, error => error.Field == "financing_money");
     }
 
     private static LandDemandWriteRequest ValidSubmittedRequest() =>

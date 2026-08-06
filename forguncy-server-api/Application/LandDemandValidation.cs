@@ -18,6 +18,11 @@ public static class LandDemandValidation
             throw new ArgumentNullException(nameof(request));
         }
 
+        return ValidateNormalized(request.Normalize());
+    }
+
+    internal static IReadOnlyList<LandDemandValidationError> ValidateNormalized(LandDemandWriteRequest request)
+    {
         var errors = new List<LandDemandValidationError>();
 
         if (!IsSupportedStatus(request.Landusedemand))
@@ -56,12 +61,12 @@ public static class LandDemandValidation
         ValidateDecimal(errors, "building_area", request.BuildingArea, 8, 2);
         ValidateDecimal(errors, "deploy_height", request.DeployHeight, 8, 2);
         ValidateDecimal(errors, "deploy_weight", request.DeployWeight, 8, 2);
-        ValidateDecimal(errors, "financing_money", request.FinancingMoney, 8, 2);
-        ValidateDecimal(errors, "investment", request.Investment, 14, 2);
-        ValidateDecimal(errors, "pred_tax", request.PredTax, 14, 2);
-        ValidateDecimal(errors, "pred_rdex", request.PredRdex, 14, 2);
-        ValidateDecimal(errors, "pred_ys", request.PredYs, 14, 2);
-        ValidateDecimal(errors, "pred_unitenergy", request.PredUnitenergy, 14, 2);
+        ValidateDecimal(errors, "financing_money", request.FinancingMoney, 14, 6);
+        ValidateDecimal(errors, "investment", request.Investment, 14, 6);
+        ValidateDecimal(errors, "pred_tax", request.PredTax, 14, 6);
+        ValidateDecimal(errors, "pred_rdex", request.PredRdex, 14, 6);
+        ValidateDecimal(errors, "pred_ys", request.PredYs, 14, 6);
+        ValidateDecimal(errors, "pred_unitenergy", request.PredUnitenergy, 14, 6);
 
         if (IsAffirmative(request.IsDeploy) && string.IsNullOrWhiteSpace(request.DeployPark))
         {
@@ -73,27 +78,45 @@ public static class LandDemandValidation
             errors.Add(new("deploy_landtype", "deploy_landtype is required when is_specialuse is affirmative."));
         }
 
-        if (string.Equals(request.IsFinancing, "1", StringComparison.Ordinal))
+        if (IsFinancingAffirmative(request.IsFinancing))
         {
             if (!request.FinancingMoney.HasValue)
             {
-                errors.Add(new("financing_money", "financing_money is required when is_financing is 1."));
+                errors.Add(new("financing_money", "financing_money is required when is_financing is affirmative."));
             }
 
             if (string.IsNullOrWhiteSpace(request.FinancingTime))
             {
-                errors.Add(new("financing_time", "financing_time is required when is_financing is 1."));
+                errors.Add(new("financing_time", "financing_time is required when is_financing is affirmative."));
             }
         }
 
         return errors;
     }
 
-    private static bool IsAffirmative(string? value) =>
-        string.Equals(value, "1", StringComparison.Ordinal)
-        || string.Equals(value, "是", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+    private static bool IsAffirmative(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return string.Equals(value, "1", StringComparison.Ordinal)
+            || string.Equals(value, "是", StringComparison.Ordinal)
+            || string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsFinancingAffirmative(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return string.Equals(value, "1", StringComparison.Ordinal)
+            || string.Equals(value, "有", StringComparison.Ordinal);
+    }
 
     private static void RequireString(List<LandDemandValidationError> errors, string field, string? value)
     {
