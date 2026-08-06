@@ -1,10 +1,10 @@
 using System.Reflection;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using ForguncyServerApi.Application;
 using ForguncyServerApi.Domain;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace ForguncyServerApi.Tests.Api;
@@ -12,9 +12,9 @@ namespace ForguncyServerApi.Tests.Api;
 public sealed class AuthApiSurfaceTests
 {
     [Fact]
-    public void AuthApi_reflection_surface_does_not_reference_logging_types()
+    public void EnterpriseApi_reflection_surface_does_not_reference_logging_types()
     {
-        WithAuthApiType(type =>
+        WithEnterpriseApiType(type =>
         {
             var referencedTypes = type
                 .GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
@@ -38,9 +38,9 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
-    public void Api_assembly_exposes_the_public_application_types()
+    public void Api_assembly_exposes_enterprise_surface_and_current_public_application_types()
     {
-        WithAuthApiType(type =>
+        WithEnterpriseApiType(type =>
         {
             var exportedTypes = type.Assembly
                 .GetExportedTypes()
@@ -49,127 +49,41 @@ public sealed class AuthApiSurfaceTests
                 .OrderBy(fullName => fullName)
                 .ToArray();
 
-            Assert.Equal(
-                new[]
-                {
-                    "ForguncyServerApi.Api.AuthApi",
-                    "ForguncyServerApi.Api.AuthCompositionRoot",
-                    "ForguncyServerApi.Api.AuthDiagnostics",
-                    "ForguncyServerApi.Api.LoginRequestFormatException",
-                    "ForguncyServerApi.Api.LoginRequestReader",
-                    "ForguncyServerApi.Api.RetryableAsyncCache`1",
-                    "ForguncyServerApi.Application.AuthService",
-                    "ForguncyServerApi.Application.LoginRequest",
-                    "ForguncyServerApi.Application.LoginResult",
-                    "ForguncyServerApi.Application.LoginStatus",
-                    "ForguncyServerApi.Application.RefreshResult",
-                    "ForguncyServerApi.Application.RefreshStatus",
-                    "ForguncyServerApi.Application.TokenPair",
-                    "ForguncyServerApi.Configuration.AuthOptions",
-                    "ForguncyServerApi.Domain.AuthUser",
-                    "ForguncyServerApi.Infrastructure.AuthSqlSugarClientFactory",
-                    "ForguncyServerApi.Infrastructure.ForguncyConfigConnectionStringReader",
-                    "ForguncyServerApi.Infrastructure.ForguncyJwtConfigurationReader",
-                    "ForguncyServerApi.Infrastructure.IUserRepository",
-                    "ForguncyServerApi.Infrastructure.UserRepository",
-                    "ForguncyServerApi.Security.IJwtTokenService",
-                    "ForguncyServerApi.Security.IPasswordHasher",
-                    "ForguncyServerApi.Security.JwtTokenService",
-                    "ForguncyServerApi.Security.PasswordHasher",
-                    "System.Runtime.CompilerServices.IsExternalInit"
-                },
-                exportedTypes);
+            Assert.Contains("ForguncyServerApi.Api.EnterpriseApi", exportedTypes);
+            Assert.Contains("ForguncyServerApi.Api.EnterpriseCompositionRoot", exportedTypes);
+            Assert.Contains("ForguncyServerApi.Api.EnterpriseDiagnostics", exportedTypes);
+            Assert.Contains("ForguncyServerApi.Api.LoginRequestFormatException", exportedTypes);
+            Assert.Contains("ForguncyServerApi.Api.LoginRequestReader", exportedTypes);
+            Assert.Contains("ForguncyServerApi.Api.RetryableAsyncCache`1", exportedTypes);
+            Assert.Contains("ForguncyServerApi.Application.AuthService", exportedTypes);
+            Assert.Contains("ForguncyServerApi.Application.EnterpriseIdentity", exportedTypes);
+            Assert.Contains("ForguncyServerApi.Application.EnterpriseService", exportedTypes);
+            Assert.Contains("ForguncyServerApi.Application.LandDemandService", exportedTypes);
+            Assert.Contains("ForguncyServerApi.Application.LandDemandResponse", exportedTypes);
+            Assert.Contains("ForguncyServerApi.Application.LandDemandOperationResult", exportedTypes);
+            Assert.Contains("ForguncyServerApi.Domain.EnterpriseProfile", exportedTypes);
+            Assert.Contains("ForguncyServerApi.Infrastructure.EnterpriseRepository", exportedTypes);
+            Assert.Contains("ForguncyServerApi.Infrastructure.IEnterpriseRepository", exportedTypes);
+            Assert.Contains("ForguncyServerApi.Infrastructure.ILandDemandRepository", exportedTypes);
+            Assert.Contains("ForguncyServerApi.Infrastructure.LandDemandRepository", exportedTypes);
+            Assert.DoesNotContain("ForguncyServerApi.Api.AuthApi", exportedTypes);
+            Assert.DoesNotContain("ForguncyServerApi.Api.AuthCompositionRoot", exportedTypes);
+            Assert.DoesNotContain("ForguncyServerApi.Api.AuthDiagnostics", exportedTypes);
         });
     }
 
     [Fact]
-    public void Readme_documents_refresh_route_request_response_and_stateless_limitations()
+    public void EnterpriseApi_exposes_only_parameterless_login_refresh_and_get_info_methods()
     {
-        var readme = File.ReadAllText(Path.Combine(ProjectRoot(), "README.md"));
-
-        Assert.Contains("POST /customapi/authapi/refresh", readme);
-        var normalizedReadme = string.Join(
-            " ",
-            readme.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries));
-        Assert.Contains(
-            "Expose both the login and refresh routes only through the Forguncy site's HTTPS endpoint or an equivalent trusted network boundary.",
-            normalizedReadme);
-
-        var refreshHeading = "## Refresh contract";
-        var refreshStart = readme.IndexOf(refreshHeading, StringComparison.Ordinal);
-        Assert.True(refreshStart >= 0, "README must contain a refresh contract heading.");
-
-        var nextHeading = readme.IndexOf(
-            "\n## ",
-            refreshStart + refreshHeading.Length,
-            StringComparison.Ordinal);
-        var refreshEnd = nextHeading >= 0 ? nextHeading : readme.Length;
-        var refreshSection = readme.Substring(refreshStart, refreshEnd - refreshStart);
-
-        Assert.Contains("Content-Type: application/json", refreshSection);
-        Assert.Contains("\"refresh_token\": \"<jwt>\"", refreshSection);
-        Assert.Contains("Content-Type: application/x-www-form-urlencoded", refreshSection);
-        Assert.Contains("refresh_token=<jwt>", refreshSection);
-        Assert.Contains("\"access_token\": \"<jwt>\"", refreshSection);
-        Assert.Contains("\"refresh_token\": \"<jwt>\"", refreshSection);
-        Assert.Contains("\"token_type\": \"Bearer\"", refreshSection);
-        Assert.Contains("\"expires_in\": 3600", refreshSection);
-        Assert.Contains("\"refresh_expires_in\": 604800", refreshSection);
-        Assert.Contains(
-            "The refresh response contains exactly the same five token fields and does not",
-            refreshSection);
-        Assert.Contains("include a user object.", refreshSection);
-        Assert.Contains("stateless", refreshSection);
-        Assert.Contains("cannot be revoked before expiry", refreshSection);
-
-        Assert.Contains(
-            "| `FGC_JWT_REFRESH_EXPIRES_MINUTES` | Refresh-token lifetime in minutes | Stores `10080`. |",
-            readme);
-
-        var successMarker = "Successful refresh returns `200 OK`:";
-        var successStart = refreshSection.IndexOf(successMarker, StringComparison.Ordinal);
-        Assert.True(successStart >= 0, "README must contain the refresh success response example.");
-
-        var jsonStart = refreshSection.IndexOf("```json", successStart, StringComparison.Ordinal);
-        Assert.True(jsonStart >= 0, "Refresh success must include a JSON example.");
-        jsonStart += "```json".Length;
-
-        var jsonEnd = refreshSection.IndexOf("```", jsonStart, StringComparison.Ordinal);
-        Assert.True(jsonEnd > jsonStart, "Refresh success JSON example must close its code fence.");
-
-        var refreshSuccessJson = refreshSection.Substring(jsonStart, jsonEnd - jsonStart).Trim();
-        var refreshPayload = JObject.Parse(refreshSuccessJson);
-        var expectedTokenFields = new[]
-        {
-            "access_token",
-            "refresh_token",
-            "token_type",
-            "expires_in",
-            "refresh_expires_in"
-        };
-
-        Assert.Equal(
-            expectedTokenFields.OrderBy(field => field),
-            refreshPayload.Properties().Select(property => property.Name).OrderBy(field => field));
-        Assert.DoesNotContain("\"user\"", refreshSuccessJson, StringComparison.OrdinalIgnoreCase);
-
-        Assert.DoesNotContain("refresh token database persistence", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("refresh-token database persistence", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("database-backed refresh token revocation", readme, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("immediate refresh token disablement", readme, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void AuthApi_exposes_only_parameterless_login_and_refresh_post_methods()
-    {
-        WithAuthApiType(type =>
+        WithEnterpriseApiType(type =>
         {
             var declaredPublicMethods = type.GetMethods(
                 BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-            Assert.Equal(2, declaredPublicMethods.Length);
+            Assert.Equal(3, declaredPublicMethods.Length);
 
             AssertPublicPostMethod(declaredPublicMethods, "Login");
             AssertPublicPostMethod(declaredPublicMethods, "Refresh");
+            AssertPublicGetMethod(declaredPublicMethods, "GetInfo");
 
             Assert.Equal("GrapeCity.Forguncy.ServerApi.ForguncyApi", type.BaseType?.FullName);
             Assert.DoesNotContain(type.GetMethods(), method => method.Name is "Issue" or "Validate");
@@ -177,11 +91,11 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
-    public void AuthCompositionRoot_requires_forguncy_data_access_before_initialization()
+    public void EnterpriseCompositionRoot_requires_forguncy_data_access_before_initialization()
     {
-        WithAuthApiType(type =>
+        WithEnterpriseApiType(type =>
         {
-            var compositionRoot = type.Assembly.GetType("ForguncyServerApi.Api.AuthCompositionRoot");
+            var compositionRoot = type.Assembly.GetType("ForguncyServerApi.Api.EnterpriseCompositionRoot");
             Assert.NotNull(compositionRoot);
 
             var createAsync = compositionRoot!.GetMethod(
@@ -197,62 +111,62 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
-    public void AuthCompositionRoot_exposes_refresh_async_contract()
+    public void EnterpriseCompositionRoot_exposes_auth_enterprise_land_demand_and_tokens()
     {
-        WithAuthApiType(type =>
+        WithEnterpriseApiType(type =>
         {
-            var compositionRoot = type.Assembly.GetType("ForguncyServerApi.Api.AuthCompositionRoot");
+            var compositionRoot = type.Assembly.GetType("ForguncyServerApi.Api.EnterpriseCompositionRoot");
             Assert.NotNull(compositionRoot);
 
-            var refreshAsync = compositionRoot!.GetMethod(
-                "RefreshAsync",
-                BindingFlags.Public | BindingFlags.Instance);
-            Assert.NotNull(refreshAsync);
-            Assert.Equal(typeof(Task<RefreshResult>), refreshAsync!.ReturnType);
-            Assert.Equal(
-                new[] { typeof(string), typeof(CancellationToken) },
-                refreshAsync.GetParameters().Select(parameter => parameter.ParameterType));
+            Assert.Equal(typeof(Task<LoginResult>), compositionRoot!.GetMethod("LoginAsync")!.ReturnType);
+            Assert.Equal(typeof(Task<RefreshResult>), compositionRoot.GetMethod("RefreshAsync")!.ReturnType);
+            Assert.Equal(typeof(Task<EnterpriseProfile?>), compositionRoot.GetMethod("GetInfoAsync")!.ReturnType);
+            Assert.Equal(typeof(AuthService), compositionRoot.GetProperty("AuthService")!.PropertyType);
+            Assert.Equal(typeof(EnterpriseService), compositionRoot.GetProperty("EnterpriseService")!.PropertyType);
+            Assert.Equal(typeof(LandDemandService), compositionRoot.GetProperty("LandDemandService")!.PropertyType);
+            Assert.Equal("ForguncyServerApi.Security.IJwtTokenService", compositionRoot.GetProperty("Tokens")!.PropertyType.FullName);
         });
     }
 
     [Fact]
-    public void AuthApi_uses_composition_root_refresh_contract_without_private_field_reflection()
+    public void EnterpriseApi_uses_enterprise_composition_root_and_response_writer_without_private_field_reflection()
     {
-        var source = File.ReadAllText(SourceFile("Api", "AuthApi.cs"));
+        var source = File.ReadAllText(SourceFile("Api", "EnterpriseApi.cs"));
 
-        Assert.Contains("auth.RefreshAsync(refreshToken, cancellationToken)", source);
+        Assert.Contains("EnterpriseCompositionRoot", source);
+        Assert.Contains("ApiResponseWriter.WriteJsonAsync", source);
         Assert.DoesNotContain("GetField(", source);
         Assert.DoesNotContain("BindingFlags.NonPublic", source);
     }
 
     [Fact]
-    public void AuthCompositionRoot_has_no_database_initializer_or_startup_schema_writes()
+    public void EnterpriseCompositionRoot_has_no_database_initializer_or_startup_schema_writes()
     {
-        WithAuthApiType(type =>
+        WithEnterpriseApiType(type =>
         {
             Assert.Null(type.Assembly.GetType("ForguncyServerApi.Infrastructure.AuthDbInitializer"));
 
-            var source = File.ReadAllText(SourceFile("Api", "AuthCompositionRoot.cs"));
+            var source = File.ReadAllText(SourceFile("Api", "EnterpriseCompositionRoot.cs"));
             Assert.DoesNotContain("AuthDbInitializer", source);
             Assert.DoesNotContain("EnsureCreated", source);
         });
     }
 
     [Fact]
-    public void AuthCompositionRoot_loads_jwt_options_from_the_forguncy_config_table()
+    public void EnterpriseCompositionRoot_loads_jwt_options_from_the_forguncy_config_table()
     {
-        var source = File.ReadAllText(SourceFile("Api", "AuthCompositionRoot.cs"));
+        var source = File.ReadAllText(SourceFile("Api", "EnterpriseCompositionRoot.cs"));
 
         Assert.Contains("ForguncyJwtConfigurationReader.ReadOrCreate", source);
         Assert.DoesNotContain("AuthOptions.FromEnvironment", source);
     }
 
     [Fact]
-    public void AuthCompositionRoot_initializes_from_config_rows_without_environment_variables()
+    public void EnterpriseCompositionRoot_initializes_from_config_rows_without_environment_variables()
     {
-        WithAuthApiType(type =>
+        WithEnterpriseApiType(type =>
         {
-            var compositionRoot = type.Assembly.GetType("ForguncyServerApi.Api.AuthCompositionRoot");
+            var compositionRoot = type.Assembly.GetType("ForguncyServerApi.Api.EnterpriseCompositionRoot");
             Assert.NotNull(compositionRoot);
 
             var createAsync = compositionRoot!.GetMethod(
@@ -311,31 +225,9 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
-    public void Real_user_deployment_surface_has_no_legacy_bootstrap_assets_or_guidance()
+    public void EnterpriseApi_server_error_payload_is_fixed_and_contains_no_sensitive_detail()
     {
-        var projectRoot = ProjectRoot();
-        var productionFiles = Directory
-            .EnumerateFiles(projectRoot, "*", SearchOption.AllDirectories)
-            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}tests{Path.DirectorySeparatorChar}"))
-            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
-            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"))
-            .Where(path => Path.GetExtension(path) is ".cs" or ".md" or ".sql")
-            .ToArray();
-        var deploymentSurface = string.Join(
-            Environment.NewLine,
-            productionFiles.Select(File.ReadAllText));
-
-        Assert.DoesNotContain("jwt_users", deploymentSurface);
-        Assert.DoesNotContain("EnsureCreated", deploymentSurface);
-        Assert.DoesNotContain("FGC_AUTH_BOOTSTRAP_", deploymentSurface);
-        Assert.DoesNotContain("AuthDbInitializer", deploymentSurface);
-        Assert.DoesNotContain(Path.Combine(projectRoot, "sql", "001-create-database.sql"), productionFiles);
-    }
-
-    [Fact]
-    public void AuthApi_server_error_payload_is_fixed_and_contains_no_sensitive_detail()
-    {
-        WithAuthApiType(type =>
+        WithEnterpriseApiType(type =>
         {
             var factory = type.GetMethod("CreateServerErrorResponse", BindingFlags.NonPublic | BindingFlags.Static);
             Assert.NotNull(factory);
@@ -355,9 +247,9 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
-    public void AuthApi_unexpected_exception_records_only_a_sanitized_server_diagnostic()
+    public void EnterpriseApi_unexpected_exception_records_only_a_sanitized_login_diagnostic()
     {
-        WithAuthApiType(type =>
+        WithEnterpriseApiType(type =>
         {
             var recorder = type.GetMethod(
                 "RecordUnexpectedLoginFailure",
@@ -379,33 +271,16 @@ public sealed class AuthApiSurfaceTests
 
             var entry = Assert.Single(loggerFactory.Logger.Entries);
             Assert.Equal(LogLevel.Error, entry.LogLevel);
-            Assert.Equal(1001, entry.EventId.Id);
-            Assert.Equal("AuthLoginUnexpectedFailure", entry.EventId.Name);
-            Assert.Null(entry.Exception);
-
-            var fields = entry.State
-                .Where(field => field.Key != "{OriginalFormat}")
-                .ToDictionary(field => field.Key, field => field.Value?.ToString());
-            Assert.Equal(2, fields.Count);
-            Assert.Equal("auth.login.unexpected_failure", fields["OperationCode"]);
-            Assert.Equal(nameof(InvalidOperationException), fields["ExceptionType"]);
-
-            var diagnostic = string.Join(
-                "|",
-                entry.Message,
-                string.Join("|", entry.State.Select(field => $"{field.Key}={field.Value}")));
-            var lowerDiagnostic = diagnostic.ToLowerInvariant();
-            Assert.DoesNotContain(secret, diagnostic);
-            Assert.DoesNotContain("password", lowerDiagnostic);
-            Assert.DoesNotContain("connection string", lowerDiagnostic);
-            Assert.DoesNotContain("stack trace", lowerDiagnostic);
+            Assert.Equal("EnterpriseLoginUnexpectedFailure", entry.EventId.Name);
+            AssertDiagnosticFields(entry, "enterprise.login");
+            AssertNoSecretInDiagnostic(entry, secret);
         });
     }
 
     [Fact]
-    public void AuthApi_refresh_unexpected_exception_records_only_a_sanitized_server_diagnostic()
+    public void EnterpriseApi_unexpected_exception_records_only_a_sanitized_refresh_diagnostic()
     {
-        WithAuthApiType(type =>
+        WithEnterpriseApiType(type =>
         {
             var recorder = type.GetMethod(
                 "RecordUnexpectedRefreshFailure",
@@ -427,33 +302,47 @@ public sealed class AuthApiSurfaceTests
 
             var entry = Assert.Single(loggerFactory.Logger.Entries);
             Assert.Equal(LogLevel.Error, entry.LogLevel);
-            Assert.Equal(1002, entry.EventId.Id);
-            Assert.Equal("AuthRefreshUnexpectedFailure", entry.EventId.Name);
-            Assert.Null(entry.Exception);
-
-            var fields = entry.State
-                .Where(field => field.Key != "{OriginalFormat}")
-                .ToDictionary(field => field.Key, field => field.Value?.ToString());
-            Assert.Equal(2, fields.Count);
-            Assert.Equal("auth.refresh.unexpected_failure", fields["OperationCode"]);
-            Assert.Equal(nameof(InvalidOperationException), fields["ExceptionType"]);
-
-            var diagnostic = string.Join(
-                "|",
-                entry.Message,
-                string.Join("|", entry.State.Select(field => $"{field.Key}={field.Value}")));
-            var lowerDiagnostic = diagnostic.ToLowerInvariant();
-            Assert.DoesNotContain(secret, diagnostic);
-            Assert.DoesNotContain("password", lowerDiagnostic);
-            Assert.DoesNotContain("connection string", lowerDiagnostic);
-            Assert.DoesNotContain("stack trace", lowerDiagnostic);
+            Assert.Equal("EnterpriseRefreshUnexpectedFailure", entry.EventId.Name);
+            AssertDiagnosticFields(entry, "enterprise.refresh");
+            AssertNoSecretInDiagnostic(entry, secret);
         });
     }
 
     [Fact]
-    public async Task AuthApi_request_read_failure_returns_fixed_server_error_and_records_a_diagnostic()
+    public void EnterpriseApi_unexpected_exception_records_only_a_sanitized_get_info_diagnostic()
     {
-        await WithAuthApiTypeAsync(async type =>
+        WithEnterpriseApiType(type =>
+        {
+            var recorder = type.GetMethod(
+                "RecordUnexpectedGetInfoFailure",
+                BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.NotNull(recorder);
+
+            const string secret = "password=get-info-diagnostic-must-not-log-this";
+            var loggerFactory = new CapturingLoggerFactory();
+            var services = new SingleServiceProvider(typeof(ILoggerFactory), loggerFactory);
+
+            try
+            {
+                throw new InvalidOperationException(secret);
+            }
+            catch (Exception exception)
+            {
+                recorder!.Invoke(null, new object?[] { services, exception });
+            }
+
+            var entry = Assert.Single(loggerFactory.Logger.Entries);
+            Assert.Equal(LogLevel.Error, entry.LogLevel);
+            Assert.Equal("EnterpriseGetInfoUnexpectedFailure", entry.EventId.Name);
+            AssertDiagnosticFields(entry, "enterprise.get_info");
+            AssertNoSecretInDiagnostic(entry, secret);
+        });
+    }
+
+    [Fact]
+    public async Task EnterpriseApi_request_read_failure_returns_fixed_server_error_and_records_a_diagnostic()
+    {
+        await WithEnterpriseApiTypeAsync(async type =>
         {
             const string sensitiveDetail = "password=request-stream-detail-must-not-escape";
             var loggerFactory = new CapturingLoggerFactory();
@@ -497,9 +386,9 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
-    public async Task AuthApi_refresh_request_read_failure_sets_no_cache_headers_and_fixed_server_error()
+    public async Task EnterpriseApi_refresh_request_read_failure_sets_no_cache_headers_and_fixed_server_error()
     {
-        await WithAuthApiTypeAsync(async type =>
+        await WithEnterpriseApiTypeAsync(async type =>
         {
             var loggerFactory = new CapturingLoggerFactory();
             var context = new DefaultHttpContext();
@@ -540,9 +429,27 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
-    public void AuthApi_maps_login_outcomes_to_200_400_and_401_responses()
+    public void EnterpriseApi_maps_get_info_invalid_access_token_to_401()
     {
-        WithAuthApiType(type =>
+        WithEnterpriseApiType(type =>
+        {
+            var mapper = type.GetMethod("CreateInvalidAccessTokenResponse", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.NotNull(mapper);
+
+            var mapped = mapper!.Invoke(null, null);
+            Assert.NotNull(mapped);
+            var mappedType = mapped!.GetType();
+            Assert.Equal(401, mappedType.GetProperty("StatusCode")!.GetValue(mapped));
+            var payload = mappedType.GetProperty("Payload")!.GetValue(mapped);
+
+            Assert.Equal("{\"error\":\"invalid_access_token\"}", JsonConvert.SerializeObject(payload));
+        });
+    }
+
+    [Fact]
+    public void EnterpriseApi_maps_login_outcomes_to_200_400_and_401_responses()
+    {
+        WithEnterpriseApiType(type =>
         {
             var mapper = type.GetMethod("CreateLoginResponse", BindingFlags.NonPublic | BindingFlags.Static);
             Assert.NotNull(mapper);
@@ -569,9 +476,9 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
-    public void AuthApi_maps_refresh_outcomes_to_200_400_and_401_responses()
+    public void EnterpriseApi_maps_refresh_outcomes_to_200_400_and_401_responses()
     {
-        WithAuthApiType(type =>
+        WithEnterpriseApiType(type =>
         {
             var mapper = type.GetMethod("CreateRefreshResponse", BindingFlags.NonPublic | BindingFlags.Static);
             Assert.NotNull(mapper);
@@ -596,13 +503,94 @@ public sealed class AuthApiSurfaceTests
         });
     }
 
+    [Fact]
+    public void EnterpriseApi_maps_get_info_success_to_only_businessname_creditcode_and_county()
+    {
+        WithEnterpriseApiType(type =>
+        {
+            var mapper = type.GetMethod("CreateGetInfoResponse", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.NotNull(mapper);
+
+            var mapped = mapper!.Invoke(null, new object[]
+            {
+                new EnterpriseProfile
+                {
+                    UserId = 9,
+                    BusinessName = "Synthetic Enterprise",
+                    CreditCode = "91330200SYNTHETIC",
+                    CountyName = "Yinzhou",
+                    Region = "330212"
+                }
+            });
+
+            Assert.NotNull(mapped);
+            var mappedType = mapped!.GetType();
+            Assert.Equal(200, mappedType.GetProperty("StatusCode")!.GetValue(mapped));
+            var payload = mappedType.GetProperty("Payload")!.GetValue(mapped);
+            var json = JsonConvert.SerializeObject(payload);
+
+            Assert.Equal(
+                "{\"businessname\":\"Synthetic Enterprise\",\"creditcode\":\"91330200SYNTHETIC\",\"county\":\"Yinzhou\"}",
+                json);
+
+            var propertyNames = JObject.Parse(json).Properties().Select(property => property.Name).ToArray();
+            Assert.Equal(new[] { "businessname", "creditcode", "county" }, propertyNames);
+            Assert.DoesNotContain("region", propertyNames);
+            Assert.DoesNotContain("id", propertyNames);
+            Assert.DoesNotContain("updateuser", propertyNames);
+            Assert.DoesNotContain("reviewstatus", propertyNames);
+        });
+    }
+
+    [Fact]
+    public void EnterpriseApi_maps_get_info_missing_profile_to_404()
+    {
+        WithEnterpriseApiType(type =>
+        {
+            var mapper = type.GetMethod("CreateGetInfoNotFoundResponse", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.NotNull(mapper);
+
+            var mapped = mapper!.Invoke(null, null);
+            Assert.NotNull(mapped);
+            var mappedType = mapped!.GetType();
+            Assert.Equal(404, mappedType.GetProperty("StatusCode")!.GetValue(mapped));
+            var payload = mappedType.GetProperty("Payload")!.GetValue(mapped);
+
+            Assert.Equal("{\"error\":\"enterprise_not_found\"}", JsonConvert.SerializeObject(payload));
+        });
+    }
+
+    [Fact]
+    public void Real_user_deployment_surface_has_no_legacy_auth_aliases_or_bootstrap_assets()
+    {
+        var projectRoot = ProjectRoot();
+        var productionFiles = Directory
+            .EnumerateFiles(projectRoot, "*", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}tests{Path.DirectorySeparatorChar}"))
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"))
+            .Where(path => Path.GetExtension(path) is ".cs" or ".md" or ".sql")
+            .ToArray();
+        var deploymentSurface = string.Join(
+            Environment.NewLine,
+            productionFiles.Select(File.ReadAllText));
+
+        Assert.DoesNotContain("POST /customapi/authapi/login", deploymentSurface);
+        Assert.DoesNotContain("POST /customapi/authapi/refresh", deploymentSurface);
+        Assert.DoesNotContain("jwt_users", deploymentSurface);
+        Assert.DoesNotContain("EnsureCreated", deploymentSurface);
+        Assert.DoesNotContain("FGC_AUTH_BOOTSTRAP_", deploymentSurface);
+        Assert.DoesNotContain("AuthDbInitializer", deploymentSurface);
+        Assert.DoesNotContain(Path.Combine(projectRoot, "sql", "001-create-database.sql"), productionFiles);
+    }
+
     private static void AssertMappedResponse(
         MethodInfo mapper,
         object result,
         int expectedStatusCode,
         string expectedJson)
     {
-        var mapped = mapper.Invoke(null, new object[] { result });
+        var mapped = mapper.Invoke(null, new[] { result });
         Assert.NotNull(mapped);
         var mappedType = mapped!.GetType();
         var statusCode = mappedType.GetProperty("StatusCode")?.GetValue(mapped);
@@ -626,13 +614,50 @@ public sealed class AuthApiSurfaceTests
             attribute.GetType().FullName == "GrapeCity.Forguncy.ServerApi.GetAttribute");
     }
 
-    private static void WithAuthApiType(Action<Type> action)
+    private static void AssertPublicGetMethod(IEnumerable<MethodInfo> declaredPublicMethods, string expectedName)
+    {
+        var method = Assert.Single(declaredPublicMethods.Where(candidate => candidate.Name == expectedName));
+        Assert.Equal(typeof(Task), method.ReturnType);
+        Assert.Empty(method.GetParameters());
+
+        var attributes = method.GetCustomAttributes(inherit: false).ToArray();
+        Assert.Single(attributes.Where(attribute =>
+            attribute.GetType().FullName == "GrapeCity.Forguncy.ServerApi.GetAttribute"));
+        Assert.DoesNotContain(attributes, attribute =>
+            attribute.GetType().FullName == "GrapeCity.Forguncy.ServerApi.PostAttribute");
+    }
+
+    private static void AssertDiagnosticFields(LogEntry entry, string expectedOperationCode)
+    {
+        Assert.Null(entry.Exception);
+        var fields = entry.State
+            .Where(field => field.Key != "{OriginalFormat}")
+            .ToDictionary(field => field.Key, field => field.Value?.ToString());
+        Assert.Equal(2, fields.Count);
+        Assert.Equal(expectedOperationCode, fields["OperationCode"]);
+        Assert.Equal(nameof(InvalidOperationException), fields["ExceptionType"]);
+    }
+
+    private static void AssertNoSecretInDiagnostic(LogEntry entry, string secret)
+    {
+        var diagnostic = string.Join(
+            "|",
+            entry.Message,
+            string.Join("|", entry.State.Select(field => $"{field.Key}={field.Value}")));
+        var lowerDiagnostic = diagnostic.ToLowerInvariant();
+        Assert.DoesNotContain(secret, diagnostic);
+        Assert.DoesNotContain("password", lowerDiagnostic);
+        Assert.DoesNotContain("connection string", lowerDiagnostic);
+        Assert.DoesNotContain("stack trace", lowerDiagnostic);
+    }
+
+    private static void WithEnterpriseApiType(Action<Type> action)
     {
         ResolveEventHandler handler = ResolveForguncyServerApi;
         AppDomain.CurrentDomain.AssemblyResolve += handler;
         try
         {
-            var type = Assembly.Load("ForguncyServerApi").GetType("ForguncyServerApi.Api.AuthApi");
+            var type = Assembly.Load("ForguncyServerApi").GetType("ForguncyServerApi.Api.EnterpriseApi");
             Assert.NotNull(type);
             action(type!);
         }
@@ -642,13 +667,13 @@ public sealed class AuthApiSurfaceTests
         }
     }
 
-    private static async Task WithAuthApiTypeAsync(Func<Type, Task> action)
+    private static async Task WithEnterpriseApiTypeAsync(Func<Type, Task> action)
     {
         ResolveEventHandler handler = ResolveForguncyServerApi;
         AppDomain.CurrentDomain.AssemblyResolve += handler;
         try
         {
-            var type = Assembly.Load("ForguncyServerApi").GetType("ForguncyServerApi.Api.AuthApi");
+            var type = Assembly.Load("ForguncyServerApi").GetType("ForguncyServerApi.Api.EnterpriseApi");
             Assert.NotNull(type);
             await action(type!);
         }

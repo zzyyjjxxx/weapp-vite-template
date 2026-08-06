@@ -1,10 +1,11 @@
-# Forguncy JWT login Web API
+# Forguncy enterprise auth Web API
 
-This class library targets Forguncy 8.0.4 and exposes two custom Web API routes:
+This class library targets Forguncy 8.0.4 and exposes three custom Web API routes:
 
 ```text
-POST /customapi/authapi/login
-POST /customapi/authapi/refresh
+POST /customapi/enterpriseapi/login
+POST /customapi/enterpriseapi/refresh
+GET /customapi/enterpriseapi/getinfo
 ```
 
 Both routes accept either JSON or URL-encoded form data. The API does not
@@ -56,7 +57,7 @@ of environment variables, documentation, diagnostics, and logs.
 Restart the Forguncy application process after changing JWT rows in the
 `config` table so the authentication composition is rebuilt.
 
-Expose both the login and refresh routes only through the Forguncy site's HTTPS
+Expose the login, refresh, and getinfo routes only through the Forguncy site's HTTPS
 endpoint or an equivalent trusted network boundary. Never expose credentials
 through an unprotected direct HTTP endpoint.
 
@@ -206,6 +207,56 @@ cannot be revoked before expiry. This API does not promise refresh-token
 rotation enforcement, logout-triggered invalidation, persistence, or immediate
 disablement.
 
+## Enterprise info contract
+
+### Request
+
+```http
+GET /customapi/enterpriseapi/getinfo
+Authorization: Bearer <access-token>
+```
+
+### Responses
+
+Successful lookup returns `200 OK`:
+
+```json
+{
+  "businessname": "<enterprise-name>",
+  "creditcode": "<credit-code>",
+  "county": "<county-name>"
+}
+```
+
+Only these three enterprise fields are returned. The response does not include
+`region`, internal identifiers, review fields, or update metadata.
+
+Missing or invalid access tokens return `401 Unauthorized`:
+
+```json
+{
+  "error": "invalid_access_token"
+}
+```
+
+If the authenticated enterprise profile cannot be found, the API returns
+`404 Not Found`:
+
+```json
+{
+  "error": "enterprise_not_found"
+}
+```
+
+Unexpected server or configuration failures return `500 Internal Server Error`
+with the same fixed non-sensitive payload:
+
+```json
+{
+  "error": "server_error"
+}
+```
+
 ## Test and release build
 
 From `forguncy-server-api`, run:
@@ -271,5 +322,6 @@ Upload the DLL bundle from `bin\Release\net472`, including
 `config` table as described above.
 Configure the existing database connection only through the Forguncy `config`
 table row where `item='ssl'`; the API does not initialize that database. The
-designer integration intentionally contains only the `login` and `refresh`
-routes; issue, validate, and logout routes are intentionally absent by design.
+designer integration intentionally contains only the `login`, `refresh`, and
+`getinfo` routes; issue, validate, logout, and legacy auth aliases are
+intentionally absent by design.

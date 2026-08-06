@@ -3,18 +3,20 @@ using Microsoft.Extensions.Logging;
 
 namespace ForguncyServerApi.Api;
 
-public static class AuthDiagnostics
+public static class EnterpriseDiagnostics
 {
-    private const string UnexpectedLoginOperationCode = "auth.login.unexpected_failure";
-    private const string UnexpectedRefreshOperationCode = "auth.refresh.unexpected_failure";
-    private static readonly EventId UnexpectedLoginEvent = new(1001, "AuthLoginUnexpectedFailure");
-    private static readonly EventId UnexpectedRefreshEvent = new(1002, "AuthRefreshUnexpectedFailure");
+    private static readonly EventId UnexpectedLoginEvent = new(1101, "EnterpriseLoginUnexpectedFailure");
+    private static readonly EventId UnexpectedRefreshEvent = new(1102, "EnterpriseRefreshUnexpectedFailure");
+    private static readonly EventId UnexpectedGetInfoEvent = new(1103, "EnterpriseGetInfoUnexpectedFailure");
 
     public static void RecordLogin(IServiceProvider? services, Exception exception) =>
-        Record(services, exception, UnexpectedLoginEvent, UnexpectedLoginOperationCode);
+        Record(services, exception, UnexpectedLoginEvent, "enterprise.login");
 
     public static void RecordRefresh(IServiceProvider? services, Exception exception) =>
-        Record(services, exception, UnexpectedRefreshEvent, UnexpectedRefreshOperationCode);
+        Record(services, exception, UnexpectedRefreshEvent, "enterprise.refresh");
+
+    public static void RecordGetInfo(IServiceProvider? services, Exception exception) =>
+        Record(services, exception, UnexpectedGetInfoEvent, "enterprise.get_info");
 
     private static void Record(
         IServiceProvider? services,
@@ -26,11 +28,11 @@ public static class AuthDiagnostics
 
         try
         {
-            var logger = services?.GetService(typeof(ILogger<AuthApi>)) as ILogger
+            var logger = services?.GetService(typeof(ILogger<EnterpriseApi>)) as ILogger
                 ?? services?.GetService(typeof(ILogger)) as ILogger;
             if (logger is null && services?.GetService(typeof(ILoggerFactory)) is ILoggerFactory loggerFactory)
             {
-                logger = loggerFactory.CreateLogger(typeof(AuthApi).FullName ?? nameof(AuthApi));
+                logger = loggerFactory.CreateLogger(typeof(EnterpriseApi).FullName ?? nameof(EnterpriseApi));
             }
 
             if (logger is not null)
@@ -45,7 +47,6 @@ public static class AuthDiagnostics
         }
         catch (Exception)
         {
-            // Diagnostics must never replace the fixed client error response.
         }
 
         try
@@ -57,7 +58,6 @@ public static class AuthDiagnostics
         }
         catch (Exception)
         {
-            // A failing Trace listener must not alter the client response.
         }
     }
 }
