@@ -1,10 +1,16 @@
 using System.Reflection;
 using ForguncyServerApi.Application;
+using ForguncyServerApi.Api;
+using ForguncyServerApi.Configuration;
 using ForguncyServerApi.Domain;
+using ForguncyServerApi.Infrastructure;
+using ForguncyServerApi.Security;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using SqlSugar;
 using Xunit;
 
 namespace ForguncyServerApi.Tests.Api;
@@ -134,9 +140,32 @@ public sealed class AuthApiSurfaceTests
         var source = File.ReadAllText(SourceFile("Api", "EnterpriseApi.cs"));
 
         Assert.Contains("EnterpriseCompositionRoot", source);
+        Assert.Contains("EnterpriseCompositionRoot.GetOrCreateAsync", source);
         Assert.Contains("ApiResponseWriter.WriteJsonAsync", source);
+        Assert.DoesNotContain("RetryableAsyncCache<EnterpriseCompositionRoot>", source);
         Assert.DoesNotContain("GetField(", source);
         Assert.DoesNotContain("BindingFlags.NonPublic", source);
+    }
+
+    [Fact]
+    public void EnterpriseCompositionRoot_exposes_shared_cached_get_or_create_facility_for_future_api_reuse()
+    {
+        WithEnterpriseApiType(type =>
+        {
+            var compositionRoot = type.Assembly.GetType("ForguncyServerApi.Api.EnterpriseCompositionRoot");
+            Assert.NotNull(compositionRoot);
+
+            var getOrCreateAsync = compositionRoot!.GetMethod(
+                "GetOrCreateAsync",
+                BindingFlags.Public | BindingFlags.Static);
+            Assert.NotNull(getOrCreateAsync);
+
+            var parameters = getOrCreateAsync!.GetParameters();
+            Assert.Equal(2, parameters.Length);
+            Assert.Equal("GrapeCity.Forguncy.ServerApi.IDataAccess", parameters[0].ParameterType.FullName);
+            Assert.Equal(typeof(CancellationToken), parameters[1].ParameterType);
+            Assert.Equal(typeof(Task<>).MakeGenericType(compositionRoot), getOrCreateAsync.ReturnType);
+        });
     }
 
     [Fact]
@@ -442,7 +471,134 @@ public sealed class AuthApiSurfaceTests
             Assert.Equal(401, mappedType.GetProperty("StatusCode")!.GetValue(mapped));
             var payload = mappedType.GetProperty("Payload")!.GetValue(mapped);
 
-            Assert.Equal("{\"error\":\"invalid_access_token\"}", JsonConvert.SerializeObject(payload));
+            Assert.Equal("{\"error\":\"invalid_token\"}", JsonConvert.SerializeObject(payload));
+        });
+    }
+
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("Basic synthetic", false)]
+    [InlineData("Bearer {0}", true)]
+    [InlineData("Bearer malformed token", false)]
+    public async Task EnterpriseApi_get_info_handler_maps_missing_malformed_and_refresh_use_tokens_to_401_invalid_token(
+        string? authorizationHeader,
+        bool useRefreshToken)
+    {
+        await WithEnterpriseApiTypeAsync(async type =>
+        {
+            var tokens = TestJwtTokenService();
+            var profileLookupCount = 0;
+            using var factoryOverride = PushCompositionRootFactoryOverride(
+                type,
+                _ => Task.FromResult(CreateTestCompositionRoot(
+                    tokens,
+                    (_, _) =>
+                    {
+                        profileLookupCount++;
+                        return Task.FromResult<EnterpriseProfile?>(null);
+                    })));
+
+            var context = CreateApiContext();
+            if (authorizationHeader is not null)
+            {
+                var token = useRefreshToken
+                    ? tokens.CreateRefreshToken(new AuthUser { Id = 8, Username = "91330200REFRESH" })
+                    : "unused";
+                context.Request.Headers["Authorization"] = string.Format(authorizationHeader, token);
+            }
+
+            await InvokeGetInfoAsync(type, context);
+
+            await AssertJsonResponseAsync(context, 401, "{\"error\":\"invalid_token\"}");
+            Assert.Equal(0, profileLookupCount);
+        });
+    }
+
+    [Fact]
+    public async Task EnterpriseApi_get_info_handler_returns_profile_not_found_for_missing_enterprise()
+    {
+        await WithEnterpriseApiTypeAsync(async type =>
+        {
+            var tokens = TestJwtTokenService();
+            EnterpriseIdentity? capturedIdentity = null;
+            using var factoryOverride = PushCompositionRootFactoryOverride(
+                type,
+                cancellationToken => Task.FromResult(CreateTestCompositionRoot(
+                    tokens,
+                    (identity, ct) =>
+                    {
+                        capturedIdentity = identity;
+                        return Task.FromResult<EnterpriseProfile?>(null);
+                    })));
+
+            var context = CreateApiContext();
+            context.Request.Headers["Authorization"] = $"Bearer {tokens.CreateToken(new AuthUser { Id = 9, Username = "91330200MISSING" })}";
+
+            await InvokeGetInfoAsync(type, context);
+
+            await AssertJsonResponseAsync(context, 404, "{\"error\":\"enterprise_not_found\"}");
+            Assert.NotNull(capturedIdentity);
+            Assert.Equal("91330200MISSING", capturedIdentity.CreditCode);
+        });
+    }
+
+    [Fact]
+    public async Task EnterpriseApi_get_info_handler_returns_only_businessname_creditcode_and_county_for_valid_access_token()
+    {
+        await WithEnterpriseApiTypeAsync(async type =>
+        {
+            var tokens = TestJwtTokenService();
+            using var factoryOverride = PushCompositionRootFactoryOverride(
+                type,
+                _ => Task.FromResult(CreateTestCompositionRoot(
+                    tokens,
+                    (identity, _) => Task.FromResult<EnterpriseProfile?>(new EnterpriseProfile
+                    {
+                        UserId = identity.UserId,
+                        BusinessName = "Synthetic Enterprise",
+                        CreditCode = identity.CreditCode,
+                        CountyName = "Yinzhou",
+                        Region = "330212"
+                    }))));
+
+            var context = CreateApiContext();
+            context.Request.Headers["Authorization"] = $"Bearer {tokens.CreateToken(new AuthUser { Id = 10, Username = "91330200SUCCESS" })}";
+
+            await InvokeGetInfoAsync(type, context);
+
+            await AssertJsonResponseAsync(
+                context,
+                200,
+                "{\"businessname\":\"Synthetic Enterprise\",\"creditcode\":\"91330200SUCCESS\",\"county\":\"Yinzhou\"}");
+        });
+    }
+
+    [Fact]
+    public async Task EnterpriseApi_get_info_handler_returns_fixed_server_error_and_sanitized_diagnostic_for_unexpected_exception()
+    {
+        await WithEnterpriseApiTypeAsync(async type =>
+        {
+            const string secret = "password=get-info-secret-should-not-escape";
+            var tokens = TestJwtTokenService();
+            var loggerFactory = new CapturingLoggerFactory();
+            using var factoryOverride = PushCompositionRootFactoryOverride(
+                type,
+                _ => Task.FromResult(CreateTestCompositionRoot(
+                    tokens,
+                    (_, _) => throw new InvalidOperationException(secret))));
+
+            var context = CreateApiContext(loggerFactory);
+            context.Request.Headers["Authorization"] = $"Bearer {tokens.CreateToken(new AuthUser { Id = 11, Username = "91330200ERROR" })}";
+
+            await InvokeGetInfoAsync(type, context);
+
+            await AssertJsonResponseAsync(context, 500, "{\"error\":\"server_error\"}");
+
+            var entry = Assert.Single(loggerFactory.Logger.Entries);
+            Assert.Equal(LogLevel.Error, entry.LogLevel);
+            Assert.Equal("EnterpriseGetInfoUnexpectedFailure", entry.EventId.Name);
+            AssertDiagnosticFields(entry, "enterprise.get_info");
+            AssertNoSecretInDiagnostic(entry, secret);
         });
     }
 
@@ -651,6 +807,102 @@ public sealed class AuthApiSurfaceTests
         Assert.DoesNotContain("stack trace", lowerDiagnostic);
     }
 
+    private static DefaultHttpContext CreateApiContext(ILoggerFactory? loggerFactory = null)
+    {
+        var context = new DefaultHttpContext();
+        context.Response.Body = new MemoryStream();
+        context.RequestServices = loggerFactory is null
+            ? new SingleServiceProvider(typeof(ILoggerFactory), NullLoggerFactory.Instance)
+            : new SingleServiceProvider(typeof(ILoggerFactory), loggerFactory);
+        return context;
+    }
+
+    private static async Task InvokeGetInfoAsync(Type type, DefaultHttpContext context)
+    {
+        var api = Activator.CreateInstance(type);
+        Assert.NotNull(api);
+        var contextProperty = type.BaseType?.GetProperty(
+            "Context",
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(contextProperty);
+        contextProperty!.SetValue(api, context);
+
+        var getInfo = type.GetMethod("GetInfo", BindingFlags.Public | BindingFlags.Instance);
+        Assert.NotNull(getInfo);
+        var task = Assert.IsAssignableFrom<Task>(getInfo!.Invoke(api, null));
+        await task;
+    }
+
+    private static async Task AssertJsonResponseAsync(
+        DefaultHttpContext context,
+        int expectedStatusCode,
+        string expectedJson)
+    {
+        context.Response.Body.Position = 0;
+        using var reader = new StreamReader(context.Response.Body);
+        var responseBody = await reader.ReadToEndAsync();
+
+        Assert.Equal(expectedStatusCode, context.Response.StatusCode);
+        Assert.Equal("application/json; charset=utf-8", context.Response.ContentType);
+        Assert.Equal("no-store", context.Response.Headers["Cache-Control"].ToString());
+        Assert.Equal("no-cache", context.Response.Headers["Pragma"].ToString());
+        Assert.Equal(expectedJson, responseBody);
+    }
+
+    private static IDisposable PushCompositionRootFactoryOverride(
+        Type enterpriseApiType,
+        Func<CancellationToken, Task<EnterpriseCompositionRoot>> factory)
+    {
+        var pushOverride = enterpriseApiType.GetMethod(
+            "PushCompositionRootFactoryOverrideForTests",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(pushOverride);
+
+        return (IDisposable)pushOverride!.Invoke(null, new object[] { factory })!;
+    }
+
+    private static EnterpriseCompositionRoot CreateTestCompositionRoot(
+        IJwtTokenService tokens,
+        Func<EnterpriseIdentity, CancellationToken, Task<EnterpriseProfile?>> getProfileAsync)
+    {
+        var enterpriseService = new EnterpriseService(new DelegateEnterpriseRepository(getProfileAsync));
+        var authService = new AuthService(
+            new StubUserRepository(),
+            new StubPasswordHasher(),
+            tokens,
+            TimeSpan.FromHours(1),
+            TimeSpan.FromDays(7));
+        var landDemandService = new LandDemandService(
+            enterpriseService,
+            new StubLandDemandRepository(),
+            () => DateTimeOffset.Parse("2026-08-06T00:00:00+08:00"));
+
+        var compositionRootType = Assembly.Load("ForguncyServerApi")
+            .GetType("ForguncyServerApi.Api.EnterpriseCompositionRoot", throwOnError: true)!;
+        var constructor = compositionRootType.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic)
+            .Single();
+
+        return (EnterpriseCompositionRoot)constructor.Invoke(new object[]
+        {
+            authService,
+            enterpriseService,
+            landDemandService,
+            tokens,
+            new Func<SqlSugarClient>(() => throw new NotSupportedException("Test composition root does not create SqlSugar clients."))
+        });
+    }
+
+    private static JwtTokenService TestJwtTokenService() => new(TestOptions());
+
+    private static AuthOptions TestOptions() =>
+        AuthOptions.From(new Dictionary<string, string?>
+        {
+            ["FGC_JWT_SIGNING_KEY"] = "test-signing-key-that-is-at-least-32-chars",
+            ["FGC_JWT_ISSUER"] = "synthetic-issuer",
+            ["FGC_JWT_EXPIRES_MINUTES"] = "60",
+            ["FGC_JWT_REFRESH_EXPIRES_MINUTES"] = "10080"
+        });
+
     private static void WithEnterpriseApiType(Action<Type> action)
     {
         ResolveEventHandler handler = ResolveForguncyServerApi;
@@ -820,5 +1072,50 @@ public sealed class AuthApiSurfaceTests
         public IReadOnlyList<KeyValuePair<string, object?>> State { get; }
 
         public Exception? Exception { get; }
+    }
+
+    private sealed class DelegateEnterpriseRepository : IEnterpriseRepository
+    {
+        private readonly Func<EnterpriseIdentity, CancellationToken, Task<EnterpriseProfile?>> getProfileAsync;
+
+        public DelegateEnterpriseRepository(Func<EnterpriseIdentity, CancellationToken, Task<EnterpriseProfile?>> getProfileAsync)
+        {
+            this.getProfileAsync = getProfileAsync;
+        }
+
+        public Task<EnterpriseProfile?> FindByCreditCodeAsync(string creditCode, CancellationToken cancellationToken)
+        {
+            var identity = new EnterpriseIdentity(1, creditCode);
+            return getProfileAsync(identity, cancellationToken);
+        }
+    }
+
+    private sealed class StubLandDemandRepository : ILandDemandRepository
+    {
+        public Task<LandDemandRecord?> FindByCreditCodeAsync(string creditCode, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<LandDemandRecord> InsertAsync(LandDemandRecord record, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<bool> UpdateWritableFieldsAsync(
+            string creditCode,
+            LandDemandWriteRequest request,
+            string updateTime,
+            string updateUser,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
+    }
+
+    private sealed class StubUserRepository : IUserRepository
+    {
+        public Task<AuthUser?> FindByUsernameAsync(string creditCode, CancellationToken cancellationToken) =>
+            Task.FromResult<AuthUser?>(null);
+    }
+
+    private sealed class StubPasswordHasher : IPasswordHasher
+    {
+        public string Hash(string password) => throw new NotSupportedException();
+
+        public bool Verify(string password, string encodedHash) => false;
     }
 }

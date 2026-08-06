@@ -84,12 +84,4 @@ public static class AccessTokenReader
     }
 
     private static Exception CreateFormatException() => new AccessTokenFormatException();
-
-    private sealed class AccessTokenFormatException : Exception
-    {
-        public AccessTokenFormatException()
-            : base("The access token format is invalid.")
-        {
-        }
-    }
 }

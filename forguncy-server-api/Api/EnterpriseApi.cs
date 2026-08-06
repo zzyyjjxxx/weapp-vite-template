@@ -7,7 +7,8 @@ namespace ForguncyServerApi.Api;
 
 public class EnterpriseApi : ForguncyApi
 {
-    private static readonly RetryableAsyncCache<EnterpriseCompositionRoot> EnterpriseCompositionCache = new();
+    private static readonly object EnterpriseFactoryOverrideGate = new();
+    private static Func<CancellationToken, Task<EnterpriseCompositionRoot>>? enterpriseFactoryOverrideForTests;
 
     [Post]
     public async Task Login()
@@ -115,7 +116,7 @@ public class EnterpriseApi : ForguncyApi
                     enterprise.Tokens,
                     cancellationToken);
             }
-            catch (Exception exception) when (exception.GetType().Name == "AccessTokenFormatException")
+            catch (AccessTokenFormatException)
             {
                 var invalidResponse = CreateInvalidAccessTokenResponse();
                 await ApiResponseWriter.WriteJsonAsync(
@@ -152,10 +153,34 @@ public class EnterpriseApi : ForguncyApi
         }
     }
 
-    private Task<EnterpriseCompositionRoot> GetEnterpriseAsync(CancellationToken cancellationToken) =>
-        EnterpriseCompositionCache.GetOrCreateAsync(
-            () => EnterpriseCompositionRoot.CreateAsync(DataAccess, CancellationToken.None),
-            cancellationToken);
+    internal static IDisposable PushCompositionRootFactoryOverrideForTests(
+        Func<CancellationToken, Task<EnterpriseCompositionRoot>> factory)
+    {
+        if (factory is null)
+        {
+            throw new ArgumentNullException(nameof(factory));
+        }
+
+        lock (EnterpriseFactoryOverrideGate)
+        {
+            var previous = enterpriseFactoryOverrideForTests;
+            enterpriseFactoryOverrideForTests = factory;
+            return new EnterpriseFactoryOverrideScope(previous);
+        }
+    }
+
+    private Task<EnterpriseCompositionRoot> GetEnterpriseAsync(CancellationToken cancellationToken)
+    {
+        Func<CancellationToken, Task<EnterpriseCompositionRoot>>? factoryOverride;
+        lock (EnterpriseFactoryOverrideGate)
+        {
+            factoryOverride = enterpriseFactoryOverrideForTests;
+        }
+
+        return factoryOverride is not null
+            ? factoryOverride(cancellationToken)
+            : EnterpriseCompositionRoot.GetOrCreateAsync(DataAccess, cancellationToken);
+    }
 
     private static void RecordUnexpectedLoginFailure(IServiceProvider? services, Exception exception) =>
         EnterpriseDiagnostics.RecordLogin(services, exception);
@@ -168,7 +193,7 @@ public class EnterpriseApi : ForguncyApi
 
     private static ErrorResponse CreateServerErrorResponse() => new("server_error");
 
-    private static ApiResponse CreateInvalidAccessTokenResponse() => new(401, new ErrorResponse("invalid_access_token"));
+    private static ApiResponse CreateInvalidAccessTokenResponse() => new(401, new ErrorResponse("invalid_token"));
 
     private static ApiResponse CreateGetInfoNotFoundResponse() => new(404, new ErrorResponse("enterprise_not_found"));
 
@@ -235,4 +260,30 @@ public class EnterpriseApi : ForguncyApi
         [property: JsonProperty("county")] string County);
 
     private record ErrorResponse([property: JsonProperty("error")] string Error);
+
+    private sealed class EnterpriseFactoryOverrideScope : IDisposable
+    {
+        private readonly Func<CancellationToken, Task<EnterpriseCompositionRoot>>? previous;
+        private bool disposed;
+
+        public EnterpriseFactoryOverrideScope(Func<CancellationToken, Task<EnterpriseCompositionRoot>>? previous)
+        {
+            this.previous = previous;
+        }
+
+        public void Dispose()
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            lock (EnterpriseFactoryOverrideGate)
+            {
+                enterpriseFactoryOverrideForTests = previous;
+            }
+
+            disposed = true;
+        }
+    }
 }

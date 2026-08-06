@@ -10,6 +10,8 @@ namespace ForguncyServerApi.Api;
 
 public sealed class EnterpriseCompositionRoot
 {
+    private static readonly RetryableAsyncCache<EnterpriseCompositionRoot> SharedCompositionCache = new();
+
     private EnterpriseCompositionRoot(
         AuthService authService,
         EnterpriseService enterpriseService,
@@ -33,6 +35,20 @@ public sealed class EnterpriseCompositionRoot
     public IJwtTokenService Tokens { get; }
 
     public Func<SqlSugarClient> ClientFactory { get; }
+
+    public static Task<EnterpriseCompositionRoot> GetOrCreateAsync(
+        IDataAccess dataAccess,
+        CancellationToken cancellationToken)
+    {
+        if (dataAccess is null)
+        {
+            throw new ArgumentNullException(nameof(dataAccess));
+        }
+
+        return SharedCompositionCache.GetOrCreateAsync(
+            () => CreateAsync(dataAccess, CancellationToken.None),
+            cancellationToken);
+    }
 
     public static Task<EnterpriseCompositionRoot> CreateAsync(
         IDataAccess dataAccess,

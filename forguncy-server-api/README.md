@@ -231,11 +231,11 @@ Successful lookup returns `200 OK`:
 Only these three enterprise fields are returned. The response does not include
 `region`, internal identifiers, review fields, or update metadata.
 
-Missing or invalid access tokens return `401 Unauthorized`:
+Missing, malformed, expired, wrong-key, refresh-use, or otherwise invalid access tokens return `401 Unauthorized`:
 
 ```json
 {
-  "error": "invalid_access_token"
+  "error": "invalid_token"
 }
 ```
 
