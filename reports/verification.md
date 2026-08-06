@@ -1066,3 +1066,90 @@ Post-repair commit status showed only the pre-existing user-owned item:
 ```
 
 The `.vs` directory was not staged, removed, or modified.
+
+## JWT HTTP security and contract hardening - 2026-08-06
+
+This repair round addressed the three Important findings and the requested
+Minor regression tests in worktree
+`D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login`.
+No dependency version, schema, `review-final.diff`, or `.vs` content was
+changed. No secret, connection string, password, or signing key was printed
+or recorded. No live Forguncy designer upload or HTTP round-trip was observed.
+
+Implementation commit:
+
+```text
+e130e25b4ec15cc4d48155f05937d57f7de198bd fix: harden JWT HTTP contracts
+```
+
+### TDD focused RED/GREEN
+
+Tests were added first. Focused RED command:
+
+```powershell
+dotnet test .\forguncy-server-api\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~LoginRequestReaderTests|FullyQualifiedName~AuthApiSurfaceTests|FullyQualifiedName~AuthOptionsTests" -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+Exit code `1`; actual summary was `6` failed, `48` passed, `0` skipped, `54`
+total. Failures were the expected absent cache headers on the login and
+refresh HTTP write paths and the existing JSON coercion of numeric/boolean
+fields. The boundary tests also include null/object/array values.
+
+The same command after the minimal implementation exited `0`:
+
+```text
+已通过! - 失败:     0，通过:    54，已跳过:     0，总计:    54
+```
+
+The implementation sets `Cache-Control: no-store` and `Pragma: no-cache` in
+the shared `WriteJsonAsync`; actual response tests cover both login and refresh
+request-read-failure paths. JSON request fields are accepted only when their
+`JToken.Type` is `String`. Refresh expiration `0`, `-1`, and `not-a-number`
+have independent AuthOptions regression coverage.
+
+### Release test/build
+
+Full Release test:
+
+```powershell
+dotnet test .\forguncy-server-api\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj --configuration Release --no-restore -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+Exit code `0`; `119` passed, `0` failed, `0` skipped.
+
+Release build:
+
+```powershell
+dotnet build .\forguncy-server-api\ForguncyServerApi.csproj --configuration Release --no-restore -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+Exit code `0`; `0` warnings and `0` errors. Final DLL:
+
+```text
+D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login\forguncy-server-api\bin\Release\net472\ForguncyServerApi.dll
+```
+
+### Reflection and repository checks
+
+The net472/Forguncy 8.0.4 reflection probe exited `0`:
+
+```text
+TYPE=ForguncyServerApi.Api.AuthApi
+BASE=GrapeCity.Forguncy.ServerApi.ForguncyApi
+METHOD=Login;RET=System.Threading.Tasks.Task;PARAMS=0;POST=True
+METHOD=Refresh;RET=System.Threading.Tasks.Task;PARAMS=0;POST=True
+```
+
+`git diff --check` exited `0` before commit; it emitted only expected
+LF-to-CRLF working-copy warnings for the seven edited tracked files and no
+whitespace errors. The protected `review-final.diff` SHA-256 remained:
+
+```text
+6BC34B2FCE7E090CD05840DE8EE5ED46CFDCF1771FDF4FA0848008E15AB11AAD
+```
+
+Post-commit status contained only the pre-existing user-owned item:
+
+```text
+?? forguncy-server-api/.vs/
+```
