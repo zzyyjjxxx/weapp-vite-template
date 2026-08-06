@@ -47,6 +47,9 @@ reports/*
 
 # local AI and planning support files
 .agents/
+/.agents/skills/
+/.codex/skills/
+/.claude/skills/
 docs/superpowers/
 .superpowers/
 .worktrees/
