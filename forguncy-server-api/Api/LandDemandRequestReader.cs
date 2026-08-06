@@ -63,9 +63,7 @@ public static class LandDemandRequestReader
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            using var reader = new StreamReader(request.Body, Encoding.UTF8, true, 1024, true);
-            var json = await reader.ReadToEndAsync();
-            cancellationToken.ThrowIfCancellationRequested();
+            var json = await ReadBodyAsync(request.Body, cancellationToken);
             var payload = ParsePayload(json);
 
             RejectNonWritableProperties(payload);
@@ -117,6 +115,39 @@ public static class LandDemandRequestReader
         {
             throw new LandDemandRequestFormatException();
         }
+        catch (DecoderFallbackException)
+        {
+            throw new LandDemandRequestFormatException();
+        }
+    }
+
+    private static async Task<string> ReadBodyAsync(
+        Stream body,
+        CancellationToken cancellationToken)
+    {
+        using var content = new MemoryStream();
+        var buffer = new byte[81920];
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var bytesRead = await body.ReadAsync(
+                buffer,
+                0,
+                buffer.Length,
+                cancellationToken);
+            if (bytesRead == 0)
+            {
+                break;
+            }
+
+            content.Write(buffer, 0, bytesRead);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var json = new UTF8Encoding(false, true).GetString(content.ToArray());
+        return json.Length > 0 && json[0] == '\uFEFF'
+            ? json.Substring(1)
+            : json;
     }
 
     private static void RejectNonWritableProperties(JObject payload)

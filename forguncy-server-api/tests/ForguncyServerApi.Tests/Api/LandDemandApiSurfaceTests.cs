@@ -203,6 +203,35 @@ public sealed class LandDemandApiSurfaceTests
             () => InvokeHandlerAsync("GetLandDemand", context));
     }
 
+    [Theory]
+    [InlineData("AddLandDemand")]
+    [InlineData("UpdateLandDemand")]
+    public async Task Write_handlers_propagate_cancellation_during_request_body_read_without_writing_500(
+        string handler)
+    {
+        var tokens = TestJwtTokenService();
+        var context = CreateApiContext();
+        context.Request.Method = "POST";
+        context.Request.ContentType = "application/json";
+        context.Request.Headers["Authorization"] =
+            $"Bearer {tokens.CreateToken(new AuthUser { Id = 7, Username = "91330200SYNTHETIC" })}";
+        using var cancellation = new CancellationTokenSource();
+        var body = new CancellationAwareReadStream();
+        context.Request.Body = body;
+        context.RequestAborted = cancellation.Token;
+
+        using var factoryOverride = PushCompositionRootFactoryOverride(
+            _ => Task.FromResult(CreateTestCompositionRoot(tokens, true, new StubLandDemandRepository())));
+        var handlerTask = InvokeHandlerAsync(handler, context);
+        await body.ReadStarted.Task;
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => handlerTask);
+
+        Assert.NotEqual(500, context.Response.StatusCode);
+        Assert.Equal(0, context.Response.Body.Length);
+    }
+
     private static void AssertHandler(IEnumerable<MethodInfo> methods, string name, string attributeName)
     {
         var method = Assert.Single(methods, candidate => candidate.Name == name);
@@ -524,6 +553,42 @@ public sealed class LandDemandApiSurfaceTests
         public override int Read(byte[] buffer, int offset, int count) => throw exception;
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
             Task.FromException<int>(exception);
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    private sealed class CancellationAwareReadStream : Stream
+    {
+        public TaskCompletionSource<bool> ReadStarted { get; } = new();
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public override void Flush() { }
+
+        public override int Read(byte[] buffer, int offset, int count) =>
+            throw new NotSupportedException();
+
+        public override Task<int> ReadAsync(
+            byte[] buffer,
+            int offset,
+            int count,
+            CancellationToken cancellationToken)
+        {
+            ReadStarted.TrySetResult(true);
+            if (!cancellationToken.CanBeCanceled)
+            {
+                return Task.FromException<int>(new InvalidOperationException("ReadAsync without cancellation token."));
+            }
+
+            var completion = new TaskCompletionSource<int>();
+            cancellationToken.Register(() => completion.TrySetCanceled());
+            return completion.Task;
+        }
+
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
         public override void SetLength(long value) => throw new NotSupportedException();
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
