@@ -16,7 +16,9 @@ describe('mini-program runtime E2E contract', () => {
     expect(fixture).toContain('timeout: 90_000')
     expect(fixture).toContain('scope: \'worker\'')
     expect(fixture).toContain('miniProgram.disconnect()')
-    expect(fixture).toContain('quitWechatIde()')
+    expect(fixture).toContain('reconnect: async () =>')
+    expect(fixture).toContain('miniProgram.waitForAppReady(30_000)')
+    expect(fixture).not.toContain('quitWechatIde()')
   })
 
   it('covers every required land-demand runtime scenario and hook', () => {

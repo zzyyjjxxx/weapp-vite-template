@@ -32,6 +32,7 @@ function withAuthenticatedIdentity(
 export const useLandDemandStore = defineStore('land-demand', () => {
   const form = ref<LandDemandForm>({} as LandDemandForm)
   const currentStep = ref<LandDemandStep>(1)
+  const progressStep = ref<LandDemandStep>(1)
   const hasRecord = ref(false)
   const isDirty = ref(false)
   let enterprise: EnterpriseProfile | undefined
@@ -46,7 +47,9 @@ export const useLandDemandStore = defineStore('land-demand', () => {
       cloneForm(draft?.form ?? createLandDemandForm(nextEnterprise, record)),
       nextEnterprise,
     )
-    currentStep.value = draft?.currentStep ?? 1
+    const initializedStep = draft?.currentStep ?? 1
+    currentStep.value = initializedStep
+    progressStep.value = Math.max(initializedStep, draft?.progressStep ?? initializedStep) as LandDemandStep
     hasRecord.value = Boolean(record)
     isDirty.value = false
   }
@@ -78,12 +81,14 @@ export const useLandDemandStore = defineStore('land-demand', () => {
 
   function goToStep(step: LandDemandStep): void {
     currentStep.value = step
+    progressStep.value = Math.max(progressStep.value, step) as LandDemandStep
   }
 
   function saveLocalDraft(): void {
     getLandDemandRepository().setDraft(form.value.creditcode, {
       form: cloneForm(form.value),
       currentStep: currentStep.value,
+      progressStep: progressStep.value,
       savedAt: Date.now(),
     })
     isDirty.value = false
@@ -96,6 +101,7 @@ export const useLandDemandStore = defineStore('land-demand', () => {
 
   function markPersisted(record: LandDemandRecord): void {
     hasRecord.value = true
+    progressStep.value = 5
     isDirty.value = false
     getLandDemandRepository().removeDraft(record.creditcode)
     if (enterprise) {
@@ -106,6 +112,7 @@ export const useLandDemandStore = defineStore('land-demand', () => {
   return {
     form,
     currentStep,
+    progressStep,
     hasRecord,
     isDirty,
     initialize,

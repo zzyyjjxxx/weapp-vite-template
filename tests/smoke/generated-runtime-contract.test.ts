@@ -38,4 +38,32 @@ describe('generated mini-program runtime contract', () => {
 
     expect(templates).not.toContain('?.')
   })
+
+  it('uses a real view for forwarded slot fallbacks in Summer Compiler', () => {
+    const config = readFileSync('vite.config.ts', 'utf8')
+    const verifier = readFileSync('scripts/verify-generated-runtime.mjs', 'utf8')
+
+    expect(config).toContain('slotFallbackWrapperStrategy: \'view\'')
+    expect(verifier).toContain('__weapp_vite_slot_wrapper')
+  })
+
+  it('keeps conditional page bodies in native slots that Automator can inspect', () => {
+    const formPage = readFileSync('src/pages/land-demand/index.vue', 'utf8')
+    const successPage = readFileSync('src/pages/land-demand/success.vue', 'utf8')
+    const verifier = readFileSync('scripts/verify-generated-runtime.mjs', 'utf8')
+
+    expect(formPage).toContain('<view class="land-demand-page__content">')
+    expect(successPage).toContain('<view class="land-demand-success">')
+    expect(verifier).toContain('scoped-slot-')
+  })
+
+  it('patches TDesign deprecated system-info fallbacks in generated npm code', () => {
+    const config = readFileSync('vite.config.ts', 'utf8')
+    const verifier = readFileSync('scripts/verify-generated-runtime.mjs', 'utf8')
+
+    expect(config).toContain('patchTDesignDeprecatedSystemInfo')
+    expect(config).toContain('wx.getWindowInfo')
+    expect(verifier).toContain('tdesignWechat')
+    expect(verifier).toContain('getSystemInfoSync')
+  })
 })

@@ -8,6 +8,7 @@ import { setupStorePlugins } from '@/stores/plugins'
 import {
   AUTH_STORAGE_KEY,
   createPersistencePlugin,
+  readPersistedAuthSession,
 } from '@/stores/plugins/persistence'
 import { createMemoryStorage } from '../../helpers/memory-storage'
 
@@ -95,5 +96,29 @@ describe('auth persistence', () => {
     createPersistencePlugin(storage)(malformed)
 
     expect(malformed.store.session).toBeNull()
+    expect(readPersistedAuthSession(storage)).toBeUndefined()
+  })
+
+  it('does not overwrite a persisted session during an app-instance reset', () => {
+    let subscriber: ((mutation: unknown, state: unknown) => void) | undefined
+    const lifecycleStore = {
+      $id: 'auth',
+      session: null as AuthSession | null,
+      $patch(patch: { session?: AuthSession | null }) {
+        lifecycleStore.session = patch.session ?? null
+      },
+      $subscribe(callback: (mutation: unknown, state: unknown) => void) {
+        subscriber = callback
+        return () => undefined
+      },
+    }
+    storage.set(AUTH_STORAGE_KEY, { version: 1, session })
+    createPersistencePlugin(storage)({ store: lifecycleStore })
+
+    subscriber?.({}, { session: null, sessionClearRevision: 0 })
+    expect(storage.get<PersistedAuthStateV1>(AUTH_STORAGE_KEY)?.session).toEqual(session)
+
+    subscriber?.({}, { session: null, sessionClearRevision: 1 })
+    expect(storage.get<PersistedAuthStateV1>(AUTH_STORAGE_KEY)?.session).toBeNull()
   })
 })

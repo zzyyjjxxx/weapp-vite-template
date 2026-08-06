@@ -1,6 +1,7 @@
 export const appIconNames = [
   'home',
   'user-circle',
+  'lock',
   'list-check',
   'login',
 ] as const
@@ -18,6 +19,10 @@ const appIconSources: AppIconSources = {
   'user-circle': {
     Outline: '/assets/icons/reicon/user-circle-outline.svg',
     Filled: '/assets/icons/reicon/user-circle-filled.svg',
+  },
+  'lock': {
+    Outline: '/assets/icons/reicon/lock-outline.svg',
+    Filled: '/assets/icons/reicon/lock-filled.svg',
   },
   'list-check': {
     Outline: '/assets/icons/reicon/list-check-outline.svg',

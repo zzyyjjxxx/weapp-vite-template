@@ -78,6 +78,61 @@ describe('land demand wizard component contract', () => {
     expect(source).toContain('data-testid="destructive-clear-confirm"')
   })
 
+  it('never passes transient null values into typed mini-program component properties', () => {
+    const page = readFileSync('src/pages/land-demand/index.vue', 'utf8')
+    const verificationDialog = readFileSync(`${componentRoot}/verification-dialog.vue`, 'utf8')
+
+    expect(page.match(/:current-step="currentStep \|\| 1"/g)).toHaveLength(2)
+    expect(page).toContain(':acceptance-error="acceptanceError || \'\'"')
+    expect(page).toContain(':content="clearDialogContent || \'\'"')
+    expect(page).toContain(':code="verificationCode || \'\'"')
+    expect(page).toContain(':error="verificationError || \'\'"')
+    expect(verificationDialog).toContain('content=""')
+  })
+
+  it('keeps every TDesign string and array property concrete on first render', () => {
+    const sources = stepFiles.map(file => readFileSync(file, 'utf8')).join('\n')
+    const project = readFileSync(`${componentRoot}/project-info-step.vue`, 'utf8')
+    const basic = readFileSync(`${componentRoot}/basic-info-step.vue`, 'utf8')
+    const verificationDialog = readFileSync(`${componentRoot}/verification-dialog.vue`, 'utf8')
+
+    expect(sources).not.toMatch(/:tips="fieldError\([^)]*\)"/)
+    expect(sources).toContain('const emptyOptions')
+    expect(project).toContain('const industryOptions = ref([...NATIONAL_INDUSTRY_OPTIONS])')
+    expect(project).toContain('filter-placeholder="搜索行业"')
+    expect(project).toContain('const industryNote = ref')
+    expect(basic).toContain('status="default"')
+    expect(basic).toContain('tips=""')
+    expect(verificationDialog).toContain('status="default"')
+    expect(verificationDialog).toContain('tips=""')
+  })
+
+  it('uses a compact, viewport-safe progress rail and fixed action bar', () => {
+    const progress = readFileSync(`${componentRoot}/wizard-progress.vue`, 'utf8')
+    const actions = readFileSync(`${componentRoot}/wizard-actions.vue`, 'utf8')
+    const page = readFileSync('src/pages/land-demand/index.vue', 'utf8')
+
+    expect(progress).not.toContain('<scroll-view')
+    expect(progress).toContain('flex: 1 1 0')
+    expect(actions).toContain('position: fixed')
+    expect(page).toContain('compact')
+    expect(page).toContain('padding-bottom: 220rpx')
+  })
+
+  it('allows shared card utilities to style isolated step components', () => {
+    for (const file of [
+      'basic-info-step.vue',
+      'land-info-step.vue',
+      'project-info-step.vue',
+      'finance-contact-step.vue',
+      'review-step.vue',
+    ]) {
+      expect(readFileSync(`${componentRoot}/${file}`, 'utf8')).toContain(
+        'styleIsolation: \'apply-shared\'',
+      )
+    }
+  })
+
   it('does not recreate a local draft after an explicit server save', () => {
     const source = readFileSync('src/pages/land-demand/index.vue', 'utf8')
 
@@ -118,10 +173,10 @@ describe('land demand wizard component contract', () => {
   it('uses the confirmed investment and unit-energy labels', () => {
     const source = readFileSync(`${componentRoot}/project-info-step.vue`, 'utf8')
 
-    expect(source).toContain('label="固定资产投资额（万元）"')
-    expect(source).toContain('label="项目单位能耗增加值（万元/吨标煤）"')
-    expect(source).not.toContain('label="项目总投资（万元）"')
-    expect(source).not.toContain('label="预计单位能耗"')
+    expect(source).toContain('固定资产投资额（万元）')
+    expect(source).toContain('项目单位能耗增加值（万元/吨标煤）')
+    expect(source).not.toContain('项目总投资（万元）')
+    expect(source).not.toContain('预计单位能耗')
   })
 
   it('loads local drafts through the Store boundary instead of the page repository', () => {

@@ -4,9 +4,17 @@ export type RouteQuery = Record<string, QueryValue | QueryValue[]>
 const DEFAULT_RETURN_TO = '/pages/home/index'
 
 export type LandDemandMode = 'edit' | 'view'
+export type LandDemandStep = 1 | 2 | 3 | 4 | 5
 
 export function parseLandDemandMode(value: unknown): LandDemandMode {
   return value === 'view' ? 'view' : 'edit'
+}
+
+export function parseLandDemandStep(value: unknown): LandDemandStep | undefined {
+  const parsed = Number(value)
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 5
+    ? parsed as LandDemandStep
+    : undefined
 }
 
 export function encodeQuery(query?: RouteQuery): string {

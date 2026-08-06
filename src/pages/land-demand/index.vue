@@ -5,6 +5,7 @@ import type {
   LandDemandForm,
   YesNo,
 } from '@/features/land-demand/models'
+import type { LandDemandStep } from '@/router/query'
 
 import { computed, onLoad, ref, watchEffect } from 'wevu'
 import AppError from '@/components/ui/app-error/index.vue'
@@ -31,7 +32,7 @@ import {
   resolveSubmissionTarget,
 } from '@/features/land-demand/step-controller'
 import { createSubmitController } from '@/features/land-demand/submit'
-import { validateDraft } from '@/features/land-demand/validation'
+import { validateDraft, validateStep } from '@/features/land-demand/validation'
 import {
   applyFinancingChoice,
   applySpecialUseChoice,
@@ -41,7 +42,7 @@ import {
 import { readPatchDetail } from '@/platform/event-detail'
 import { replace } from '@/router/navigation'
 import { runProtectedAction, useProtectedPage } from '@/router/protected-page'
-import { parseLandDemandMode } from '@/router/query'
+import { parseLandDemandMode, parseLandDemandStep } from '@/router/query'
 import { useAuthStore } from '@/stores/auth'
 import { useLandDemandStore } from '@/stores/land-demand'
 
@@ -77,6 +78,7 @@ const challenge = ref<NonNullable<typeof sendCodeMutation.data.value>>()
 const verificationCode = ref('')
 const verificationError = ref('')
 const mode = ref<'edit' | 'view'>('edit')
+const requestedStep = ref<LandDemandStep | undefined>(undefined)
 const routeReady = ref(false)
 let initialized = false
 
@@ -111,6 +113,7 @@ const clearDialogContent = computed(() => {
 
 onLoad((query) => {
   mode.value = parseLandDemandMode(query?.mode)
+  requestedStep.value = parseLandDemandStep(query?.step)
   routeReady.value = true
 })
 
@@ -127,11 +130,14 @@ watchEffect(() => {
   }
 
   if (viewOnly.value) {
-    store.initialize(profile, query.data.value)
+    store.initialize(profile, query.data.value ?? undefined)
     store.goToStep(5)
   }
   else {
-    store.initializeFromLocalDraft(profile, query.data.value)
+    store.initializeFromLocalDraft(profile, query.data.value ?? undefined)
+    if (requestedStep.value) {
+      store.goToStep(requestedStep.value)
+    }
   }
   initialized = true
   ready.value = true
@@ -270,6 +276,15 @@ function goPrevious(): void {
 }
 
 function goNext(): void {
+  const stepErrors = validateStep(form.value, currentStep.value)
+  errors.value = errors.value
+    .filter(error => error.step !== currentStep.value)
+    .concat(stepErrors)
+  if (stepErrors.length > 0) {
+    feedback.value = `请先完成第 ${currentStep.value} 步的必填项`
+    return
+  }
+  feedback.value = ''
   goToStep(nextStep(currentStep.value))
 }
 
@@ -342,7 +357,7 @@ const submitController = createSubmitController({
 })
 
 async function requestVerificationAuthorized(): Promise<void> {
-  feedback.value = ''
+  feedback.value = '正在发送验证码，请稍候…'
   acceptanceError.value = ''
   sendCodeMutation.reset()
   try {
@@ -351,15 +366,18 @@ async function requestVerificationAuthorized(): Promise<void> {
     acceptanceError.value = result.acceptanceError ?? ''
     const target = resolveSubmissionTarget(result.errors)
     if (target) {
+      feedback.value = `请先完成第 ${target} 步的必填项`
       goToStep(target)
       return
     }
     if (!result.challenge) {
+      feedback.value = ''
       return
     }
     challenge.value = result.challenge
     verificationCode.value = ''
     verificationError.value = ''
+    feedback.value = '验证码已发送，请在弹窗中完成验证'
   }
   catch {
     feedback.value = sendCodeMutation.error.value?.message ?? '验证码发送失败，请稍后重试'
@@ -389,6 +407,7 @@ async function submitVerificationCodeAuthorized(): Promise<void> {
     return
   }
   verificationError.value = ''
+  feedback.value = '正在核验并提交，请稍候…'
   verifyCodeMutation.reset()
   saveMutation.reset()
   updateMutation.reset()
@@ -399,9 +418,11 @@ async function submitVerificationCodeAuthorized(): Promise<void> {
     )
     store.markPersisted(record)
     challenge.value = undefined
+    feedback.value = ''
     await replace('/pages/land-demand/success')
   }
   catch (error) {
+    feedback.value = ''
     verificationError.value = error instanceof Error
       ? error.message
       : '提交失败，请稍后重试'
@@ -428,125 +449,177 @@ async function editDetail(): Promise<void> {
 <template>
   <PageShell
     v-if="authorized"
-    title="用地需求填报"
-    :subtitle="enterpriseName"
+    :title="viewOnly ? '填报详情' : '用地需求填报'"
+    :subtitle="viewOnly ? `${enterpriseName} · 已提交信息` : `${enterpriseName} · 请按实际情况填写`"
     icon="list-check"
+    compact
   >
-    <AppLoading v-if="query.isPending || !ready" />
-    <AppError
-      v-else-if="query.isError"
-      title="填报信息加载失败"
-      :message="queryErrorMessage"
-    />
-    <view v-else class="land-demand-page">
-      <WizardProgress v-if="!viewOnly" :current-step="currentStep" />
-      <scroll-view class="land-demand-page__form" scroll-y>
-        <BasicInfoStep
-          v-if="currentStep === 1"
-          :form="form"
-          :errors="errors"
-          @change="changeForm"
-        />
-        <LandInfoStep
-          v-else-if="currentStep === 2"
-          :form="form"
-          :errors="errors"
-          @change="changeForm"
-        />
-        <ProjectInfoStep
-          v-else-if="currentStep === 3"
-          :form="form"
-          :errors="errors"
-          @change="changeForm"
-        />
-        <FinanceContactStep
-          v-else-if="currentStep === 4"
-          :form="form"
-          :errors="errors"
-          @change="changeForm"
-        />
-        <ReviewStep
-          v-else
-          :form="form"
-          :accepted="accepted"
-          :acceptance-error="acceptanceError"
-          :submitting="submitting"
-          :readonly="viewOnly"
-          @edit="goToStep"
-          @accept="setAccepted"
-          @submit="requestVerification"
-        />
-        <view v-if="viewOnly" class="land-demand-page__detail-actions">
-          <t-button
-            data-testid="detail-back-home"
-            theme="default"
-            block
-            @tap="backToHome"
-          >
-            返回首页
-          </t-button>
-          <t-button
-            data-testid="detail-edit"
-            theme="primary"
-            block
-            @tap="editDetail"
-          >
-            修改填报
-          </t-button>
+    <view class="land-demand-page__content">
+      <AppLoading v-if="query.isPending || !ready" />
+      <AppError
+        v-else-if="query.isError"
+        title="填报信息加载失败"
+        :message="queryErrorMessage"
+      />
+      <view v-else class="land-demand-page">
+        <WizardProgress v-if="!viewOnly" :current-step="currentStep || 1" />
+        <view v-if="!viewOnly" class="land-demand-page__guide">
+          <view class="land-demand-page__guide-dot" />
+          <text>当前第 {{ currentStep }} 步，共 5 步；切换步骤时会保留本地编辑内容</text>
         </view>
-      </scroll-view>
+        <view class="land-demand-page__form">
+          <BasicInfoStep
+            v-if="currentStep === 1"
+            id="basic-info-step"
+            :form="form"
+            :errors="errors"
+            @change="changeForm"
+          />
+          <LandInfoStep
+            v-else-if="currentStep === 2"
+            id="land-info-step"
+            :form="form"
+            :errors="errors"
+            @change="changeForm"
+          />
+          <ProjectInfoStep
+            v-else-if="currentStep === 3"
+            id="project-info-step"
+            :form="form"
+            :errors="errors"
+            @change="changeForm"
+          />
+          <FinanceContactStep
+            v-else-if="currentStep === 4"
+            id="finance-contact-step"
+            :form="form"
+            :errors="errors"
+            @change="changeForm"
+          />
+          <ReviewStep
+            v-else
+            id="review-step"
+            :form="form"
+            :accepted="accepted"
+            :acceptance-error="acceptanceError || ''"
+            :submitting="submitting"
+            :readonly="viewOnly"
+            @edit="goToStep"
+            @accept="setAccepted"
+            @submit="requestVerification"
+          />
+          <view v-if="viewOnly" class="land-demand-page__detail-actions">
+            <t-button
+              data-testid="detail-back-home"
+              theme="default"
+              block
+              @tap="backToHome"
+            >
+              返回首页
+            </t-button>
+            <t-button
+              data-testid="detail-edit"
+              theme="primary"
+              block
+              @tap="editDetail"
+            >
+              修改填报
+            </t-button>
+          </view>
+        </view>
 
-      <text v-if="feedback" class="land-demand-page__feedback">{{ feedback }}</text>
-      <text v-if="mutationError" class="land-demand-page__error">{{ mutationError }}</text>
-      <WizardActions
-        v-if="!viewOnly"
-        :current-step="currentStep"
-        :saving="saving"
-        @previous="goPrevious"
-        @save="saveDraft"
-        @next="goNext"
+        <text v-if="feedback" class="land-demand-page__feedback">{{ feedback }}</text>
+        <text v-if="mutationError" class="land-demand-page__error">{{ mutationError }}</text>
+        <WizardActions
+          v-if="!viewOnly"
+          id="wizard-actions"
+          :current-step="currentStep || 1"
+          :saving="saving"
+          @previous="goPrevious"
+          @save="saveDraft"
+          @next="goNext"
+        />
+      </view>
+
+      <t-dialog
+        data-testid="destructive-clear-dialog"
+        :visible="clearDialogVisible"
+        title="确认清空已有内容"
+        :content="clearDialogContent || ''"
+        :cancel-btn="false"
+        :confirm-btn="false"
+        :close-on-overlay-click="false"
+        @cancel="cancelDestructiveClear"
+        @close="cancelDestructiveClear"
+      >
+        <template #cancel-btn>
+          <t-button
+            data-testid="destructive-clear-cancel"
+            class="land-demand-dialog__button"
+            theme="default"
+            variant="text"
+            @tap="cancelDestructiveClear"
+          >
+            取消
+          </t-button>
+        </template>
+        <template #confirm-btn>
+          <t-button
+            data-testid="destructive-clear-confirm"
+            class="land-demand-dialog__button"
+            theme="primary"
+            @tap="confirmDestructiveClear"
+          >
+            继续
+          </t-button>
+        </template>
+      </t-dialog>
+      <VerificationDialog
+        id="verification-dialog"
+        :visible="verificationVisible"
+        :challenge="challenge"
+        :code="verificationCode || ''"
+        :loading="submitting"
+        :error="verificationError || ''"
+        @change="verificationCode = $event"
+        @close="closeVerification"
+        @submit="submitVerificationCode"
       />
     </view>
-
-    <t-dialog
-      data-testid="destructive-clear-dialog"
-      :visible="clearDialogVisible"
-      title="确认清空已有内容"
-      :content="clearDialogContent"
-      cancel-btn="取消"
-      :confirm-btn="false"
-      :close-on-overlay-click="false"
-      @cancel="cancelDestructiveClear"
-      @close="cancelDestructiveClear"
-    >
-      <template #confirm-btn>
-        <t-button
-          data-testid="destructive-clear-confirm"
-          theme="primary"
-          @tap="confirmDestructiveClear"
-        >
-          继续
-        </t-button>
-      </template>
-    </t-dialog>
-    <VerificationDialog
-      :visible="verificationVisible"
-      :challenge="challenge"
-      :code="verificationCode"
-      :loading="submitting"
-      :error="verificationError"
-      @change="verificationCode = $event"
-      @close="closeVerification"
-      @submit="submitVerificationCode"
-    />
   </PageShell>
 </template>
 
 <style lang="scss">
 @use '@/styles/tokens' as *;
 
-.land-demand-page__form {
-  max-height: calc(100vh - 420rpx);
+.land-demand-page__guide {
+  display: flex;
+  align-items: flex-start;
+  padding: $space-2 $space-3;
+  margin: -$space-2 0 $space-3;
+  font-size: 22rpx;
+  line-height: 1.55;
+  color: $color-text-secondary;
+  background: rgb(255 255 255 / 68%);
+  border: 1rpx solid rgb(217 229 246 / 76%);
+  border-radius: $radius-md;
+}
+
+.land-demand-page__content {
+  padding-bottom: 0;
+}
+
+.land-demand-page {
+  padding-bottom: 220rpx;
+}
+
+.land-demand-page__guide-dot {
+  flex: 0 0 auto;
+  width: 10rpx;
+  height: 10rpx;
+  margin: 12rpx 12rpx 0 0;
+  background: $color-primary;
+  border-radius: 50%;
 }
 
 .land-demand-page__feedback,
@@ -557,21 +630,36 @@ async function editDetail(): Promise<void> {
 .land-demand-page__detail-actions {
   display: flex;
   gap: $space-2;
-  margin-top: $space-3;
+  padding: $space-3;
+  margin-top: $space-4;
+  background: $color-card;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
 }
 
 .land-demand-page__feedback,
 .land-demand-page__error {
-  margin-top: $space-2;
+  padding: $space-2;
+  margin-top: $space-3;
   font-size: 24rpx;
   text-align: center;
+  border-radius: $radius-md;
 }
 
 .land-demand-page__feedback {
   color: $color-success;
+  background: $color-success-soft;
 }
 
 .land-demand-page__error {
   color: $color-error;
+  background: $color-error-soft;
+}
+
+.land-demand-dialog__button {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: $radius-md;
 }
 </style>

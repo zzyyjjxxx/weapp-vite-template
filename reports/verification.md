@@ -605,3 +605,189 @@ Commands run from `D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-lo
   A probe with the complete Release DLL bundle reports 21 exported types,
   successful `AuthApi` activation, and one `[Post]` parameterless `Task Login`
   route.
+
+## 全面视觉重构验收（2026-07-31）
+
+- 视觉范围：登录页、企业工作台、五步填报、确认提交、提交成功、错误、
+  空状态、加载状态、验证码弹窗与公共页面骨架均已统一为蓝白渐变、规划插画、
+  悬浮卡片和清晰步骤层级；业务仍为项目真实五步，没有加入参考图中的注册、
+  忘记密码、图形验证码或附件上传。
+- TDD RED：`pnpm exec vitest run tests/smoke/visual-system.test.ts` 退出 1，
+  3/3 测试按预期失败，分别捕获缺少规划插画/登录文案、缺少共享视觉令牌、
+  以及旧步骤名称和旧进度结构。
+- TDD GREEN：同一聚焦命令退出 0，1 个文件/3 个测试通过。
+- `pnpm verify` 退出 0：依次通过 `prepare`、应用与 E2E 类型检查、零警告
+  `lint`、`stylelint`、35 个测试文件/133 个测试、微信小程序构建、生成产物
+  契约和包体预算；主包为 753 KB。
+- `pnpm test:coverage` 退出 0：35 个测试文件/133 个测试通过；语句
+  85.85%、分支 77.97%、函数 81.89%、行 86.57%。
+- 插画源文件经压缩后为 `src/assets/land-planning-hero.webp`（20,054 字节）；
+  构建实际输出 `dist/land-planning-hero-eqexouqf.webp`，不是悬空模板路径。
+- 实现阶段提交为 `55ef3da feat: redesign land demand mini program`；
+  用户已有的 `skills-lock.json` 修改没有暂存或提交。
+
+### 本轮微信开发者工具运行时结果
+
+- `pnpm test:e2e` 退出 1：9 个串行用例中首个用例连接
+  `ws://127.0.0.1:9643` 失败，1 个失败、其余 8 个未运行；错误明确要求目标
+  项目窗口以自动化模式打开。
+- `pnpm open` 与
+  `pnpm exec wv open . --non-interactive --no-mcp --debug` 均在等待
+  DevTools 时超时，现场未出现可连接的 9643 监听端口。
+- `pnpm exec wv screenshot --project ./dist --page pages/login/index
+  --output .tmp/login-redesign.png --json` 退出 1，报告“无法连接到当前项目的
+  微信开发者工具自动化 websocket”，没有生成截图。
+- 因没有新的真实运行时截图，`wv compare` 未执行，也没有创建或更新视觉基线。
+  当前结论为静态、单元、类型、构建与包体门禁通过；DevTools E2E 和运行时
+  截图受外部自动化连接前置条件阻塞，不能标记为通过。
+
+## DevTools 控制台与运行时稳定性复核（2026-07-31）
+
+- 修复 Summer Compiler 虚拟 slot wrapper、页面属性类型、空 Query 记录、
+  TDesign 弹窗属性、冷启动认证恢复及 App Service 自动化连接问题；生成产物
+  不再包含可执行的 `wx.getSystemInfoSync` 调用。
+- 登录、工作台、五步填报、提交成功和错误页完成加载后逐页预检；产品控制台
+  警告/错误关键字扫描为 0。MCP 连接预检自身触发的系统 API 弃用提示不来自
+  产品产物，未计作产品通过证据。
+- 独立 Automator 端口 `9651` 上运行 `pnpm test:e2e`，退出 0：9 个串行
+  场景全部通过，耗时 46.8 秒；覆盖登录、草稿恢复、冷启动会话、字段显隐、
+  园区/行业选择、融资校验、提交查看及修改再保存。
+- E2E 完成后扫描 6 份本轮 DevTools 运行时日志，Summer Compiler、WXML
+  缺失、组件属性不兼容、Query `undefined` 和产品系统 API 弃用等关键字命中
+  数均为 0。
+- 最终 `pnpm verify` 退出 0：`prepare`、应用与 E2E 类型检查、零警告
+  `lint`、`stylelint`、35 个测试文件/149 个测试、微信小程序构建、生成产物
+  契约和包体预算全部通过；主包为 749 KB。
+- 登录页截图仅在页面就绪和控制台预检完成后采集；测试夹具只断开自己的
+  Automator 连接，不关闭用户已打开的微信开发者工具。
+
+## UI 修正与控制台清零复核（2026-07-31，本轮实际结果）
+
+- 关闭并重新打开当前项目后，确认微信开发者工具服务端口为 `40637`、
+  Automator 端口为 `9651`；避免使用旧的内存编译结果。
+- 修正首页插画为完整铺满 hero 的 `aspectFit`，填报页使用紧凑骨架；步骤条
+  改为五等分且不横向溢出，底部操作栏改为固定吸底；详情页和成功页改用
+  `replace`，避免复用旧页面实例造成 `routeReady` 未初始化、详情页卡住。
+- TDesign 输入、单选、行业级联和弹窗属性均提供首帧可用的字符串/数组；逐页
+  Automator console/exception 扫描结果：登录页、工作台、填报页、成功页及
+  填报各步骤/验证码弹窗均为 `warnings=[]`、`exceptions=[]`。成功页因当前
+  测试记录为草稿而按业务守卫返回工作台，仍无警告或异常。
+- `pnpm test:e2e` 退出码 0：9/9 串行场景通过，耗时 49.3 秒，包含最终验证
+  提交、成功页、详情页查看及修改再保存。
+- `pnpm verify` 退出码 0（71 秒）：35 个测试文件、152 个测试通过；应用与
+  E2E 类型检查、零警告 lint、stylelint、生成运行时契约和包体预算均通过；
+  微信小程序主包 739 KB。
+- 实际检查截图：`.tmp/e2e-login.png`、`.tmp/e2e-home-latest.png`、
+  `.tmp/e2e-basic-latest.png`、`.tmp/e2e-review.png`；均在页面就绪后采集。
+
+## 首页与填报页视觉复核（2026-07-31，本轮最终结果）
+
+- 首页 hero 使用 `aspectFill` 配合右侧定位（`left: 5%`、`width: 108%`），
+  插画定位点与参考图保持右侧构图，避免原先 `aspectFit` 留白导致的错位。
+- 五步进度条将圆点、连接线、文字拆分为独立布局：五等分节点、连接线不再占用
+  圆点宽度，文字 `text-align: center` 且不横向溢出。
+- 填报步骤组件启用 `styleIsolation: 'apply-shared'`，使共享的白色卡片、
+  `32rpx` 圆角、标题蓝色竖标、卡片阴影在真实运行时生效；底部操作区继续固定吸底。
+- `pnpm vitest run tests/unit/components/land-demand-wizard.test.ts tests/smoke/visual-system.test.ts`：
+  2 个测试文件、18 个测试通过。
+- `pnpm verify`：退出码 0，35 个测试文件、153 个测试通过；应用/E2E 类型检查、
+  零警告 lint、stylelint、739 KB 主包构建、生成运行时契约和包体预算均通过，耗时
+  66.5 秒。
+- 构建后真实运行时逐页扫描（登录、首页、填报第 1–5 步、成功页，监听 Automator
+  `console` 与 `exception`）：`warnings=[]`、`exceptions=[]`。
+- 微信开发者工具服务端口 `40637`、Automator `9651`；完整 `pnpm test:e2e`
+  首次因会话协议超时失败，关闭并重新打开同一端口后重试退出码 0，9/9 场景通过，
+  用时 49.3 秒。
+- 最终截图：`.tmp/home-final.png`、`.tmp/fill-final.png`、`.tmp/e2e-login.png`、
+  `.tmp/e2e-review.png`，均在页面完成渲染后采集并人工核对。
+
+## 登录、工作台与提交链路最终复核（2026-07-31，本轮实际结果）
+
+- 登录页插画右移量调整为稳定的参考构图，并为用户名、密码输入补齐用户和锁图标；
+  工作台移除重复规划插画，退出操作改为紧凑原生按钮，进度条使用 1–5 等分节点，
+  按 Store 中的本地草稿当前步骤高亮并显示“当前第 N 步 / 共 5 步”。
+- 填报页根容器为固定底栏预留 `220rpx` 底部空间；确认页“修改”改为紧凑胶囊操作，
+  与标题垂直居中且不再挤出右侧空白；验证码弹窗链路由真实 E2E 覆盖。
+- `pnpm stylelint`、`pnpm lint` 均退出 0；聚焦视觉/向导/确认测试为 3 个文件、
+  23 个测试通过。
+- 最终 `pnpm verify` 退出 0（59.3 秒）：35 个测试文件、153 个测试通过；
+  应用与 E2E 类型检查、零警告 lint、stylelint、微信构建、生成运行时契约和包体预算
+  全部通过，主包 743 KB。
+- 构建后关闭并重开微信开发者工具（服务端口 `40637`、Automator `9651`），
+  逐页扫描登录、工作台和填报第 1–5 步，运行时结果为
+  `RUNTIME_BLOCKING=[]`；成功页直接访问因业务守卫返回工作台，未产生异常。
+- 最终 `pnpm test:e2e` 退出 0：9/9 场景通过（48.0 秒），包含验证码弹窗出现、
+  输入 `123456`、验证提交、成功页、详情查看及修改再保存。
+- 页面完成渲染后采集并人工复核：`.tmp/login-visual-current.png`、
+  `.tmp/home-visual-current.png`、`.tmp/fill-visual-current.png`；其中填报截图已滚动
+  至底部，内容卡片与固定底栏之间可见留白。用户已有的 `skills-lock.json` 未暂存。
+
+## UI 重构与运行时复核（2026-08-03，本轮最终结果）
+
+- `pnpm verify` 退出 0（57.4 秒）：35 个测试文件、153 个单元测试通过；类型检查、
+  零警告 lint、stylelint、微信构建、生成运行时契约和包体预算全部通过，主包 766 KB。
+- 微信开发者工具服务端口为 `40637`，Automator 端口为 `9643`。构建后重新打开项目，
+  扫描登录、工作台、填报第 1–5 步和成功页，控制台结果为 `RUNTIME_BLOCKING=[]`。
+- 清理运行时日志后执行 `pnpm test:e2e`，退出 0：9/9 场景通过（48.1 秒），覆盖当前步骤
+  必填拦截、融资条件、验证码弹窗、输入 `123456`、验证提交、成功页、详情查看和修改再保存。
+- 实机截图已写入正确目录 `C:\Users\hp\.codex\worktrees\f809\weapp-vite-template\.tmp`：
+  `login-visual-current.png`、`home-visual-current.png`、`fill-visual-current.png`、
+  `verification-dialog-current.png`；截图确认插画、输入图标、日期区间、步骤进度、底栏留白和
+  验证码弹窗正文均已渲染。
+- `skills-lock.json` 为用户已有修改，未暂存。
+
+## 登录与验证码对齐复核（2026-08-03，本轮结果）
+
+- 登录页已移除“演示环境”角标和底部本地提示；用户名/密码图标改为固定高度的
+  TDesign `prefix-icon` 插槽容器，输入文字与图标垂直居中。
+- 验证码弹窗将“验”图标移入标题插槽与标题同排，验证码输入、Mock 验证码和底部操作
+  使用 TDesign 内容/按钮插槽并保持等宽布局。
+- `pnpm test:e2e` 退出 0：9/9 场景通过（约 1.1 分钟）。
+- `pnpm verify` 退出 0（60.7 秒）：35 个测试文件、153 个测试通过，主包 766 KB。
+- 构建后运行时扫描结果为 `RUNTIME_PATH=pages/home/index`、`RUNTIME_BLOCKING=[]`；
+  最新截图为 `.tmp/login-visual-current.png` 与 `.tmp/verification-dialog-current.png`。
+
+## 验证码弹窗 footer 溢出修复（2026-08-03，本轮最终结果）
+
+- footer 的取消/确认插槽改为显式 flex 容器，内部 TDesign 按钮使用 `block` 填充各自半区，
+  修复确认按钮超出弹窗右边界的问题。
+- 修复后实机截图确认按钮完整位于弹窗内，验证码提交按钮仍可被自动化定位。
+- `pnpm test:e2e` 退出 0：9/9 场景通过（约 1.4 分钟）。
+- `pnpm verify` 退出 0（57.8 秒）：35 个测试文件、153 个测试通过，主包 766 KB。
+- 构建后运行时扫描结果：`RUNTIME_PATH=pages/home/index`、`RUNTIME_BLOCKING=[]`。
+
+## 验证码输入类 Dialog 对齐官方实现（2026-08-03，本轮最终结果）
+
+- 验证码弹窗 footer 改为 TDesign `t-dialog` 原生 `confirm-btn` / `cancel-btn` 对象配置，
+  显式使用 `button-layout="horizontal"`；输入内容继续通过 `content` slot 承载业务字段。
+- 移除 footer 内嵌自定义 `t-button` 和手写 flex 宽度，避免小程序 slot 包裹层导致按钮溢出、重叠。
+- 使用 TDesign `tId` 保留验证码提交的稳定运行时定位，提交事件改由 `t-dialog` 的 `confirm` 事件触发。
+- `pnpm test:e2e` 退出 0：9/9 场景通过（50.1 秒）。
+- `pnpm verify` 退出 0（47.8 秒）：35 个测试文件、153 个测试通过，主包 766 KB。
+- 构建后运行时扫描结果：`RUNTIME_PATH=pages/home/index`、`RUNTIME_BLOCKING=[]`。
+- 最新验证码弹窗截图：`.tmp/verification-dialog-native.png`。
+
+## 首页步骤轨道与已填步骤跳转（2026-08-03，本轮最终结果）
+
+- 首页五步进度轨道改为五列等宽布局，连接线从节点中心延伸，已填步骤增加可选中态；
+  `.tmp/home-step-selection.png` 为实机截图。
+- 已填进度以内的节点可点击选择；点击首页主操作会携带 `step` 查询参数，填报页解析后
+  定位到对应步骤。实机验证点击第 1 步后进入 `pages/land-demand/index?step=1`，
+  运行时 `currentStep=1`。
+- `pnpm verify` 退出 0（58.3 秒）：35 个测试文件、154 个测试通过，类型检查、
+  零警告 lint、stylelint、生成运行时契约和包体预算全部通过，主包 767 KB。
+- 微信开发者工具服务端口 `40637`、Automator `9651`；最新运行时扫描结果为
+  `RUNTIME_PATH=pages/home/index`、`RUNTIME_BLOCKING=[]`。
+- `pnpm test:e2e` 退出 0：9/9 场景通过（42.3 秒），包含已有填报、步骤切换、融资条件、
+  验证码提交、详情查看及修改再保存回归。用户已有的 `skills-lock.json` 未暂存。
+
+## 首页已填进度与当前选择分离（2026-08-03，本轮最终结果）
+
+- Store 新增可持久化的 `progressStep`，`currentStep` 回退到已填写步骤时不再降低最高进度；
+  首页增加 `completed / selected / pending` 三种节点状态。
+- 实机选择第 2 步后，运行时仍显示“已填写至第 5 步 / 共 5 步”，节点 3–5 保持完成态，
+  节点 2 显示选中态；截图为 `.tmp/home-step-selection-middle.png`。
+- `pnpm verify` 退出 0（76.9 秒）：35 个测试文件、155 个测试通过，生成运行时契约和包体
+  预算均通过，主包 768 KB。
+- `pnpm test:e2e` 退出 0：9/9 场景通过（46.6 秒）；最终运行时扫描为
+  `RUNTIME_PATH=pages/home/index`、`RUNTIME_BLOCKING=[]`。用户已有的 `skills-lock.json` 未暂存。

@@ -79,21 +79,43 @@ function readSession(state: unknown): AuthSession | null {
   return isAuthSession(session) ? session : null
 }
 
+function readSessionClearRevision(state: unknown): number {
+  if (!isRecord(state)) {
+    return 0
+  }
+  const revision = unwrapRef(state.sessionClearRevision)
+  return typeof revision === 'number' ? revision : 0
+}
+
+export function readPersistedAuthSession(
+  storage: StorageAdapter,
+): AuthSession | null | undefined {
+  const persisted = storage.get<unknown>(AUTH_STORAGE_KEY)
+  return isPersistedAuthState(persisted) ? persisted.session : undefined
+}
+
 export function createPersistencePlugin(storage: StorageAdapter) {
   return ({ store }: { store: PersistenceStore }): void => {
     if (store.$id !== 'auth') {
       return
     }
 
-    const persisted = storage.get<unknown>(AUTH_STORAGE_KEY)
-    if (isPersistedAuthState(persisted)) {
-      store.$patch({ session: persisted.session })
+    const persistedSession = readPersistedAuthSession(storage)
+    if (persistedSession !== undefined) {
+      store.$patch({ session: persistedSession })
     }
 
+    let sessionClearRevision = 0
     store.$subscribe((_mutation, state) => {
+      const session = readSession(state)
+      const nextSessionClearRevision = readSessionClearRevision(state)
+      if (!session && nextSessionClearRevision === sessionClearRevision) {
+        return
+      }
+      sessionClearRevision = nextSessionClearRevision
       storage.set<PersistedAuthStateV1>(AUTH_STORAGE_KEY, {
         version: 1,
-        session: readSession(state),
+        session,
       })
     }, { detached: true })
   }

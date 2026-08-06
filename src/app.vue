@@ -30,9 +30,10 @@ defineAppJson({
   entryPagePath: 'pages/login/index',
   pages: autoRoutes.pages,
   window: {
-    navigationBarTitleText: '业务工作台',
+    navigationBarTitleText: '用地需求填报',
     navigationBarBackgroundColor: '#ffffff',
     navigationBarTextStyle: 'black',
+    backgroundColor: '#f2f7ff',
   },
   style: 'v2',
   componentFramework: 'glass-easel',

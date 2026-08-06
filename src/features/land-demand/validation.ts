@@ -163,3 +163,18 @@ export function validateSubmission(form: LandDemandForm): FieldError[] {
 
   return errors
 }
+
+/**
+ * Validate only the step the user is leaving.
+ *
+ * Submission validation intentionally remains the single source of truth for
+ * required and conditional fields.  Filtering its result here keeps the
+ * wizard and the final submit action in sync without maintaining a second
+ * required-field list in the page.
+ */
+export function validateStep(
+  form: LandDemandForm,
+  step: 1 | 2 | 3 | 4 | 5,
+): FieldError[] {
+  return validateSubmission(form).filter(error => error.step === step)
+}

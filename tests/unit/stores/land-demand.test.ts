@@ -63,11 +63,26 @@ describe('land demand store', () => {
     store.initialize(enterprise, undefined, { form, currentStep: 3, savedAt: 1_000 })
 
     expect(store.currentStep.value).toBe(3)
+    expect(store.progressStep.value).toBe(3)
     expect(store.hasRecord.value).toBe(false)
     expect(store.isDirty.value).toBe(false)
     store.patch({ area: '31' })
     expect(store.form.value.area).toBe('31')
     expect(store.isDirty.value).toBe(true)
+  })
+
+  it('keeps filled progress when revisiting an earlier step', () => {
+    const store = useLandDemandStore()
+    store.initialize(enterprise, undefined, { form, currentStep: 4, savedAt: 1_000 })
+
+    store.goToStep(2)
+    expect(store.currentStep.value).toBe(2)
+    expect(store.progressStep.value).toBe(4)
+
+    store.goToStep(5)
+    store.goToStep(3)
+    expect(store.currentStep.value).toBe(3)
+    expect(store.progressStep.value).toBe(5)
   })
 
   it('reasserts authenticated identity over a tampered local draft', () => {
@@ -137,6 +152,7 @@ describe('land demand store', () => {
     expect(repository.getDraft(enterprise.creditcode)).toMatchObject({
       form: { area: '31' },
       currentStep: 2,
+      progressStep: 2,
     })
     expect(store.isDirty.value).toBe(false)
     store.discardLocalDraft()

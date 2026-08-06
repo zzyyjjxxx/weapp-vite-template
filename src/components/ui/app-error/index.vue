@@ -18,6 +18,7 @@ defineComponentJson({
 
 <template>
   <view class="state state--error">
+    <view class="state__mark">!</view>
     <text class="state__title">
       {{ props.title }}
     </text>
@@ -41,6 +42,24 @@ defineComponentJson({
   min-height: 240rpx;
   padding: $space-4;
   text-align: center;
+  background: rgb(255 255 255 / 90%);
+  border: 1rpx solid #f3ddda;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+}
+
+.state__mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72rpx;
+  height: 72rpx;
+  margin-bottom: $space-2;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: $color-error;
+  background: $color-error-soft;
+  border-radius: 50%;
 }
 
 .state__title {
@@ -62,6 +81,6 @@ defineComponentJson({
   color: $color-primary;
   background: $color-primary-soft;
   border: 0;
-  border-radius: $radius-sm;
+  border-radius: $radius-md;
 }
 </style>

@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import type { FieldError, FinancingChoice, LandDemandForm } from '../models'
 
+import { ref } from 'wevu'
 import { readStringDetail } from '@/platform/event-detail'
 
 const props = defineProps<{ form: LandDemandForm, errors: readonly FieldError[] }>()
 const emit = defineEmits<{ change: [patch: Partial<LandDemandForm>] }>()
 
-defineComponentJson({ component: true })
+defineComponentJson({ component: true, styleIsolation: 'apply-shared' })
+
+const emptyOptions = ref<string[]>([])
+const financingTimeVisible = ref(false)
 
 function fieldError(field: keyof LandDemandForm): string {
   return props.errors.find(error => error.field === field)?.message ?? ''
@@ -19,16 +23,35 @@ function changeText(field: keyof LandDemandForm, detail: unknown): void {
 function changeFinancing(detail: unknown): void {
   emit('change', { is_financing: readStringDetail(detail) as FinancingChoice })
 }
+
+function openFinancingTime(): void {
+  financingTimeVisible.value = true
+}
+
+function closeFinancingTime(): void {
+  financingTimeVisible.value = false
+}
+
+function changeFinancingTime(detail: unknown): void {
+  const value = readStringDetail(detail)
+  if (value) {
+    emit('change', { financing_time: value })
+  }
+  closeFinancingTime()
+}
 </script>
 
 <template>
   <view class="step-card">
-    <text class="step-card__title">融资与联系人</text>
+    <text class="step-card__title">融资及联系人</text>
+    <text class="step-card__description">融资需求默认选择“没有”；如选择“有”，请补充金额和期望时间。</text>
+
     <view class="field">
-      <text class="field__label">是否有融资需求</text>
+      <text class="field__label"><text class="field__required">*</text>是否有融资需求</text>
       <t-radio-group
         data-testid="is-financing"
         :value="props.form.is_financing"
+        :options="emptyOptions"
         @change="changeFinancing"
       >
         <t-radio data-testid="is-financing-yes" value="有">有</t-radio>
@@ -36,13 +59,16 @@ function changeFinancing(detail: unknown): void {
       </t-radio-group>
       <text v-if="fieldError('is_financing')" class="field__error">{{ fieldError('is_financing') }}</text>
     </view>
-    <view v-if="props.form.is_financing === '有'">
+
+    <view v-if="props.form.is_financing === '有'" class="field field--control">
+      <text class="field__label"><text class="field__required">*</text>融资金额（万元）</text>
       <t-input
         data-testid="financing-money"
-        label="融资金额（万元）"
+        label=""
         type="digit"
         :value="props.form.financing_money"
-        :status="fieldError('financing_money') ? 'error' : 'default'"
+        status="default"
+        tips=""
         @change="changeText('financing_money', $event)"
       />
       <text
@@ -52,12 +78,28 @@ function changeFinancing(detail: unknown): void {
       >
         {{ fieldError('financing_money') }}
       </text>
-      <t-input
+    </view>
+    <view v-if="props.form.is_financing === '有'" class="field field--selector">
+      <t-cell
         data-testid="financing-time"
-        label="融资时间（YYYY-MM）"
-        :value="props.form.financing_time"
-        :status="fieldError('financing_time') ? 'error' : 'default'"
-        @change="changeText('financing_time', $event)"
+        title="融资时间"
+        :note="props.form.financing_time || '请选择年月'"
+        arrow
+        required
+        @tap="openFinancingTime"
+      />
+      <t-date-time-picker
+        data-testid="financing-time-picker"
+        :visible="financingTimeVisible"
+        :value="props.form.financing_time || ''"
+        mode="month"
+        format="YYYY-MM"
+        start="2020-01-01"
+        end="2040-12-31"
+        title="选择融资时间"
+        @change="changeFinancingTime"
+        @cancel="closeFinancingTime"
+        @close="closeFinancingTime"
       />
       <text
         v-if="fieldError('financing_time')"
@@ -67,71 +109,44 @@ function changeFinancing(detail: unknown): void {
         {{ fieldError('financing_time') }}
       </text>
     </view>
-    <t-input
-      data-testid="contact"
-      label="联系人"
-      :value="props.form.contact"
-      :status="fieldError('contact') ? 'error' : 'default'"
-      :tips="fieldError('contact')"
-      @change="changeText('contact', $event)"
-    />
-    <t-input
-      data-testid="office"
-      label="职务（选填）"
-      :value="props.form.office"
-      :status="fieldError('office') ? 'error' : 'default'"
-      :tips="fieldError('office')"
-      @change="changeText('office', $event)"
-    />
-    <t-input
-      data-testid="phone"
-      label="手机号码"
-      type="number"
-      :maxlength="11"
-      :value="props.form.phone"
-      :status="fieldError('phone') ? 'error' : 'default'"
-      :tips="fieldError('phone')"
-      @change="changeText('phone', $event)"
-    />
+
+    <view class="field field--control">
+      <text class="field__label"><text class="field__required">*</text>联系人</text>
+      <t-input
+        data-testid="contact"
+        label=""
+        :value="props.form.contact"
+        status="default"
+        tips=""
+        @change="changeText('contact', $event)"
+      />
+      <text v-if="fieldError('contact')" class="field__error">{{ fieldError('contact') }}</text>
+    </view>
+    <view class="field field--control">
+      <text class="field__label">职务（选填）</text>
+      <t-input
+        data-testid="office"
+        label=""
+        :value="props.form.office"
+        status="default"
+        tips=""
+        @change="changeText('office', $event)"
+      />
+      <text v-if="fieldError('office')" class="field__error">{{ fieldError('office') }}</text>
+    </view>
+    <view class="field field--control">
+      <text class="field__label"><text class="field__required">*</text>手机号码</text>
+      <t-input
+        data-testid="phone"
+        label=""
+        type="number"
+        :maxlength="11"
+        :value="props.form.phone"
+        status="default"
+        tips=""
+        @change="changeText('phone', $event)"
+      />
+      <text v-if="fieldError('phone')" class="field__error">{{ fieldError('phone') }}</text>
+    </view>
   </view>
 </template>
-
-<style lang="scss">
-@use '@/styles/tokens' as *;
-
-.step-card {
-  padding: $space-4;
-  background: $color-card;
-  border-radius: $radius-md;
-}
-
-.step-card__title,
-.field__label,
-.field__error {
-  display: block;
-}
-
-.step-card__title {
-  margin-bottom: $space-3;
-  font-size: 34rpx;
-  font-weight: 700;
-  color: $color-text;
-}
-
-.field {
-  padding: $space-3 0;
-  border-bottom: 1rpx solid $color-border;
-}
-
-.field__label {
-  margin-bottom: $space-2;
-  font-size: 28rpx;
-  color: $color-text;
-}
-
-.field__error {
-  margin-top: $space-1;
-  font-size: 24rpx;
-  color: $color-error;
-}
-</style>

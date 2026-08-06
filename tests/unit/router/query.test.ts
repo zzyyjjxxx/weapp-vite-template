@@ -4,6 +4,7 @@ import * as queryModule from '@/router/query'
 import {
   parseEnum,
   parseLandDemandMode,
+  parseLandDemandStep,
   parseOptionalNumber,
   parseRequiredString,
 } from '@/router/query'
@@ -14,6 +15,14 @@ describe('route query parsing', () => {
     expect(parseLandDemandMode('edit')).toBe('edit')
     expect(parseLandDemandMode('other')).toBe('edit')
     expect(parseLandDemandMode(undefined)).toBe('edit')
+  })
+
+  it('accepts only the five land-demand steps', () => {
+    expect(parseLandDemandStep('1')).toBe(1)
+    expect(parseLandDemandStep(5)).toBe(5)
+    expect(parseLandDemandStep(0)).toBeUndefined()
+    expect(parseLandDemandStep(6)).toBeUndefined()
+    expect(parseLandDemandStep('step-2')).toBeUndefined()
   })
 
   it('decodes and validates an encoded login return path', () => {
