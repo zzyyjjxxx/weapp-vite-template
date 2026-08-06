@@ -1,4 +1,5 @@
 using System.Reflection;
+using ForguncyServerApi.Application;
 using ForguncyServerApi.Domain;
 using ForguncyServerApi.Infrastructure;
 using SqlSugar;
@@ -43,6 +44,52 @@ public sealed class SqlSugarPersistenceTests
         Assert.Contains("creditCode", sql.Key, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Enterprise_row_maps_to_the_real_m_preliminary_list_columns()
+    {
+        var enterpriseRow = typeof(EnterpriseRepository).GetNestedType("EnterpriseRow", BindingFlags.NonPublic);
+        Assert.NotNull(enterpriseRow);
+
+        var table = enterpriseRow!.GetCustomAttribute<SugarTable>();
+        Assert.NotNull(table);
+        Assert.Equal("m_preliminary_list", table!.TableName);
+
+        AssertNestedColumn(enterpriseRow, "BusinessName", "businessName");
+        AssertNestedColumn(enterpriseRow, "CreditCode", "creditCode");
+        AssertNestedColumn(enterpriseRow, "CountyId", "county");
+        AssertNestedColumn(enterpriseRow, "Region", "region");
+    }
+
+    [Fact]
+    public void Region_row_maps_to_the_real_yj_regioninfo_columns()
+    {
+        var regionRow = typeof(EnterpriseRepository).GetNestedType("RegionRow", BindingFlags.NonPublic);
+        Assert.NotNull(regionRow);
+
+        var table = regionRow!.GetCustomAttribute<SugarTable>();
+        Assert.NotNull(table);
+        Assert.Equal("yj_regioninfo", table!.TableName);
+
+        AssertNestedColumn(regionRow, "Id", "id");
+        AssertNestedColumn(regionRow, "Name", "name");
+    }
+
+    [Fact]
+    public void Enterprise_query_joins_regioninfo_by_county_and_filters_by_creditCode()
+    {
+        using var client = AuthSqlSugarClientFactory.Create("Server=localhost;Database=synthetic;User=root;Password=synthetic;");
+
+        var buildSql = typeof(EnterpriseRepository).GetMethod("BuildLookupSql", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(buildSql);
+
+        var sql = Assert.IsType<string>(buildSql!.Invoke(null, new object[] { client, "91330200SYNTHETIC" }));
+
+        Assert.Contains("m_preliminary_list", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("yj_regioninfo", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("creditCode", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("yj_regioninfo.id", sql, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static void AssertColumn(string propertyName, string columnName, bool isPrimaryKey = false)
     {
         var property = typeof(AuthUser).GetProperty(propertyName);
@@ -52,5 +99,15 @@ public sealed class SqlSugarPersistenceTests
         Assert.NotNull(column);
         Assert.Equal(columnName, column!.ColumnName);
         Assert.Equal(isPrimaryKey, column.IsPrimaryKey);
+    }
+
+    private static void AssertNestedColumn(Type rowType, string propertyName, string columnName)
+    {
+        var property = rowType.GetProperty(propertyName);
+        Assert.NotNull(property);
+
+        var column = property!.GetCustomAttribute<SugarColumn>();
+        Assert.NotNull(column);
+        Assert.Equal(columnName, column!.ColumnName);
     }
 }
