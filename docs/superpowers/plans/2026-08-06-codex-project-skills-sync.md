@@ -198,6 +198,7 @@ The setup block must become:
 ```toml
 [setup]
 script = '''
+cd "$CODEX_WORKTREE_PATH"
 node scripts/sync-codex-project-skills.mjs
 pnpm install --frozen-lockfile --config.confirmModulesPurge=false
 '''
@@ -291,8 +292,10 @@ git status --short -- . '.agents/skills' '.codex/skills' '.claude/skills'
 git -C $worktree status --short -- '.agents/skills' '.codex/skills' '.claude/skills'
 ```
 
-Expected: generated directories are present and populated, and neither the
-main nor linked worktree reports generated skill files as tracked changes.
+Expected: generated directories are present and populated. The current main
+worktree must not report generated files as changes; an older linked worktree
+whose branch predates the new `.gitignore` may show the generated copies as
+untracked and must not be staged or modified as part of this task.
 
 - [ ] **Step 3: Run repository verification.**
 

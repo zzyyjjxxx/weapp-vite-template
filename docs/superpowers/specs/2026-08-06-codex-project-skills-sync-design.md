@@ -50,6 +50,7 @@
 `environment.toml` 的初始化流程变为：
 
 ```text
+cd "$CODEX_WORKTREE_PATH"
 node scripts/sync-codex-project-skills.mjs
 pnpm install --frozen-lockfile --config.confirmModulesPurge=false
 ```
@@ -79,7 +80,7 @@ pnpm install --frozen-lockfile --config.confirmModulesPurge=false
 
 ## 验证策略
 
-- 脚本测试使用临时 Git 主工作树和链接工作树，验证主目录解析、`npx` 只收到主工作树工作目录、三个目标目录生成独立副本，以及旧文件被移除。
+- 脚本单元测试使用临时源目录和工作树目录，验证主目录安装注入、三个目标目录生成独立副本，以及旧文件被移除；Git 主目录解析和真实链接工作树复制通过集成命令验证。
 - 测试覆盖当前工作树等于主工作树时不删除源目录的分支。
 - 配置检查确认 `environment.toml` 不再包含工作树内直接执行
   `npx skills experimental_install` 的命令，而是调用同步脚本。
