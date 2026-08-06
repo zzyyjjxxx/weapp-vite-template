@@ -22,7 +22,10 @@ public sealed class JwtTokenService : IJwtTokenService
 
     public string CreateToken(AuthUser user)
     {
-        ArgumentNullException.ThrowIfNull(user);
+        if (user is null)
+        {
+            throw new ArgumentNullException(nameof(user));
+        }
 
         var now = DateTime.UtcNow;
         var claims = new[]

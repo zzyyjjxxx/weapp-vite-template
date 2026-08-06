@@ -1,23 +1,30 @@
 using ForguncyServerApi.Domain;
-using Microsoft.EntityFrameworkCore;
+using SqlSugar;
 
 namespace ForguncyServerApi.Infrastructure;
 
 public sealed class UserRepository : IUserRepository
 {
-    private readonly Func<AuthDbContext> _contextFactory;
+    private readonly Func<SqlSugarClient> _clientFactory;
 
-    public UserRepository(Func<AuthDbContext> contextFactory)
+    public UserRepository(Func<SqlSugarClient> clientFactory)
     {
-        _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
+        _clientFactory = clientFactory ?? throw new ArgumentNullException(nameof(clientFactory));
     }
 
     public async Task<AuthUser?> FindByUsernameAsync(string creditCode, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(creditCode);
+        if (creditCode is null)
+        {
+            throw new ArgumentNullException(nameof(creditCode));
+        }
 
-        await using var context = _contextFactory();
-        var user = await context.Users.SingleOrDefaultAsync(user => user.Username == creditCode, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        using var client = _clientFactory();
+        var user = await client.Queryable<AuthUser>()
+            .Where(user => user.Username == creditCode)
+            .SingleAsync();
+        cancellationToken.ThrowIfCancellationRequested();
         return user is not null && string.Equals(user.Username, creditCode, StringComparison.Ordinal)
             ? user
             : null;

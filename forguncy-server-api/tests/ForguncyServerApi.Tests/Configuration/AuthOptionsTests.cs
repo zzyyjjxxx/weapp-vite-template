@@ -75,11 +75,13 @@ public sealed class AuthOptionsTests
     }
 
     [Fact]
-    public void AuthOptions_source_does_not_read_obsolete_bootstrap_environment_names()
+    public void AuthOptions_source_does_not_read_environment_variables()
     {
         var source = File.ReadAllText(SourceFile("Configuration", "AuthOptions.cs"));
 
         Assert.DoesNotContain("FGC_AUTH_BOOTSTRAP_", source);
+        Assert.DoesNotContain("Environment.GetEnvironmentVariable", source);
+        Assert.DoesNotContain("FromEnvironment", source);
     }
 
     private static Dictionary<string, string?> ValidValues() => new()

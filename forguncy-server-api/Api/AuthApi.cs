@@ -1,16 +1,13 @@
-using System.Diagnostics;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Text;
 using ForguncyServerApi.Application;
 using GrapeCity.Forguncy.ServerApi;
-using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace ForguncyServerApi.Api;
 
-public sealed class AuthApi : ForguncyApi
+public class AuthApi : ForguncyApi
 {
     private const string UnexpectedLoginOperationCode = "auth.login.unexpected_failure";
-    private static readonly EventId UnexpectedLoginEvent = new(1001, "AuthLoginUnexpectedFailure");
     // Forguncy hosts a custom API assembly for one site, so this cache is scoped to that host lifetime.
     private static readonly RetryableAsyncCache<AuthCompositionRoot> AuthCompositionCache = new();
 
@@ -54,55 +51,21 @@ public sealed class AuthApi : ForguncyApi
     {
         Context.Response.StatusCode = statusCode;
         Context.Response.ContentType = "application/json; charset=utf-8";
-        await JsonSerializer.SerializeAsync(Context.Response.Body, value, cancellationToken: cancellationToken);
+        var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(value));
+        await Context.Response.Body.WriteAsync(bytes, 0, bytes.Length, cancellationToken);
     }
 
     private static ErrorResponse CreateServerErrorResponse() => new("server_error");
 
-    private static void RecordUnexpectedLoginFailure(IServiceProvider? services, Exception exception)
-    {
-        var exceptionType = exception.GetType().Name;
-
-        try
-        {
-            var logger = services?.GetService(typeof(ILogger<AuthApi>)) as ILogger
-                ?? services?.GetService(typeof(ILogger)) as ILogger;
-            if (logger is null && services?.GetService(typeof(ILoggerFactory)) is ILoggerFactory loggerFactory)
-            {
-                logger = loggerFactory.CreateLogger(typeof(AuthApi).FullName ?? nameof(AuthApi));
-            }
-
-            if (logger is not null)
-            {
-                logger.LogError(
-                    UnexpectedLoginEvent,
-                    "Operation {OperationCode} failed with exception type {ExceptionType}.",
-                    UnexpectedLoginOperationCode,
-                    exceptionType);
-                return;
-            }
-        }
-        catch (Exception)
-        {
-            // Diagnostics must never replace the fixed client error response.
-        }
-
-        try
-        {
-            Trace.TraceError(
-                "Operation {0} failed with exception type {1}.",
-                UnexpectedLoginOperationCode,
-                exceptionType);
-        }
-        catch (Exception)
-        {
-            // A failing Trace listener must not alter the client response.
-        }
-    }
+    private static void RecordUnexpectedLoginFailure(IServiceProvider? services, Exception exception) =>
+        AuthDiagnostics.Record(services, exception);
 
     private static ApiResponse CreateLoginResponse(LoginResult result)
     {
-        ArgumentNullException.ThrowIfNull(result);
+        if (result is null)
+        {
+            throw new ArgumentNullException(nameof(result));
+        }
 
         return result.Status switch
         {
@@ -111,25 +74,19 @@ public sealed class AuthApi : ForguncyApi
                 new LoginResponse(
                     result.AccessToken!,
                     "Bearer",
-                    result.ExpiresInSeconds,
-                    new LoginUserResponse(result.User!.Id, result.User.Username))),
+                    result.ExpiresInSeconds)),
             LoginStatus.InvalidRequest => new ApiResponse(400, new ErrorResponse("invalid_request")),
             LoginStatus.InvalidCredentials => new ApiResponse(401, new ErrorResponse("invalid_credentials")),
             _ => throw new InvalidOperationException("The login result status is not supported.")
         };
     }
 
-    private sealed record ApiResponse(int StatusCode, object Payload);
+    private record ApiResponse(int StatusCode, object Payload);
 
-    private sealed record LoginResponse(
-        [property: JsonPropertyName("access_token")] string AccessToken,
-        [property: JsonPropertyName("token_type")] string TokenType,
-        [property: JsonPropertyName("expires_in")] int ExpiresInSeconds,
-        [property: JsonPropertyName("user")] LoginUserResponse User);
+    private record LoginResponse(
+        [property: JsonProperty("access_token")] string AccessToken,
+        [property: JsonProperty("token_type")] string TokenType,
+        [property: JsonProperty("expires_in")] int ExpiresInSeconds);
 
-    private sealed record LoginUserResponse(
-        [property: JsonPropertyName("id")] long Id,
-        [property: JsonPropertyName("username")] string Username);
-
-    private sealed record ErrorResponse([property: JsonPropertyName("error")] string Error);
+    private record ErrorResponse([property: JsonProperty("error")] string Error);
 }

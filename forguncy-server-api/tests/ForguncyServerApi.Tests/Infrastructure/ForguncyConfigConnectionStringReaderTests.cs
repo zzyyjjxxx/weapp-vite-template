@@ -150,7 +150,7 @@ public sealed class ForguncyConfigConnectionStringReaderTests
             : null;
     }
 
-    private class CapturingDataAccess : DispatchProxy
+    public class CapturingDataAccess : DispatchProxy
     {
         public Dictionary<string, object>? Row { get; private set; }
 
@@ -182,7 +182,10 @@ public sealed class ForguncyConfigConnectionStringReaderTests
 
         public static CapturingDataAccess CreateThrowing(Exception exception)
         {
-            ArgumentNullException.ThrowIfNull(exception);
+            if (exception is null)
+            {
+                throw new ArgumentNullException(nameof(exception));
+            }
 
             var proxy = Create(row: null);
             proxy.QueryException = exception;

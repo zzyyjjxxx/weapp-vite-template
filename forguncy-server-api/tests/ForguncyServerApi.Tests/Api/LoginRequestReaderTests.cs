@@ -69,7 +69,9 @@ public sealed class LoginRequestReaderTests
     public async Task ReadAsync_raises_a_format_exception_for_missing_fields(string body)
     {
         var context = new DefaultHttpContext();
-        context.Request.ContentType = body.StartsWith('{') ? "application/json" : "application/x-www-form-urlencoded";
+        context.Request.ContentType = body.StartsWith("{", StringComparison.Ordinal)
+            ? "application/json"
+            : "application/x-www-form-urlencoded";
         context.Request.Body = Body(body);
 
         await Assert.ThrowsAsync<LoginRequestFormatException>(

@@ -1,5 +1,5 @@
 using System.Reflection;
-using System.Text.Json;
+using Newtonsoft.Json;
 using ForguncyServerApi.Application;
 using ForguncyServerApi.Domain;
 using Microsoft.AspNetCore.Http;
@@ -10,6 +10,74 @@ namespace ForguncyServerApi.Tests.Api;
 
 public sealed class AuthApiSurfaceTests
 {
+    [Fact]
+    public void AuthApi_reflection_surface_does_not_reference_logging_types()
+    {
+        WithAuthApiType(type =>
+        {
+            var referencedTypes = type
+                .GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
+                .Select(field => field.FieldType)
+                .Concat(type.GetMethods(
+                        BindingFlags.Public |
+                        BindingFlags.NonPublic |
+                        BindingFlags.Instance |
+                        BindingFlags.Static |
+                        BindingFlags.DeclaredOnly)
+                    .SelectMany(method => new[] { method.ReturnType }.Concat(
+                        method.GetParameters().Select(parameter => parameter.ParameterType))))
+                .Select(referencedType => referencedType.FullName)
+                .Where(fullName => fullName is not null)
+                .ToArray();
+
+            Assert.DoesNotContain(
+                referencedTypes,
+                fullName => fullName!.StartsWith("Microsoft.Extensions.Logging", StringComparison.Ordinal));
+        });
+    }
+
+    [Fact]
+    public void Api_assembly_exposes_the_public_application_types()
+    {
+        WithAuthApiType(type =>
+        {
+            var exportedTypes = type.Assembly
+                .GetExportedTypes()
+                .Select(exportedType => exportedType.FullName)
+                .Where(fullName => fullName is not null)
+                .OrderBy(fullName => fullName)
+                .ToArray();
+
+            Assert.Equal(
+                new[]
+                {
+                    "ForguncyServerApi.Api.AuthApi",
+                    "ForguncyServerApi.Api.AuthCompositionRoot",
+                    "ForguncyServerApi.Api.AuthDiagnostics",
+                    "ForguncyServerApi.Api.LoginRequestFormatException",
+                    "ForguncyServerApi.Api.LoginRequestReader",
+                    "ForguncyServerApi.Api.RetryableAsyncCache`1",
+                    "ForguncyServerApi.Application.AuthService",
+                    "ForguncyServerApi.Application.LoginRequest",
+                    "ForguncyServerApi.Application.LoginResult",
+                    "ForguncyServerApi.Application.LoginStatus",
+                    "ForguncyServerApi.Configuration.AuthOptions",
+                    "ForguncyServerApi.Domain.AuthUser",
+                    "ForguncyServerApi.Infrastructure.AuthSqlSugarClientFactory",
+                    "ForguncyServerApi.Infrastructure.ForguncyConfigConnectionStringReader",
+                    "ForguncyServerApi.Infrastructure.ForguncyJwtConfigurationReader",
+                    "ForguncyServerApi.Infrastructure.IUserRepository",
+                    "ForguncyServerApi.Infrastructure.UserRepository",
+                    "ForguncyServerApi.Security.IJwtTokenService",
+                    "ForguncyServerApi.Security.IPasswordHasher",
+                    "ForguncyServerApi.Security.JwtTokenService",
+                    "ForguncyServerApi.Security.PasswordHasher",
+                    "System.Runtime.CompilerServices.IsExternalInit"
+                },
+                exportedTypes);
+        });
+    }
+
     [Fact]
     public void AuthApi_exposes_only_the_login_post_method()
     {
@@ -67,6 +135,66 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
+    public void AuthCompositionRoot_loads_jwt_options_from_the_forguncy_config_table()
+    {
+        var source = File.ReadAllText(SourceFile("Api", "AuthCompositionRoot.cs"));
+
+        Assert.Contains("ForguncyJwtConfigurationReader.ReadOrCreate", source);
+        Assert.DoesNotContain("AuthOptions.FromEnvironment", source);
+    }
+
+    [Fact]
+    public void AuthCompositionRoot_initializes_from_config_rows_without_environment_variables()
+    {
+        WithAuthApiType(type =>
+        {
+            var compositionRoot = type.Assembly.GetType("ForguncyServerApi.Api.AuthCompositionRoot");
+            Assert.NotNull(compositionRoot);
+
+            var createAsync = compositionRoot!.GetMethod(
+                "CreateAsync",
+                BindingFlags.Public | BindingFlags.Static);
+            Assert.NotNull(createAsync);
+
+            var fake = Infrastructure.ForguncyJwtConfigurationReaderTests.CapturingDataAccess.Create(
+                new Dictionary<string, Dictionary<string, object>?>
+                {
+                    ["ssl"] = new Dictionary<string, object>
+                    {
+                        ["id"] = 1,
+                        ["value"] = "Server=synthetic;Database=synthetic;"
+                    },
+                    ["FGC_JWT_SIGNING_KEY"] = new Dictionary<string, object>
+                    {
+                        ["id"] = 2,
+                        ["value"] = new string('k', 32)
+                    },
+                    ["FGC_JWT_ISSUER"] = new Dictionary<string, object>
+                    {
+                        ["id"] = 3,
+                        ["value"] = "existing-issuer"
+                    },
+                    ["FGC_JWT_EXPIRES_MINUTES"] = new Dictionary<string, object>
+                    {
+                        ["id"] = 4,
+                        ["value"] = "15"
+                    }
+                });
+
+            var task = Assert.IsAssignableFrom<Task>(createAsync!.Invoke(
+                null,
+                new[] { fake.DataAccess, CancellationToken.None }));
+            task.GetAwaiter().GetResult();
+
+            Assert.Equal(
+                new[] { "ssl", "FGC_JWT_SIGNING_KEY", "FGC_JWT_ISSUER", "FGC_JWT_EXPIRES_MINUTES" },
+                fake.ReadItems);
+            Assert.Empty(fake.Additions);
+            Assert.Empty(fake.Updates);
+        });
+    }
+
+    [Fact]
     public void Real_user_deployment_surface_has_no_legacy_bootstrap_assets_or_guidance()
     {
         var projectRoot = ProjectRoot();
@@ -98,7 +226,7 @@ public sealed class AuthApiSurfaceTests
 
             var response = factory!.Invoke(null, null);
             Assert.NotNull(response);
-            var json = JsonSerializer.Serialize(response, response!.GetType());
+            var json = JsonConvert.SerializeObject(response);
 
             Assert.Equal("{\"error\":\"server_error\"}", json);
             var lowerJson = json.ToLowerInvariant();
@@ -218,7 +346,7 @@ public sealed class AuthApiSurfaceTests
                     new AuthUser { Id = 3, Username = "demo" },
                     3600),
                 200,
-                "{\"access_token\":\"signed-token\",\"token_type\":\"Bearer\",\"expires_in\":3600,\"user\":{\"id\":3,\"username\":\"demo\"}}");
+                "{\"access_token\":\"signed-token\",\"token_type\":\"Bearer\",\"expires_in\":3600}");
             AssertMappedResponse(
                 mapper!,
                 new LoginResult(LoginStatus.InvalidRequest, null, null, 0),
@@ -246,7 +374,7 @@ public sealed class AuthApiSurfaceTests
 
         Assert.Equal(expectedStatusCode, statusCode);
         Assert.NotNull(payload);
-        Assert.Equal(expectedJson, JsonSerializer.Serialize(payload, payload!.GetType()));
+        Assert.Equal(expectedJson, JsonConvert.SerializeObject(payload));
     }
 
     private static void WithAuthApiType(Action<Type> action)
@@ -380,9 +508,11 @@ public sealed class AuthApiSurfaceTests
 
         public override int Read(byte[] buffer, int offset, int count) => throw exception;
 
-        public override ValueTask<int> ReadAsync(
-            Memory<byte> buffer,
-            CancellationToken cancellationToken = default) => ValueTask.FromException<int>(exception);
+        public override Task<int> ReadAsync(
+            byte[] buffer,
+            int offset,
+            int count,
+            CancellationToken cancellationToken) => Task.FromException<int>(exception);
 
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
 
@@ -391,10 +521,30 @@ public sealed class AuthApiSurfaceTests
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
-    private sealed record LogEntry(
-        LogLevel LogLevel,
-        EventId EventId,
-        string Message,
-        IReadOnlyList<KeyValuePair<string, object?>> State,
-        Exception? Exception);
+    private sealed class LogEntry
+    {
+        public LogEntry(
+            LogLevel logLevel,
+            EventId eventId,
+            string message,
+            IReadOnlyList<KeyValuePair<string, object?>> state,
+            Exception? exception)
+        {
+            LogLevel = logLevel;
+            EventId = eventId;
+            Message = message;
+            State = state;
+            Exception = exception;
+        }
+
+        public LogLevel LogLevel { get; }
+
+        public EventId EventId { get; }
+
+        public string Message { get; }
+
+        public IReadOnlyList<KeyValuePair<string, object?>> State { get; }
+
+        public Exception? Exception { get; }
+    }
 }

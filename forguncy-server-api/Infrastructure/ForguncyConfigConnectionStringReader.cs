@@ -9,7 +9,10 @@ public static class ForguncyConfigConnectionStringReader
 
     public static string ReadRequired(IDataAccess dataAccess)
     {
-        ArgumentNullException.ThrowIfNull(dataAccess);
+        if (dataAccess is null)
+        {
+            throw new ArgumentNullException(nameof(dataAccess));
+        }
 
         Dictionary<string, object>? row;
         try

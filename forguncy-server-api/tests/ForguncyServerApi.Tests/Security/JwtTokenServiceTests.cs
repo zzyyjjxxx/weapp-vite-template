@@ -18,8 +18,8 @@ public sealed class JwtTokenServiceTests
         var token = service.CreateToken(user);
         var principal = service.ValidateToken(token);
 
-        Assert.Equal("7", principal.FindFirstValue("sub"));
-        Assert.Equal("demo", principal.FindFirstValue("name"));
+        Assert.Equal("7", principal.FindFirst("sub")?.Value);
+        Assert.Equal("demo", principal.FindFirst("name")?.Value);
     }
 
     [Fact]

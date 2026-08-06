@@ -34,7 +34,10 @@ public sealed class AuthService
 
     public async Task<LoginResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
+        if (request is null)
+        {
+            throw new ArgumentNullException(nameof(request));
+        }
 
         var creditCode = request.Username?.Trim();
         if (string.IsNullOrEmpty(creditCode) || string.IsNullOrEmpty(request.Password))
@@ -42,7 +45,7 @@ public sealed class AuthService
             return InvalidRequest();
         }
 
-        var user = await users.FindByUsernameAsync(creditCode, cancellationToken);
+        var user = await users.FindByUsernameAsync(creditCode!, cancellationToken);
         var passwordIsValid = passwords.Verify(request.Password, user?.PasswordHash ?? DummyPasswordHash);
         if (user is null || user.IsOpen != 1 || !passwordIsValid)
         {

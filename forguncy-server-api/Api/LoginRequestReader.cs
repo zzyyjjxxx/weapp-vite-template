@@ -1,7 +1,7 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Text;
 using ForguncyServerApi.Application;
 using Microsoft.AspNetCore.Http;
+using Newtonsoft.Json;
 
 namespace ForguncyServerApi.Api;
 
@@ -17,9 +17,12 @@ public static class LoginRequestReader
 {
     public static async Task<LoginRequest> ReadAsync(HttpRequest request, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
+        if (request is null)
+        {
+            throw new ArgumentNullException(nameof(request));
+        }
 
-        if (request.HasJsonContentType())
+        if (IsJsonContentType(request))
         {
             return await ReadJsonAsync(request, cancellationToken);
         }
@@ -36,7 +39,11 @@ public static class LoginRequestReader
     {
         try
         {
-            var payload = await JsonSerializer.DeserializeAsync<LoginRequestPayload>(request.Body, cancellationToken: cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            using var reader = new StreamReader(request.Body, Encoding.UTF8, true, 1024, true);
+            var json = await reader.ReadToEndAsync();
+            cancellationToken.ThrowIfCancellationRequested();
+            var payload = JsonConvert.DeserializeObject<LoginRequestPayload>(json);
             return ToLoginRequest(payload?.Username, payload?.Password);
         }
         catch (JsonException)
@@ -67,11 +74,21 @@ public static class LoginRequestReader
 
     private static bool IsUrlEncodedForm(HttpRequest request)
     {
-        var mediaType = request.ContentType?.Split(';', 2)[0].Trim();
+        var mediaType = GetMediaType(request.ContentType);
         return string.Equals(mediaType, "application/x-www-form-urlencoded", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsJsonContentType(HttpRequest request)
+    {
+        var mediaType = GetMediaType(request.ContentType);
+        return string.Equals(mediaType, "application/json", StringComparison.OrdinalIgnoreCase)
+            || (mediaType?.EndsWith("+json", StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    private static string? GetMediaType(string? contentType) =>
+        contentType?.Split(new[] { ';' }, 2)[0].Trim();
+
     private sealed record LoginRequestPayload(
-        [property: JsonPropertyName("username")] string? Username,
-        [property: JsonPropertyName("password")] string? Password);
+        [property: JsonProperty("username")] string? Username,
+        [property: JsonProperty("password")] string? Password);
 }

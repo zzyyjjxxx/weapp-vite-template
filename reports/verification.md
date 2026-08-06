@@ -533,3 +533,75 @@ files (excluding tests and generated `bin`/`obj`) found no
 `AuthDbInitializer`, `EnsureCreated`, `jwt_users`, bootstrap environment,
 `forguncy_auth`, or PBKDF2 references. No live MySQL, Forguncy upload, or HTTP
 verification was performed.
+
+## Forguncy 8.0.4 .NET Framework 4.7.2 migration - 2026-08-04
+
+Commands run from `D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login`:
+
+- `dotnet test .\forguncy-server-api\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj --configuration Release` exited `0`; 62 tests passed, 0 failed, 0 skipped.
+- `dotnet build .\forguncy-server-api\ForguncyServerApi.csproj --configuration Release --no-restore` exited `0`; 0 warnings and 0 errors.
+- A stale API scan found no `net6.0`, `FrameworkReference`, `System.Text.Json`, `ArgumentNullException.ThrowIfNull`, `MD5.HashData`, `Convert.ToHexString`, `Task.WaitAsync`, `HasJsonContentType`, or `ServerVersion.AutoDetect` references in the production project outside generated `bin`/`obj`.
+- Built metadata confirmed `ForguncyServerApi.dll` targets `.NETFramework,Version=v4.7.2`; EF Core and Pomelo target `.NETStandard,Version=v2.0`; MySqlConnector targets `.NETFramework,Version=v4.7.1`; Newtonsoft.Json targets `.NETFramework,Version=v4.5`; and the Forguncy SDK reference is version `8.0.4.0`.
+- `git diff --check` exited `0`; only expected line-ending notices were emitted.
+- Runtime DLL upload, live Forguncy hosting, and live MySQL/HTTP login verification were not performed.
+
+## SqlSugar 5.1.4.111 database migration - 2026-08-05
+
+- The focused red test first failed because `AuthSqlSugarClientFactory` did not exist.
+- `dotnet test .\forguncy-server-api\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj --configuration Release --filter FullyQualifiedName~SqlSugarPersistenceTests` exited `0`; 3 tests passed.
+- `dotnet clean .\forguncy-server-api\ForguncyServerApi.csproj --configuration Release` exited `0` to remove the previous Release output.
+- `dotnet build .\forguncy-server-api\ForguncyServerApi.csproj --configuration Release --no-restore` exited `0`; 0 warnings and 0 errors.
+- `dotnet test .\forguncy-server-api\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj --configuration Release` exited `0`; 61 tests passed, 0 failed, 0 skipped.
+- Resolved production database packages are exactly `SqlSugar 5.1.4.111` and `MySql.Data 8.0.29`; the Release output contains no EF Core, Pomelo, or MySqlConnector DLLs.
+- Release assembly metadata confirmed `SqlSugar.dll` assembly/file version `5.1.4.111` and `MySql.Data.dll` assembly/file version `8.0.29.0`.
+- Live Forguncy upload and live MySQL login verification were not performed.
+
+## MySql.Data driver update - 2026-08-05
+
+- Updated the production and test projects from `MySql.Data 8.0.29` to the requested `MySql.Data 8.0.30`; `SqlSugar` remains `5.1.4.111`.
+- The Release output was cleaned and rebuilt; the resulting `MySql.Data.dll` metadata was verified as version `8.0.30.0`.
+- Final serial verification: production build exited `0` with 0 warnings and 0 errors; full test run exited `0` with 61/61 tests passed; the output contained no EF Core, Pomelo, or MySqlConnector DLLs.
+
+## Forguncy DLL version audit - 2026-08-05
+
+- Compared all 23 managed DLLs in `forguncy-server-api\bin\Release\net472` against same-name DLLs in `D:\Program Files\Forguncy 8.0.4\Website\bin` and, where the SDK dependency is kept in the companion directory, `Website\designerBin`.
+- 14 same-name DLLs matched on both AssemblyVersion and FileVersion; 0 same-name DLLs differed.
+- 9 DLLs were new dependencies absent from the Forguncy directories: the custom API, `SqlSugar 5.1.4.111`, `MySql.Data 8.0.30`, and their MySQL compression/protocol dependencies. These must be uploaded with the API DLL.
+
+## Forguncy custom API discovery compatibility fix - 2026-08-05
+
+- Added a red reflection-surface test. Before the fix, `ForguncyServerApi.dll`
+  exposed `AuthApi` plus 17 implementation types; the test failed as expected.
+- Made database, JWT, configuration, and application implementation types
+  internal, leaving only `ForguncyServerApi.Api.AuthApi` exported. The test then
+  passed.
+- Moved the logging implementation out of `AuthApi`. The API type's reflected
+  fields and method signatures no longer reference
+  `Microsoft.Extensions.Logging.Abstractions`, which was absent from the
+  Forguncy 8.0.4 designer directory.
+- Full Release test suite exited `0`; 63 tests passed, 0 failed, 0 skipped.
+- Release build exited `0`; 0 warnings and 0 errors.
+- An isolated reflection probe using only the rebuilt API DLL and
+  `Website\designerBin\GrapeCity.Forguncy.ServerApi.dll` reported one exported
+  type, successful `AuthApi` activation, a parameterless `Task Login` method,
+  and the `[Post]` attribute.
+- The DLL version audit still reports 23 output DLLs, 14 exact host matches,
+  and 0 same-name mismatches.
+- Live upload and live HTTP login verification remain pending; the designer
+  process was not modified by this diagnostic run.
+
+## Public implementation surface requested - 2026-08-05
+
+- Restored `public` visibility for the application, configuration, domain,
+  infrastructure, security, request-reader, cache, and diagnostics types.
+- The compiler compatibility shim `IsExternalInit` is also public, so the
+  maintained production source contains no internal type declarations.
+- The focused public-surface test was red before the visibility change and
+  passed afterward; the rebuilt assembly exposes 21 public types.
+- Full Release test suite exited `0`; 63 tests passed, 0 failed, 0 skipped.
+- Release build exited `0`; 0 warnings and 0 errors.
+- A bare-DLL designer probe now correctly fails on the expected public
+  dependency requirement (`Microsoft.Extensions.Logging.Abstractions 3.1.7.0`).
+  A probe with the complete Release DLL bundle reports 21 exported types,
+  successful `AuthApi` activation, and one `[Post]` parameterless `Task Login`
+  route.

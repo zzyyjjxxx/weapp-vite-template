@@ -1,6 +1,6 @@
 namespace ForguncyServerApi.Api;
 
-internal sealed class RetryableAsyncCache<T>
+public sealed class RetryableAsyncCache<T>
 {
     private readonly object gate = new();
     private Lazy<Task<T>>? cachedInitialization;
@@ -10,7 +10,10 @@ internal sealed class RetryableAsyncCache<T>
 
     public async Task<T> GetOrCreateAsync(Func<Task<T>> factory, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(factory);
+        if (factory is null)
+        {
+            throw new ArgumentNullException(nameof(factory));
+        }
 
         Lazy<Task<T>> initialization;
         lock (gate)
@@ -33,7 +36,7 @@ internal sealed class RetryableAsyncCache<T>
 
         try
         {
-            return await initializationTask.WaitAsync(cancellationToken);
+            return await WaitAsync(initializationTask, cancellationToken);
         }
         catch (OperationCanceledException) when (
             cancellationToken.IsCancellationRequested
@@ -58,5 +61,22 @@ internal sealed class RetryableAsyncCache<T>
                 cachedInitialization = null;
             }
         }
+    }
+
+    private static async Task<T> WaitAsync(Task<T> task, CancellationToken cancellationToken)
+    {
+        if (task.IsCompleted || !cancellationToken.CanBeCanceled)
+        {
+            return await task;
+        }
+
+        var cancellationTask = Task.Delay(Timeout.Infinite, cancellationToken);
+        var completedTask = await Task.WhenAny(task, cancellationTask);
+        if (ReferenceEquals(completedTask, cancellationTask))
+        {
+            throw new OperationCanceledException(cancellationToken);
+        }
+
+        return await task;
     }
 }

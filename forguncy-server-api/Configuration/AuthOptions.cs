@@ -9,7 +9,10 @@ public sealed record AuthOptions(
 {
     public static AuthOptions From(IReadOnlyDictionary<string, string?> values)
     {
-        ArgumentNullException.ThrowIfNull(values);
+        if (values is null)
+        {
+            throw new ArgumentNullException(nameof(values));
+        }
 
         var signingKey = Required(values, "FGC_JWT_SIGNING_KEY");
         if (signingKey.Length < 32)
@@ -21,18 +24,6 @@ public sealed record AuthOptions(
         var lifetime = ParseLifetime(values);
 
         return new AuthOptions(signingKey, issuer, lifetime);
-    }
-
-    public static AuthOptions FromEnvironment()
-    {
-        var names = new[]
-        {
-            "FGC_JWT_SIGNING_KEY",
-            "FGC_JWT_ISSUER",
-            "FGC_JWT_EXPIRES_MINUTES"
-        };
-
-        return From(names.ToDictionary(name => name, Environment.GetEnvironmentVariable));
     }
 
     private static string Required(IReadOnlyDictionary<string, string?> values, string name)
