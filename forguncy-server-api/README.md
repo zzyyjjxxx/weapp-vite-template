@@ -56,9 +56,9 @@ of environment variables, documentation, diagnostics, and logs.
 Restart the Forguncy application process after changing JWT rows in the
 `config` table so the authentication composition is rebuilt.
 
-Expose the login route only through the Forguncy site's HTTPS endpoint or an
-equivalent trusted network boundary. Never expose credentials through an
-unprotected direct HTTP endpoint.
+Expose both the login and refresh routes only through the Forguncy site's HTTPS
+endpoint or an equivalent trusted network boundary. Never expose credentials
+through an unprotected direct HTTP endpoint.
 
 ## Login contract
 

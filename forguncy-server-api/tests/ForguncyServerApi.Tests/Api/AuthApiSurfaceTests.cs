@@ -1,5 +1,6 @@
 using System.Reflection;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using ForguncyServerApi.Application;
 using ForguncyServerApi.Domain;
 using Microsoft.AspNetCore.Http;
@@ -87,12 +88,70 @@ public sealed class AuthApiSurfaceTests
         var readme = File.ReadAllText(Path.Combine(ProjectRoot(), "README.md"));
 
         Assert.Contains("POST /customapi/authapi/refresh", readme);
-        Assert.Contains("refresh_token", readme);
-        Assert.Contains("refresh_expires_in", readme);
-        Assert.Contains("FGC_JWT_REFRESH_EXPIRES_MINUTES", readme);
-        Assert.Contains("stateless", readme);
-        Assert.Contains("cannot be revoked before expiry", readme);
-        Assert.Contains("does not repeat user details as a separate object", readme);
+        var normalizedReadme = string.Join(
+            " ",
+            readme.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries));
+        Assert.Contains(
+            "Expose both the login and refresh routes only through the Forguncy site's HTTPS endpoint or an equivalent trusted network boundary.",
+            normalizedReadme);
+
+        var refreshHeading = "## Refresh contract";
+        var refreshStart = readme.IndexOf(refreshHeading, StringComparison.Ordinal);
+        Assert.True(refreshStart >= 0, "README must contain a refresh contract heading.");
+
+        var nextHeading = readme.IndexOf(
+            "\n## ",
+            refreshStart + refreshHeading.Length,
+            StringComparison.Ordinal);
+        var refreshEnd = nextHeading >= 0 ? nextHeading : readme.Length;
+        var refreshSection = readme.Substring(refreshStart, refreshEnd - refreshStart);
+
+        Assert.Contains("Content-Type: application/json", refreshSection);
+        Assert.Contains("\"refresh_token\": \"<jwt>\"", refreshSection);
+        Assert.Contains("Content-Type: application/x-www-form-urlencoded", refreshSection);
+        Assert.Contains("refresh_token=<jwt>", refreshSection);
+        Assert.Contains("\"access_token\": \"<jwt>\"", refreshSection);
+        Assert.Contains("\"refresh_token\": \"<jwt>\"", refreshSection);
+        Assert.Contains("\"token_type\": \"Bearer\"", refreshSection);
+        Assert.Contains("\"expires_in\": 3600", refreshSection);
+        Assert.Contains("\"refresh_expires_in\": 604800", refreshSection);
+        Assert.Contains(
+            "The refresh response contains exactly the same five token fields and does not",
+            refreshSection);
+        Assert.Contains("include a user object.", refreshSection);
+        Assert.Contains("stateless", refreshSection);
+        Assert.Contains("cannot be revoked before expiry", refreshSection);
+
+        Assert.Contains(
+            "| `FGC_JWT_REFRESH_EXPIRES_MINUTES` | Refresh-token lifetime in minutes | Stores `10080`. |",
+            readme);
+
+        var successMarker = "Successful refresh returns `200 OK`:";
+        var successStart = refreshSection.IndexOf(successMarker, StringComparison.Ordinal);
+        Assert.True(successStart >= 0, "README must contain the refresh success response example.");
+
+        var jsonStart = refreshSection.IndexOf("```json", successStart, StringComparison.Ordinal);
+        Assert.True(jsonStart >= 0, "Refresh success must include a JSON example.");
+        jsonStart += "```json".Length;
+
+        var jsonEnd = refreshSection.IndexOf("```", jsonStart, StringComparison.Ordinal);
+        Assert.True(jsonEnd > jsonStart, "Refresh success JSON example must close its code fence.");
+
+        var refreshSuccessJson = refreshSection.Substring(jsonStart, jsonEnd - jsonStart).Trim();
+        var refreshPayload = JObject.Parse(refreshSuccessJson);
+        var expectedTokenFields = new[]
+        {
+            "access_token",
+            "refresh_token",
+            "token_type",
+            "expires_in",
+            "refresh_expires_in"
+        };
+
+        Assert.Equal(
+            expectedTokenFields.OrderBy(field => field),
+            refreshPayload.Properties().Select(property => property.Name).OrderBy(field => field));
+        Assert.DoesNotContain("\"user\"", refreshSuccessJson, StringComparison.OrdinalIgnoreCase);
 
         Assert.DoesNotContain("refresh token database persistence", readme, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("refresh-token database persistence", readme, StringComparison.OrdinalIgnoreCase);
