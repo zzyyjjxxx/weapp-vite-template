@@ -34,4 +34,7 @@ public sealed class AuthCompositionRoot
 
     public Task<LoginResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken) =>
         authService.LoginAsync(request, cancellationToken);
+
+    public Task<RefreshResult> RefreshAsync(string refreshToken, CancellationToken cancellationToken) =>
+        authService.RefreshAsync(refreshToken, cancellationToken);
 }

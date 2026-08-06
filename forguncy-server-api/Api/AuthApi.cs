@@ -2,7 +2,6 @@ using System.Text;
 using ForguncyServerApi.Application;
 using GrapeCity.Forguncy.ServerApi;
 using Newtonsoft.Json;
-using System.Reflection;
 
 namespace ForguncyServerApi.Api;
 
@@ -67,7 +66,7 @@ public class AuthApi : ForguncyApi
             var auth = await AuthCompositionCache.GetOrCreateAsync(
                 () => AuthCompositionRoot.CreateAsync(DataAccess, CancellationToken.None),
                 cancellationToken);
-            var result = await RefreshAsync(auth, refreshToken, cancellationToken);
+            var result = await auth.RefreshAsync(refreshToken, cancellationToken);
             var response = CreateRefreshResponse(result);
             await WriteJsonAsync(response.StatusCode, response.Payload, cancellationToken);
         }
@@ -140,25 +139,6 @@ public class AuthApi : ForguncyApi
             "Bearer",
             tokens.ExpiresInSeconds,
             tokens.RefreshExpiresInSeconds);
-
-    private static Task<RefreshResult> RefreshAsync(
-        AuthCompositionRoot auth,
-        string refreshToken,
-        CancellationToken cancellationToken)
-    {
-        if (auth is null)
-        {
-            throw new ArgumentNullException(nameof(auth));
-        }
-
-        var authServiceField = typeof(AuthCompositionRoot).GetField(
-            "authService",
-            BindingFlags.NonPublic | BindingFlags.Instance);
-        var authService = authServiceField?.GetValue(auth) as AuthService
-            ?? throw new InvalidOperationException("The auth composition root is not initialized.");
-
-        return authService.RefreshAsync(refreshToken, cancellationToken);
-    }
 
     private record ApiResponse(int StatusCode, object Payload);
 

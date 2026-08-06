@@ -119,6 +119,35 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
+    public void AuthCompositionRoot_exposes_refresh_async_contract()
+    {
+        WithAuthApiType(type =>
+        {
+            var compositionRoot = type.Assembly.GetType("ForguncyServerApi.Api.AuthCompositionRoot");
+            Assert.NotNull(compositionRoot);
+
+            var refreshAsync = compositionRoot!.GetMethod(
+                "RefreshAsync",
+                BindingFlags.Public | BindingFlags.Instance);
+            Assert.NotNull(refreshAsync);
+            Assert.Equal(typeof(Task<RefreshResult>), refreshAsync!.ReturnType);
+            Assert.Equal(
+                new[] { typeof(string), typeof(CancellationToken) },
+                refreshAsync.GetParameters().Select(parameter => parameter.ParameterType));
+        });
+    }
+
+    [Fact]
+    public void AuthApi_uses_composition_root_refresh_contract_without_private_field_reflection()
+    {
+        var source = File.ReadAllText(SourceFile("Api", "AuthApi.cs"));
+
+        Assert.Contains("auth.RefreshAsync(refreshToken, cancellationToken)", source);
+        Assert.DoesNotContain("GetField(", source);
+        Assert.DoesNotContain("BindingFlags.NonPublic", source);
+    }
+
+    [Fact]
     public void AuthCompositionRoot_has_no_database_initializer_or_startup_schema_writes()
     {
         WithAuthApiType(type =>
