@@ -12,7 +12,9 @@ public static class ForguncyJwtConfigurationReader
     private const string SigningKeyItem = "FGC_JWT_SIGNING_KEY";
     private const string IssuerItem = "FGC_JWT_ISSUER";
     private const string LifetimeItem = "FGC_JWT_EXPIRES_MINUTES";
+    private const string RefreshLifetimeItem = "FGC_JWT_REFRESH_EXPIRES_MINUTES";
     private const string DefaultLifetimeMinutes = "60";
+    private const string DefaultRefreshLifetimeMinutes = "10080";
     private const string IssuerPrefix = "forguncy-server-api-";
     private const string InvalidConfigurationMessage =
         "The Forguncy JWT configuration is invalid.";
@@ -32,7 +34,11 @@ public static class ForguncyJwtConfigurationReader
             {
                 [SigningKeyItem] = ReadOrCreateValue(dataAccess, SigningKeyItem, GenerateSigningKey),
                 [IssuerItem] = ReadOrCreateValue(dataAccess, IssuerItem, GenerateIssuer),
-                [LifetimeItem] = ReadOrCreateValue(dataAccess, LifetimeItem, () => DefaultLifetimeMinutes)
+                [LifetimeItem] = ReadOrCreateValue(dataAccess, LifetimeItem, () => DefaultLifetimeMinutes),
+                [RefreshLifetimeItem] = ReadOrCreateValue(
+                    dataAccess,
+                    RefreshLifetimeItem,
+                    () => DefaultRefreshLifetimeMinutes)
             };
 
             return values;

@@ -61,6 +61,9 @@ public sealed class AuthApiSurfaceTests
                     "ForguncyServerApi.Application.LoginRequest",
                     "ForguncyServerApi.Application.LoginResult",
                     "ForguncyServerApi.Application.LoginStatus",
+                    "ForguncyServerApi.Application.RefreshResult",
+                    "ForguncyServerApi.Application.RefreshStatus",
+                    "ForguncyServerApi.Application.TokenPair",
                     "ForguncyServerApi.Configuration.AuthOptions",
                     "ForguncyServerApi.Domain.AuthUser",
                     "ForguncyServerApi.Infrastructure.AuthSqlSugarClientFactory",
@@ -178,6 +181,11 @@ public sealed class AuthApiSurfaceTests
                     {
                         ["id"] = 4,
                         ["value"] = "15"
+                    },
+                    ["FGC_JWT_REFRESH_EXPIRES_MINUTES"] = new Dictionary<string, object>
+                    {
+                        ["id"] = 5,
+                        ["value"] = "10080"
                     }
                 });
 
@@ -187,7 +195,14 @@ public sealed class AuthApiSurfaceTests
             task.GetAwaiter().GetResult();
 
             Assert.Equal(
-                new[] { "ssl", "FGC_JWT_SIGNING_KEY", "FGC_JWT_ISSUER", "FGC_JWT_EXPIRES_MINUTES" },
+                new[]
+                {
+                    "ssl",
+                    "FGC_JWT_SIGNING_KEY",
+                    "FGC_JWT_ISSUER",
+                    "FGC_JWT_EXPIRES_MINUTES",
+                    "FGC_JWT_REFRESH_EXPIRES_MINUTES"
+                },
                 fake.ReadItems);
             Assert.Empty(fake.Additions);
             Assert.Empty(fake.Updates);

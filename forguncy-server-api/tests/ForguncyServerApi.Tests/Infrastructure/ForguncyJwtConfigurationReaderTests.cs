@@ -18,7 +18,8 @@ public sealed class ForguncyJwtConfigurationReaderTests
             {
                 ["FGC_JWT_SIGNING_KEY"] = Row(1, new string('k', 32)),
                 ["FGC_JWT_ISSUER"] = Row(2, "existing-issuer"),
-                ["FGC_JWT_EXPIRES_MINUTES"] = Row(3, "15")
+                ["FGC_JWT_EXPIRES_MINUTES"] = Row(3, "15"),
+                ["FGC_JWT_REFRESH_EXPIRES_MINUTES"] = Row(4, "10080")
             });
 
             var values = ReadOrCreate(readerType, fake.DataAccess);
@@ -26,8 +27,15 @@ public sealed class ForguncyJwtConfigurationReaderTests
             Assert.Equal(new string('k', 32), values["FGC_JWT_SIGNING_KEY"]);
             Assert.Equal("existing-issuer", values["FGC_JWT_ISSUER"]);
             Assert.Equal("15", values["FGC_JWT_EXPIRES_MINUTES"]);
+            Assert.Equal("10080", values["FGC_JWT_REFRESH_EXPIRES_MINUTES"]);
             Assert.Equal(
-                new[] { "FGC_JWT_SIGNING_KEY", "FGC_JWT_ISSUER", "FGC_JWT_EXPIRES_MINUTES" },
+                new[]
+                {
+                    "FGC_JWT_SIGNING_KEY",
+                    "FGC_JWT_ISSUER",
+                    "FGC_JWT_EXPIRES_MINUTES",
+                    "FGC_JWT_REFRESH_EXPIRES_MINUTES"
+                },
                 fake.ReadItems);
             Assert.Empty(fake.Additions);
             Assert.Empty(fake.Updates);
@@ -44,9 +52,10 @@ public sealed class ForguncyJwtConfigurationReaderTests
 
             var values = ReadOrCreate(readerType, fake.DataAccess);
 
-            Assert.Equal(3, fake.Additions.Count);
+            Assert.Equal(4, fake.Additions.Count);
             Assert.Empty(fake.Updates);
             Assert.Equal("60", values["FGC_JWT_EXPIRES_MINUTES"]);
+            Assert.Equal("10080", values["FGC_JWT_REFRESH_EXPIRES_MINUTES"]);
 
             var signingKey = values["FGC_JWT_SIGNING_KEY"];
             Assert.NotNull(signingKey);
@@ -65,6 +74,8 @@ public sealed class ForguncyJwtConfigurationReaderTests
                 addition => addition.Item == "FGC_JWT_ISSUER").Value);
             Assert.Equal("60", fake.Additions.Single(
                 addition => addition.Item == "FGC_JWT_EXPIRES_MINUTES").Value);
+            Assert.Equal("10080", fake.Additions.Single(
+                addition => addition.Item == "FGC_JWT_REFRESH_EXPIRES_MINUTES").Value);
         });
     }
 
@@ -75,13 +86,15 @@ public sealed class ForguncyJwtConfigurationReaderTests
         {
             var fake = CapturingDataAccess.Create(new Dictionary<string, Dictionary<string, object>?>
             {
-                ["FGC_JWT_SIGNING_KEY"] = new Dictionary<string, object>()
+                ["FGC_JWT_SIGNING_KEY"] = new Dictionary<string, object>(),
+                ["FGC_JWT_REFRESH_EXPIRES_MINUTES"] = new Dictionary<string, object>()
             });
 
             var values = ReadOrCreate(readerType, fake.DataAccess);
 
-            Assert.Equal(3, fake.Additions.Count);
+            Assert.Equal(4, fake.Additions.Count);
             Assert.Equal("60", values["FGC_JWT_EXPIRES_MINUTES"]);
+            Assert.Equal("10080", values["FGC_JWT_REFRESH_EXPIRES_MINUTES"]);
         });
     }
 
@@ -94,18 +107,21 @@ public sealed class ForguncyJwtConfigurationReaderTests
             {
                 ["FGC_JWT_SIGNING_KEY"] = Row(11, " "),
                 ["FGC_JWT_ISSUER"] = Row(12, null),
-                ["FGC_JWT_EXPIRES_MINUTES"] = Row(13, "\t")
+                ["FGC_JWT_EXPIRES_MINUTES"] = Row(13, "\t"),
+                ["FGC_JWT_REFRESH_EXPIRES_MINUTES"] = Row(14, null)
             });
 
             var values = ReadOrCreate(readerType, fake.DataAccess);
 
             Assert.Empty(fake.Additions);
-            Assert.Equal(3, fake.Updates.Count);
+            Assert.Equal(4, fake.Updates.Count);
             Assert.Equal(11, fake.Updates.Single(update => update.Item == "FGC_JWT_SIGNING_KEY").Id);
             Assert.Equal(12, fake.Updates.Single(update => update.Item == "FGC_JWT_ISSUER").Id);
             Assert.Equal(13, fake.Updates.Single(update => update.Item == "FGC_JWT_EXPIRES_MINUTES").Id);
+            Assert.Equal(14, fake.Updates.Single(update => update.Item == "FGC_JWT_REFRESH_EXPIRES_MINUTES").Id);
             Assert.All(fake.Updates, update => Assert.Equal(new[] { "value" }, update.UpdatedColumns));
             Assert.Equal("60", values["FGC_JWT_EXPIRES_MINUTES"]);
+            Assert.Equal("10080", values["FGC_JWT_REFRESH_EXPIRES_MINUTES"]);
         });
     }
 
@@ -123,7 +139,8 @@ public sealed class ForguncyJwtConfigurationReaderTests
             Assert.Equal(first["FGC_JWT_SIGNING_KEY"], second["FGC_JWT_SIGNING_KEY"]);
             Assert.Equal(first["FGC_JWT_ISSUER"], second["FGC_JWT_ISSUER"]);
             Assert.Equal("60", second["FGC_JWT_EXPIRES_MINUTES"]);
-            Assert.Equal(3, fake.Additions.Count);
+            Assert.Equal("10080", second["FGC_JWT_REFRESH_EXPIRES_MINUTES"]);
+            Assert.Equal(4, fake.Additions.Count);
             Assert.Empty(fake.Updates);
         });
     }
@@ -135,7 +152,8 @@ public sealed class ForguncyJwtConfigurationReaderTests
         {
             var fake = CapturingDataAccess.Create(new Dictionary<string, Dictionary<string, object>?>
             {
-                ["FGC_JWT_SIGNING_KEY"] = Row(1, 42)
+                ["FGC_JWT_SIGNING_KEY"] = Row(1, 42),
+                ["FGC_JWT_REFRESH_EXPIRES_MINUTES"] = Row(2, 42)
             });
 
             var exception = Assert.Throws<InvalidOperationException>(
@@ -199,7 +217,8 @@ public sealed class ForguncyJwtConfigurationReaderTests
             {
                 ["FGC_JWT_SIGNING_KEY"] = Row(1, new string('k', 32)),
                 ["FGC_JWT_ISSUER"] = Row(2, "existing-issuer"),
-                ["FGC_JWT_EXPIRES_MINUTES"] = Row(3, "15")
+                ["FGC_JWT_EXPIRES_MINUTES"] = Row(3, "15"),
+                ["FGC_JWT_REFRESH_EXPIRES_MINUTES"] = Row(4, "10080")
             });
             fake.PrimaryKeyReadException = new InvalidOperationException("item is not a primary key");
 
@@ -208,7 +227,7 @@ public sealed class ForguncyJwtConfigurationReaderTests
             Assert.Equal(new string('k', 32), values["FGC_JWT_SIGNING_KEY"]);
             Assert.Equal("existing-issuer", values["FGC_JWT_ISSUER"]);
             Assert.Equal("15", values["FGC_JWT_EXPIRES_MINUTES"]);
-            Assert.Equal(3, fake.ODataPaths.Count);
+            Assert.Equal(4, fake.ODataPaths.Count);
             Assert.All(fake.ODataPaths, path => Assert.Contains("$filter=item eq '", path));
             Assert.Empty(fake.Additions);
             Assert.Empty(fake.Updates);
@@ -226,10 +245,11 @@ public sealed class ForguncyJwtConfigurationReaderTests
 
             var values = ReadOrCreate(readerType, fake.DataAccess);
 
-            Assert.Equal(3, fake.ODataPaths.Count);
-            Assert.Equal(3, fake.Additions.Count);
+            Assert.Equal(4, fake.ODataPaths.Count);
+            Assert.Equal(4, fake.Additions.Count);
             Assert.Empty(fake.Updates);
             Assert.Equal("60", values["FGC_JWT_EXPIRES_MINUTES"]);
+            Assert.Equal("10080", values["FGC_JWT_REFRESH_EXPIRES_MINUTES"]);
         });
     }
 

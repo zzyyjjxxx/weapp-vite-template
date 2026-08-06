@@ -1,3 +1,5 @@
+using ForguncyServerApi.Application;
+using ForguncyServerApi.Domain;
 using ForguncyServerApi.Configuration;
 using Xunit;
 
@@ -15,6 +17,7 @@ public sealed class AuthOptionsTests
             {
                 typeof(string),
                 typeof(string),
+                typeof(TimeSpan),
                 typeof(TimeSpan)
             },
             constructor.GetParameters().Select(parameter => parameter.ParameterType));
@@ -45,12 +48,13 @@ public sealed class AuthOptionsTests
     }
 
     [Fact]
-    public void From_uses_default_issuer_and_lifetime()
+    public void From_uses_default_issuer_and_lifetimes()
     {
         var options = AuthOptions.From(ValidValues());
 
         Assert.Equal("forguncy-server-api", options.JwtIssuer);
         Assert.Equal(TimeSpan.FromMinutes(60), options.JwtLifetime);
+        Assert.Equal(TimeSpan.FromMinutes(10080), options.JwtRefreshLifetime);
     }
 
     [Fact]
@@ -60,6 +64,15 @@ public sealed class AuthOptionsTests
         values["FGC_JWT_EXPIRES_MINUTES"] = "15";
 
         Assert.Equal(TimeSpan.FromMinutes(15), AuthOptions.From(values).JwtLifetime);
+    }
+
+    [Fact]
+    public void From_parses_a_positive_refresh_expiration_in_minutes()
+    {
+        var values = ValidValues();
+        values["FGC_JWT_REFRESH_EXPIRES_MINUTES"] = "120";
+
+        Assert.Equal(TimeSpan.FromMinutes(120), AuthOptions.From(values).JwtRefreshLifetime);
     }
 
     [Theory]
@@ -82,6 +95,43 @@ public sealed class AuthOptionsTests
         Assert.DoesNotContain("FGC_AUTH_BOOTSTRAP_", source);
         Assert.DoesNotContain("Environment.GetEnvironmentVariable", source);
         Assert.DoesNotContain("FromEnvironment", source);
+    }
+
+    [Fact]
+    public void Login_models_expose_token_pair_and_refresh_contracts()
+    {
+        var assembly = typeof(LoginResult).Assembly;
+
+        var tokenPair = assembly.GetType("ForguncyServerApi.Application.TokenPair");
+        Assert.NotNull(tokenPair);
+        Assert.Equal(
+            new[]
+            {
+                "AccessToken",
+                "RefreshToken",
+                "ExpiresInSeconds",
+                "RefreshExpiresInSeconds"
+            },
+            tokenPair!.GetProperties().Select(property => property.Name));
+
+        var refreshStatus = assembly.GetType("ForguncyServerApi.Application.RefreshStatus");
+        Assert.NotNull(refreshStatus);
+        Assert.Equal(new[] { "Success", "InvalidRequest", "InvalidToken" }, Enum.GetNames(refreshStatus!));
+
+        var refreshResult = assembly.GetType("ForguncyServerApi.Application.RefreshResult");
+        Assert.NotNull(refreshResult);
+        Assert.Contains(
+            refreshResult!.GetConstructors(),
+            constructor =>
+                constructor.GetParameters().Select(parameter => parameter.ParameterType).SequenceEqual(
+                    new[] { refreshStatus, tokenPair }));
+
+        var loginResult = typeof(LoginResult);
+        Assert.NotNull(loginResult.GetProperty("Tokens"));
+        Assert.Contains(
+            loginResult.GetConstructors(),
+            constructor => constructor.GetParameters().Select(parameter => parameter.ParameterType).SequenceEqual(
+                new[] { typeof(LoginStatus), tokenPair!, typeof(AuthUser) }));
     }
 
     private static Dictionary<string, string?> ValidValues() => new()

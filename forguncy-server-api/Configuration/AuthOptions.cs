@@ -5,7 +5,8 @@ namespace ForguncyServerApi.Configuration;
 public sealed record AuthOptions(
     string JwtSigningKey,
     string JwtIssuer,
-    TimeSpan JwtLifetime)
+    TimeSpan JwtLifetime,
+    TimeSpan JwtRefreshLifetime)
 {
     public static AuthOptions From(IReadOnlyDictionary<string, string?> values)
     {
@@ -22,8 +23,9 @@ public sealed record AuthOptions(
 
         var issuer = Optional(values, "FGC_JWT_ISSUER") ?? "forguncy-server-api";
         var lifetime = ParseLifetime(values);
+        var refreshLifetime = ParseRefreshLifetime(values);
 
-        return new AuthOptions(signingKey, issuer, lifetime);
+        return new AuthOptions(signingKey, issuer, lifetime, refreshLifetime);
     }
 
     private static string Required(IReadOnlyDictionary<string, string?> values, string name)
@@ -59,6 +61,29 @@ public sealed record AuthOptions(
         catch (OverflowException exception)
         {
             throw new ArgumentException("FGC_JWT_EXPIRES_MINUTES is out of range.", nameof(values), exception);
+        }
+    }
+
+    private static TimeSpan ParseRefreshLifetime(IReadOnlyDictionary<string, string?> values)
+    {
+        var raw = Optional(values, "FGC_JWT_REFRESH_EXPIRES_MINUTES");
+        if (raw is null)
+        {
+            return TimeSpan.FromMinutes(10080);
+        }
+
+        if (!int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var minutes) || minutes <= 0)
+        {
+            throw new ArgumentException("FGC_JWT_REFRESH_EXPIRES_MINUTES must be a positive integer.", nameof(values));
+        }
+
+        try
+        {
+            return TimeSpan.FromMinutes(minutes);
+        }
+        catch (OverflowException exception)
+        {
+            throw new ArgumentException("FGC_JWT_REFRESH_EXPIRES_MINUTES is out of range.", nameof(values), exception);
         }
     }
 }
