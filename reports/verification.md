@@ -972,3 +972,97 @@ Observed result: no whitespace or patch-format errors; only Git line-ending warn
   预算均通过，主包 768 KB。
 - `pnpm test:e2e` 退出 0：9/9 场景通过（46.6 秒）；最终运行时扫描为
   `RUNTIME_PATH=pages/home/index`、`RUNTIME_BLOCKING=[]`。用户已有的 `skills-lock.json` 未暂存。
+
+## Task 4 final review repair - 2026-08-06
+
+This repair round addressed the two Important review findings in the isolated
+worktree `D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login`.
+No runtime implementation or dependency was changed. No secret, connection
+string, password, or signing key was printed or recorded. No live Forguncy
+designer upload, host interaction, or HTTP round-trip was observed.
+
+Repair implementation commit:
+
+```text
+524bdfe63cd81d1857f3bb08b08baca74f3da483 docs: address JWT refresh review findings
+```
+
+The README now requires both `login` and `refresh` routes to be exposed only
+through the Forguncy HTTPS endpoint or an equivalent trusted network boundary.
+The surface test now scopes contract assertions to the `## Refresh contract`
+section through the next same-level heading, checks JSON and form request
+examples, checks the five token fields and exact-response/no-user wording,
+parses the refresh success JSON to require exactly those five properties, and
+checks `FGC_JWT_REFRESH_EXPIRES_MINUTES`/`10080`, `stateless`, and
+`cannot be revoked before expiry`.
+
+### TDD repair evidence
+
+The first focused attempt after adding `JObject` parsing exited `1` with the
+test-only compile error `CS0103: The name 'JObject' does not exist in the
+current context`. Adding `using Newtonsoft.Json.Linq` corrected that test
+setup before the intended RED run.
+
+Focused RED command:
+
+```powershell
+dotnet test .\forguncy-server-api\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~AuthApiSurfaceTests" -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+Exit code `1`; actual failure was the expected missing HTTPS wording:
+
+```text
+Assert.Contains() Failure
+Not found: Expose both the login and refresh routes only through the Forguncy site's HTTPS endpoint or an equivalent trusted network boundary.
+失败: 1，通过: 16，已跳过: 0，总计: 17
+```
+
+After the README update and whitespace-tolerant HTTPS assertion, the same
+focused command exited `0`:
+
+```text
+已通过! - 失败:     0，通过:    17，已跳过:     0，总计:    17
+```
+
+### Release verification
+
+Full Release test command:
+
+```powershell
+dotnet test .\forguncy-server-api\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj --configuration Release --no-restore -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+Exit code `0`; `107` passed, `0` failed, `0` skipped.
+
+Release build command:
+
+```powershell
+dotnet build .\forguncy-server-api\ForguncyServerApi.csproj --configuration Release --no-restore -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+```
+
+Exit code `0`; `0` warnings and `0` errors. The final DLL was:
+
+```text
+D:\WorkProject\weapp-vite-template\.worktrees\forguncy-jwt-login\forguncy-server-api\bin\Release\net472\ForguncyServerApi.dll
+```
+
+The Release DLL reflection probe exited `0` and reported:
+
+```text
+TYPE=ForguncyServerApi.Api.AuthApi
+BASE=GrapeCity.Forguncy.ServerApi.ForguncyApi
+METHOD=Login;RET=System.Threading.Tasks.Task;PARAMS=0;POST=True
+METHOD=Refresh;RET=System.Threading.Tasks.Task;PARAMS=0;POST=True
+```
+
+`git diff --check` exited `0`. Its only output was the expected LF-to-CRLF
+working-copy warnings for edited tracked files; no whitespace errors were
+reported.
+
+Post-repair commit status showed only the pre-existing user-owned item:
+
+```text
+?? forguncy-server-api/.vs/
+```
+
+The `.vs` directory was not staged, removed, or modified.
