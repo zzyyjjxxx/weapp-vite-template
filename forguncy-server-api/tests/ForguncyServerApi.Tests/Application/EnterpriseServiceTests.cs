@@ -8,15 +8,15 @@ namespace ForguncyServerApi.Tests.Application;
 public sealed class EnterpriseServiceTests
 {
     [Fact]
-    public async Task GetProfileAsync_uses_the_authenticated_credit_code_and_returns_joined_county_name()
+    public async Task GetProfileAsync_uses_the_authenticated_credit_code_and_returns_the_repository_profile_user_id()
     {
         var repository = new StubEnterpriseRepository(new EnterpriseProfile
         {
-            UserId = 7,
+            UserId = 42,
             CreditCode = "91330200SYNTHETIC",
             BusinessName = "Synthetic Enterprise",
-            CountyName = "鄞州区",
-            Region = "首南街道"
+            CountyName = "Yinzhou",
+            Region = "Shounan"
         });
         var service = new EnterpriseService(repository);
 
@@ -26,10 +26,11 @@ public sealed class EnterpriseServiceTests
 
         Assert.Equal("91330200SYNTHETIC", repository.LastCreditCode);
         Assert.NotNull(result);
-        Assert.Equal("Synthetic Enterprise", result!.BusinessName);
+        Assert.Equal(42, result!.UserId);
+        Assert.Equal("Synthetic Enterprise", result.BusinessName);
         Assert.Equal("91330200SYNTHETIC", result.CreditCode);
-        Assert.Equal("鄞州区", result.CountyName);
-        Assert.Equal("首南街道", result.Region);
+        Assert.Equal("Yinzhou", result.CountyName);
+        Assert.Equal("Shounan", result.Region);
     }
 
     [Fact]

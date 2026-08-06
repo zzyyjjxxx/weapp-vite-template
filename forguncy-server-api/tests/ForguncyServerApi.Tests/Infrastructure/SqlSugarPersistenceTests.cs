@@ -54,6 +54,7 @@ public sealed class SqlSugarPersistenceTests
         Assert.NotNull(table);
         Assert.Equal("m_preliminary_list", table!.TableName);
 
+        AssertNestedColumn(enterpriseRow, "Id", "id", isPrimaryKey: true);
         AssertNestedColumn(enterpriseRow, "BusinessName", "businessName");
         AssertNestedColumn(enterpriseRow, "CreditCode", "creditCode");
         AssertNestedColumn(enterpriseRow, "CountyId", "county");
@@ -79,15 +80,24 @@ public sealed class SqlSugarPersistenceTests
     {
         using var client = AuthSqlSugarClientFactory.Create("Server=localhost;Database=synthetic;User=root;Password=synthetic;");
 
-        var buildSql = typeof(EnterpriseRepository).GetMethod("BuildLookupSql", BindingFlags.NonPublic | BindingFlags.Static);
-        Assert.NotNull(buildSql);
+        var buildLookupQuery = typeof(EnterpriseRepository).GetMethod("BuildLookupQuery", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(buildLookupQuery);
 
-        var sql = Assert.IsType<string>(buildSql!.Invoke(null, new object[] { client, "91330200SYNTHETIC" }));
+        var query = buildLookupQuery!.Invoke(null, new object[] { client, "91330200SYNTHETIC" });
+        Assert.NotNull(query);
+        var toSql = query!.GetType().GetMethod("ToSql", Type.EmptyTypes);
+        Assert.NotNull(toSql);
+        var sqlResult = toSql!.Invoke(query, null);
+        Assert.NotNull(sqlResult);
+        var keyProperty = sqlResult!.GetType().GetProperty("Key");
+        Assert.NotNull(keyProperty);
+        var sql = Assert.IsType<string>(keyProperty!.GetValue(sqlResult));
 
         Assert.Contains("m_preliminary_list", sql, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("yj_regioninfo", sql, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("creditCode", sql, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("yj_regioninfo.id", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("enterprise`.`county` = `region`.`id", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("enterprise`.`id` AS `UserId", sql, StringComparison.OrdinalIgnoreCase);
     }
 
     private static void AssertColumn(string propertyName, string columnName, bool isPrimaryKey = false)
@@ -101,7 +111,7 @@ public sealed class SqlSugarPersistenceTests
         Assert.Equal(isPrimaryKey, column.IsPrimaryKey);
     }
 
-    private static void AssertNestedColumn(Type rowType, string propertyName, string columnName)
+    private static void AssertNestedColumn(Type rowType, string propertyName, string columnName, bool isPrimaryKey = false)
     {
         var property = rowType.GetProperty(propertyName);
         Assert.NotNull(property);
@@ -109,5 +119,6 @@ public sealed class SqlSugarPersistenceTests
         var column = property!.GetCustomAttribute<SugarColumn>();
         Assert.NotNull(column);
         Assert.Equal(columnName, column!.ColumnName);
+        Assert.Equal(isPrimaryKey, column.IsPrimaryKey);
     }
 }

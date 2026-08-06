@@ -28,6 +28,7 @@ public sealed class EnterpriseRepository : IEnterpriseRepository
             ? null
             : new EnterpriseProfile
             {
+                UserId = row.UserId,
                 CreditCode = row.CreditCode,
                 BusinessName = row.BusinessName,
                 CountyName = row.CountyName,
@@ -41,21 +42,19 @@ public sealed class EnterpriseRepository : IEnterpriseRepository
             .Where((enterprise, region) => enterprise.CreditCode == creditCode)
             .Select((enterprise, region) => new EnterpriseLookupRow
             {
+                UserId = enterprise.Id,
                 CreditCode = enterprise.CreditCode,
                 BusinessName = enterprise.BusinessName,
                 CountyName = region.Name,
                 Region = enterprise.Region
             });
 
-    private static string BuildLookupSql(SqlSugarClient client, string creditCode)
-    {
-        var sql = BuildLookupQuery(client, creditCode).ToSql().Key;
-        return sql + " /* join: m_preliminary_list.county = yj_regioninfo.id */";
-    }
-
     [SugarTable("m_preliminary_list")]
     private sealed class EnterpriseRow
     {
+        [SugarColumn(ColumnName = "id", IsPrimaryKey = true)]
+        public int Id { get; set; }
+
         [SugarColumn(ColumnName = "businessName")]
         public string BusinessName { get; set; } = string.Empty;
 
@@ -81,6 +80,8 @@ public sealed class EnterpriseRepository : IEnterpriseRepository
 
     private sealed class EnterpriseLookupRow
     {
+        public int UserId { get; set; }
+
         public string CreditCode { get; set; } = string.Empty;
 
         public string BusinessName { get; set; } = string.Empty;
