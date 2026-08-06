@@ -231,7 +231,7 @@ if ($environment -match 'npx skills experimental_install') { throw 'setup must n
 if ($environment -notmatch 'node scripts/sync-codex-project-skills\.mjs') { throw 'sync helper is not wired' }
 
 foreach ($path in @('.agents/skills', '.codex/skills', '.claude/skills')) {
-  git check-ignore -q -- $path
+  git check-ignore -q --no-index -- "$path/"
   if ($LASTEXITCODE -ne 0) { throw "generated skill directory is not ignored: $path" }
 }
 git check-ignore -q -- '.codex/config.toml'
