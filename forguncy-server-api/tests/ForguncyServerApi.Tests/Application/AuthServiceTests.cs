@@ -24,8 +24,9 @@ public sealed class AuthServiceTests
             CancellationToken.None);
 
         Assert.Equal(LoginStatus.Success, result.Status);
-        Assert.Equal("signed-token", result.AccessToken);
-        Assert.Equal(3600, result.ExpiresInSeconds);
+        Assert.NotNull(result.Tokens);
+        Assert.Equal("signed-token", result.Tokens!.AccessToken);
+        Assert.Equal(3600, result.Tokens.ExpiresInSeconds);
         Assert.Equal(3, result.User?.Id);
         Assert.Equal("91330200SYNTHETIC", result.User?.Username);
     }
@@ -55,7 +56,7 @@ public sealed class AuthServiceTests
             CancellationToken.None);
 
         Assert.Equal(LoginStatus.InvalidCredentials, result.Status);
-        Assert.Null(result.AccessToken);
+        Assert.Null(result.Tokens);
         Assert.Equal(1, passwords.VerifyCallCount);
         Assert.Equal("0000000000000000", passwords.LastEncodedHash);
     }
@@ -76,7 +77,7 @@ public sealed class AuthServiceTests
             CancellationToken.None);
 
         Assert.Equal(LoginStatus.InvalidCredentials, result.Status);
-        Assert.Null(result.AccessToken);
+        Assert.Null(result.Tokens);
         Assert.Equal(1, passwords.VerifyCallCount);
         Assert.Equal(user.PasswordHash, passwords.LastEncodedHash);
     }
@@ -97,7 +98,7 @@ public sealed class AuthServiceTests
             CancellationToken.None);
 
         Assert.Equal(LoginStatus.InvalidCredentials, result.Status);
-        Assert.Null(result.AccessToken);
+        Assert.Null(result.Tokens);
         Assert.Equal(1, passwords.VerifyCallCount);
         Assert.Equal(user.PasswordHash, passwords.LastEncodedHash);
     }
@@ -110,7 +111,7 @@ public sealed class AuthServiceTests
             CancellationToken.None);
 
         Assert.Equal(LoginStatus.Success, result.Status);
-        Assert.Equal("signed-token", result.AccessToken);
+        Assert.Equal("signed-token", result.Tokens?.AccessToken);
     }
 
     [Fact]

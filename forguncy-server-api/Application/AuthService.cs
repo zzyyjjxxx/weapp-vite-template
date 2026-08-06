@@ -54,12 +54,14 @@ public sealed class AuthService
 
         return new LoginResult(
             LoginStatus.Success,
-            tokens.CreateToken(user),
-            new AuthUser { Id = user.Id, Username = user.Username },
-            (int)tokenLifetime.TotalSeconds);
+            CreateTokenPair(tokens.CreateToken(user)),
+            new AuthUser { Id = user.Id, Username = user.Username });
     }
 
-    private static LoginResult InvalidRequest() => new(LoginStatus.InvalidRequest, null, null, 0);
+    private static LoginResult InvalidRequest() => new(LoginStatus.InvalidRequest, null, null);
 
-    private static LoginResult InvalidCredentials() => new(LoginStatus.InvalidCredentials, null, null, 0);
+    private static LoginResult InvalidCredentials() => new(LoginStatus.InvalidCredentials, null, null);
+
+    private TokenPair CreateTokenPair(string accessToken) =>
+        new(accessToken, string.Empty, (int)tokenLifetime.TotalSeconds, 0);
 }

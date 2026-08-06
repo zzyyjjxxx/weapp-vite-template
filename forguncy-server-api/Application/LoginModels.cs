@@ -27,22 +27,7 @@ public enum RefreshStatus
 public sealed record LoginResult(
     LoginStatus Status,
     TokenPair? Tokens,
-    AuthUser? User)
-{
-    public LoginResult(LoginStatus status, string? accessToken, AuthUser? user, int expiresInSeconds)
-        : this(
-            status,
-            accessToken is null
-                ? null
-                : new TokenPair(accessToken, string.Empty, expiresInSeconds, 0),
-            user)
-    {
-    }
-
-    public string? AccessToken => Tokens?.AccessToken;
-
-    public int ExpiresInSeconds => Tokens?.ExpiresInSeconds ?? 0;
-}
+    AuthUser? User);
 
 public sealed record RefreshResult(
     RefreshStatus Status,

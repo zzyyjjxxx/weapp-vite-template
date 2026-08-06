@@ -357,19 +357,18 @@ public sealed class AuthApiSurfaceTests
                 mapper!,
                 new LoginResult(
                     LoginStatus.Success,
-                    "signed-token",
-                    new AuthUser { Id = 3, Username = "demo" },
-                    3600),
+                    new TokenPair("signed-token", string.Empty, 3600, 0),
+                    new AuthUser { Id = 3, Username = "demo" }),
                 200,
                 "{\"access_token\":\"signed-token\",\"token_type\":\"Bearer\",\"expires_in\":3600}");
             AssertMappedResponse(
                 mapper!,
-                new LoginResult(LoginStatus.InvalidRequest, null, null, 0),
+                new LoginResult(LoginStatus.InvalidRequest, null, null),
                 400,
                 "{\"error\":\"invalid_request\"}");
             AssertMappedResponse(
                 mapper!,
-                new LoginResult(LoginStatus.InvalidCredentials, null, null, 0),
+                new LoginResult(LoginStatus.InvalidCredentials, null, null),
                 401,
                 "{\"error\":\"invalid_credentials\"}");
         });

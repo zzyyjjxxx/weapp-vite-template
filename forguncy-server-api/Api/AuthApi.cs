@@ -72,9 +72,9 @@ public class AuthApi : ForguncyApi
             LoginStatus.Success => new ApiResponse(
                 200,
                 new LoginResponse(
-                    result.AccessToken!,
+                    result.Tokens!.AccessToken,
                     "Bearer",
-                    result.ExpiresInSeconds)),
+                    result.Tokens.ExpiresInSeconds)),
             LoginStatus.InvalidRequest => new ApiResponse(400, new ErrorResponse("invalid_request")),
             LoginStatus.InvalidCredentials => new ApiResponse(401, new ErrorResponse("invalid_credentials")),
             _ => throw new InvalidOperationException("The login result status is not supported.")

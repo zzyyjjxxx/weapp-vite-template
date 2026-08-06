@@ -127,11 +127,14 @@ public sealed class AuthOptionsTests
                     new[] { refreshStatus, tokenPair }));
 
         var loginResult = typeof(LoginResult);
+        Assert.Null(loginResult.GetProperty("AccessToken"));
+        Assert.Null(loginResult.GetProperty("ExpiresInSeconds"));
+        var loginConstructors = loginResult.GetConstructors();
+        Assert.Single(loginConstructors);
+        Assert.Equal(
+            new[] { typeof(LoginStatus), tokenPair!, typeof(AuthUser) },
+            loginConstructors[0].GetParameters().Select(parameter => parameter.ParameterType));
         Assert.NotNull(loginResult.GetProperty("Tokens"));
-        Assert.Contains(
-            loginResult.GetConstructors(),
-            constructor => constructor.GetParameters().Select(parameter => parameter.ParameterType).SequenceEqual(
-                new[] { typeof(LoginStatus), tokenPair!, typeof(AuthUser) }));
     }
 
     private static Dictionary<string, string?> ValidValues() => new()
