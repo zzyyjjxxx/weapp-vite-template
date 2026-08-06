@@ -112,9 +112,23 @@ function runProcess(command, args, options) {
   })
 }
 
+export function getNpxInvocation(platform = process.platform, comSpec = process.env.ComSpec) {
+  if (platform === 'win32') {
+    return {
+      command: comSpec || 'cmd.exe',
+      args: ['/d', '/s', '/c', 'npx.cmd skills experimental_install'],
+    }
+  }
+
+  return {
+    command: 'npx',
+    args: ['skills', 'experimental_install'],
+  }
+}
+
 async function installSkills(mainRoot) {
-  const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx'
-  await runProcess(npx, ['skills', 'experimental_install'], { cwd: mainRoot })
+  const invocation = getNpxInvocation()
+  await runProcess(invocation.command, invocation.args, { cwd: mainRoot })
 }
 
 export async function runCli() {

@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  getNpxInvocation,
   PROJECT_SKILL_TARGETS,
   resolveMainWorktreeRoot,
   syncProjectSkills,
@@ -81,5 +82,16 @@ describe('Codex project skill synchronization', () => {
     expect(await readFile(join(source, 'SKILL.md'), 'utf8')).toBe('main source')
     expect(await readFile(join(mainRoot, '.codex', 'skills', 'SKILL.md'), 'utf8')).toBe('main source')
     expect(await readFile(join(mainRoot, '.claude', 'skills', 'SKILL.md'), 'utf8')).toBe('main source')
+  })
+
+  it('wraps the Windows npx batch file with ComSpec', () => {
+    expect(getNpxInvocation('win32', 'C:\\Windows\\System32\\cmd.exe')).toEqual({
+      command: 'C:\\Windows\\System32\\cmd.exe',
+      args: ['/d', '/s', '/c', 'npx.cmd skills experimental_install'],
+    })
+    expect(getNpxInvocation('linux')).toEqual({
+      command: 'npx',
+      args: ['skills', 'experimental_install'],
+    })
   })
 })
