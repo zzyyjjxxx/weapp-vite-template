@@ -38,6 +38,7 @@ export interface LandDemandRecord extends Omit<LandDemandForm, 'deploy_park'> {
   deploy_park: string
   landusedemand: LandDemandStatus
   updatetime: string
+  lastSubmittedAt?: string
   updateuser: string
   newproject?: '1'
   industryCode?: string

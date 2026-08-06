@@ -211,7 +211,7 @@ describe('land demand service and queries', () => {
     expect(source).toContain('signal,')
   })
 
-  it('clears local draft metadata after saving and reloads the record through Query', async () => {
+  it('retains step metadata after a draft save and reloads it with the record', async () => {
     const client = createQueryClient()
     const lifecycle = createLifecycle()
     configureQueryLifecycleAdapter(lifecycle)
@@ -231,16 +231,19 @@ describe('land demand service and queries', () => {
       updateuser: enterprise.username,
     })
     store.markPersisted(saved)
-    expect(repository.getDraft(form.creditcode)).toBeUndefined()
+    expect(repository.getDraft(form.creditcode)).toMatchObject({
+      currentStep: 2,
+      progressStep: 2,
+    })
 
     client.removeQueries({ queryKey: landDemandKeys.detail(form.creditcode), exact: true })
     const query = useLandDemandQuery(form.creditcode, { client, repository })
     await query.refetch()
     store.$reset()
-    store.initialize(enterprise, query.data.value ?? undefined)
+    store.initializeFromLocalDraft(enterprise, query.data.value ?? undefined)
 
     expect(store.form.value.area).toBe('41')
-    expect(store.currentStep.value).toBe(1)
+    expect(store.currentStep.value).toBe(2)
 
     configureLandDemandRepository()
     lifecycle.dispose()

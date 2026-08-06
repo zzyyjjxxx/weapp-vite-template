@@ -1,4 +1,6 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import process from 'node:process'
 import { fileURLToPath, URL } from 'node:url'
 
 import { weappTailwindcss } from 'weapp-tailwindcss/vite'
@@ -12,14 +14,19 @@ function patchTDesignDeprecatedSystemInfo() {
     name: 'app:patch-tdesign-deprecated-system-info',
     enforce: 'post' as const,
     closeBundle() {
-      const commonPath = fileURLToPath(new URL(
-        './dist/miniprogram_npm/tdesign-miniprogram/common/wechat.js',
-        import.meta.url,
-      ))
-      const uploadPath = fileURLToPath(new URL(
-        './dist/miniprogram_npm/tdesign-miniprogram/upload/upload.js',
-        import.meta.url,
-      ))
+      const commonPath = resolve(
+        process.cwd(),
+        'dist/miniprogram_npm/tdesign-miniprogram/common/wechat.js',
+      )
+      const uploadPath = resolve(
+        process.cwd(),
+        'dist/miniprogram_npm/tdesign-miniprogram/upload/upload.js',
+      )
+      const messagePaths = [
+        resolve(process.cwd(), 'dist/miniprogram_npm/tdesign-miniprogram/message/message.js'),
+        resolve(process.cwd(), 'dist/miniprogram_npm/tdesign-miniprogram/message/index.js'),
+        resolve(process.cwd(), 'dist/miniprogram_npm/tdesign-miniprogram/message-item/index.js'),
+      ]
 
       if (existsSync(commonPath)) {
         const source = readFileSync(commonPath, 'utf8')
@@ -45,6 +52,37 @@ function patchTDesignDeprecatedSystemInfo() {
         )
         writeFileSync(uploadPath, source)
       }
+
+      for (const messagePath of messagePaths) {
+        if (!existsSync(messagePath)) {
+          continue
+        }
+
+        const source = readFileSync(messagePath, 'utf8')
+        const patched = source.replace(
+          /const _imported\d* = require\(["'](?:\.\/message\.interface|\.\.\/message\/message\.interface)["']\);\r?\nconst MessageType = _imported\d*\.MessageType;/g,
+          'const MessageType = { info: "info", success: "success", warning: "warning", error: "error" };',
+        )
+        if (patched !== source) {
+          writeFileSync(messagePath, patched)
+        }
+      }
+    },
+  }
+}
+
+function ensureDevTailwindWxssCompatibility() {
+  return {
+    name: 'app:ensure-dev-tailwind-wxss-compatibility',
+    closeBundle() {
+      const appStylesPath = resolve(process.cwd(), 'dist/app.wxss')
+      if (!existsSync(appStylesPath)) {
+        return
+      }
+
+      const compatibilityStylesPath = resolve(process.cwd(), 'dist/styles/tailwind.wxss')
+      mkdirSync(dirname(compatibilityStylesPath), { recursive: true })
+      copyFileSync(appStylesPath, compatibilityStylesPath)
     },
   }
 }
@@ -53,6 +91,7 @@ export default defineConfig({
   plugins: [
     weappTailwindcss({ cssEntries: [tailwindEntry] }),
     patchTDesignDeprecatedSystemInfo(),
+    ensureDevTailwindWxssCompatibility(),
   ],
   resolve: {
     alias: {

@@ -105,6 +105,56 @@ describe('land demand submit controller', () => {
     expect(sendCode).toHaveBeenCalledWith(validForm.phone)
   })
 
+  it('reuses an active challenge without sending another code', async () => {
+    const sendCode = vi.fn(async () => challenge)
+    const activeChallenge: VerificationChallenge = {
+      ...challenge,
+      expiresAt: Date.now() + 300_000,
+      retryAt: Date.now() + 60_000,
+    }
+    const controller = createSubmitController({
+      sendCode,
+      verifyCode: vi.fn(),
+      persist: vi.fn(),
+    })
+
+    await expect(controller.requestCode(validForm, true, {
+      existingChallenge: activeChallenge,
+    })).resolves.toEqual({
+      errors: [],
+      challenge: activeChallenge,
+    })
+    expect(sendCode).not.toHaveBeenCalled()
+  })
+
+  it('resends an active challenge after its cooldown ends', async () => {
+    const resentChallenge: VerificationChallenge = {
+      ...challenge,
+      expiresAt: Date.now() + 300_000,
+      retryAt: Date.now() + 60_000,
+    }
+    const sendCode = vi.fn(async () => resentChallenge)
+    const controller = createSubmitController({
+      sendCode,
+      verifyCode: vi.fn(),
+      persist: vi.fn(),
+    })
+    const existingChallenge: VerificationChallenge = {
+      ...challenge,
+      expiresAt: Date.now() + 300_000,
+      retryAt: Date.now() - 1,
+    }
+
+    await expect(controller.requestCode(validForm, true, {
+      existingChallenge,
+      forceResend: true,
+    })).resolves.toEqual({
+      errors: [],
+      challenge: resentChallenge,
+    })
+    expect(sendCode).toHaveBeenCalledOnce()
+  })
+
   it('verifies once before persisting status 1', async () => {
     const events: string[] = []
     const controller = createSubmitController({
@@ -118,6 +168,20 @@ describe('land demand submit controller', () => {
 
     await expect(controller.submitCode(validForm.phone, '123456')).resolves.toEqual(submittedRecord)
     expect(events).toEqual(['verify', 'persist'])
+  })
+
+  it('does not call verification mutation for an incomplete code', async () => {
+    const verifyCode = vi.fn()
+    const persist = vi.fn()
+    const controller = createSubmitController({
+      sendCode: async () => challenge,
+      verifyCode,
+      persist,
+    })
+
+    await expect(controller.submitCode(validForm.phone, '1')).rejects.toThrow('请输入6位验证码')
+    expect(verifyCode).not.toHaveBeenCalled()
+    expect(persist).not.toHaveBeenCalled()
   })
 
   it('does not persist when verification fails', async () => {

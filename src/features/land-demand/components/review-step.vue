@@ -61,6 +61,7 @@ defineComponentJson({ component: true, styleIsolation: 'apply-shared' })
       <t-checkbox
         data-testid="review-accept"
         :checked="props.accepted"
+        borderless
         @change="emit('accept', readBooleanDetail($event))"
       >
         本企业承诺所填写的信息真实、准确、完整，并同意相关部门根据项目服务需要使用以上信息。
@@ -73,7 +74,6 @@ defineComponentJson({ component: true, styleIsolation: 'apply-shared' })
         class="review-step__submit"
         theme="primary"
         block
-        :loading="props.submitting"
         :disabled="props.submitting"
         @tap="emit('submit')"
       >

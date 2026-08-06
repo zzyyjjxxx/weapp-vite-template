@@ -2,10 +2,11 @@
 import type { LoginInput } from '@/features/auth/models'
 
 import { computed, onLoad, ref } from 'wevu'
-import landPlanningHero from '@/assets/land-planning-hero.webp'
 import AppIcon from '@/components/ui/app-icon/index.vue'
+import PageTransitionLoading from '@/components/ui/page-transition-loading/index.vue'
 import { useLoginMutation } from '@/features/auth/queries'
 import { readStringDetail } from '@/platform/event-detail'
+import { usePageTransitionLoading } from '@/platform/page-transition'
 import { replaceUrl } from '@/router/navigation'
 import { parseReturnTo } from '@/router/query'
 
@@ -21,6 +22,7 @@ const formError = ref('')
 const returnTo = ref('/pages/home/index')
 const loginMutation = useLoginMutation()
 const isPending = loginMutation.isPending
+const { pending: transitioning, run: runTransition } = usePageTransitionLoading()
 const errorMessage = computed(() => formError.value || loginMutation.error.value?.message || '')
 
 onLoad((query) => {
@@ -38,7 +40,7 @@ function updatePassword(detail: unknown): void {
 }
 
 function validate(input: LoginInput): boolean {
-  usernameError.value = input.username ? '' : '请输入用户名'
+  usernameError.value = input.username ? '' : '请输入统一社会信用代码'
   passwordError.value = input.password ? '' : '请输入密码'
   return !usernameError.value && !passwordError.value
 }
@@ -54,8 +56,10 @@ async function submit(): Promise<void> {
   }
 
   try {
-    await loginMutation.mutateAsync(input)
-    await replaceUrl(returnTo.value)
+    await runTransition(async () => {
+      await loginMutation.mutateAsync(input)
+      await replaceUrl(returnTo.value)
+    })
   }
   catch {
     // The mutation result exposes the sanitized API error to the template.
@@ -74,7 +78,7 @@ async function submit(): Promise<void> {
       </view>
       <image
         class="login__illustration"
-        :src="landPlanningHero"
+        src="/assets/land-planning-hero.png"
         mode="aspectFill"
       />
     </view>
@@ -83,7 +87,6 @@ async function submit(): Promise<void> {
       <view class="login__panel-heading">
         <view>
           <text class="login__panel-title">企业账号登录</text>
-          <text class="login__panel-description">登录后可填报、暂存和查询用地需求</text>
         </view>
       </view>
 
@@ -93,9 +96,9 @@ async function submit(): Promise<void> {
           data-testid="username"
           :value="username"
           :maxlength="32"
-          placeholder="请输入用户名"
-          status="default"
-          tips=""
+          :status="usernameError ? 'error' : 'default'"
+          :tips="usernameError"
+          placeholder="请输入统一社会信用代码"
           @change="updateUsername"
         >
           <template #prefix-icon>
@@ -112,9 +115,9 @@ async function submit(): Promise<void> {
           type="password"
           :value="password"
           :maxlength="64"
+          :status="passwordError ? 'error' : 'default'"
+          :tips="passwordError"
           placeholder="请输入密码"
-          status="default"
-          tips=""
           @change="updatePassword"
         >
           <template #prefix-icon>
@@ -124,10 +127,6 @@ async function submit(): Promise<void> {
           </template>
         </t-input>
       </view>
-      <view class="login__account-tip">
-        <text class="login__account-tip-label">演示账号</text>
-        <text class="login__account-tip-value">demo / demo123</text>
-      </view>
       <text v-if="errorMessage" class="login__error">
         {{ errorMessage }}
       </text>
@@ -136,13 +135,14 @@ async function submit(): Promise<void> {
         class="login__submit"
         theme="primary"
         block
-        :loading="isPending"
-        :disabled="isPending"
+        :disabled="isPending || transitioning"
         @tap="submit"
       >
         登录并进入填报
       </t-button>
     </view>
+
+    <PageTransitionLoading :visible="transitioning" text="正在登录" />
 
     <view class="login__footer">
       <text class="login__footer-title">企业用地需求服务</text>
@@ -252,7 +252,6 @@ async function submit(): Promise<void> {
 }
 
 .login__panel-title,
-.login__panel-description,
 .login__field-label,
 .login__footer-title,
 .login__footer-copy {
@@ -265,16 +264,11 @@ async function submit(): Promise<void> {
   color: $color-text;
 }
 
-.login__panel-description {
-  margin-top: $space-1;
-  font-size: 23rpx;
-  line-height: 1.5;
-  color: $color-text-secondary;
-}
-
 .login__field {
+  --td-input-vertical-padding: 16rpx 32rpx;
+  --td-input-default-text-color: #{$color-text};
+
   padding: $space-2 0;
-  border-bottom: 1rpx solid $color-border-soft;
 }
 
 .login__field + .login__field {
@@ -282,33 +276,15 @@ async function submit(): Promise<void> {
 }
 
 .login__field-label {
-  padding-left: 68rpx;
-  margin-bottom: 2rpx;
-  font-size: 23rpx;
-  font-weight: 600;
-  color: $color-text-secondary;
-}
-
-.login__account-tip {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: $space-2 $space-3;
-  margin-top: $space-3;
-  background: $color-primary-faint;
-  border: 1rpx solid #deebff;
-  border-radius: $radius-md;
-}
-
-.login__account-tip-label {
-  font-size: 23rpx;
-  color: $color-text-secondary;
-}
-
-.login__account-tip-value {
-  font-size: 24rpx;
-  font-weight: 600;
-  color: $color-primary;
+  min-height: 48rpx;
+  padding-left: 32rpx;
+  margin-bottom: 2rpx;
+  font-size: 32rpx;
+  font-weight: 400;
+  line-height: 48rpx;
+  color: $color-text;
 }
 
 .login__error {

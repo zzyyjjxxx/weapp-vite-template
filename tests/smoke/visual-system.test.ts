@@ -6,9 +6,10 @@ describe('land-demand visual system', () => {
   it('keeps the reference-inspired hero and project-specific login content together', () => {
     const source = readFileSync('src/pages/login/index.vue', 'utf8')
 
-    expect(source).toContain('/assets/land-planning-hero.webp')
+    expect(source).toContain('/assets/land-planning-hero.png')
     expect(source).toContain('企业用地需求在线填报服务')
-    expect(source).toContain('demo / demo123')
+    expect(source).toContain('placeholder="请输入统一社会信用代码"')
+    expect(source).not.toContain('demo / demo123')
     expect(source).not.toContain('立即注册')
     expect(source).not.toContain('忘记密码')
   })
@@ -29,9 +30,9 @@ describe('land-demand visual system', () => {
       'utf8',
     )
 
-    expect(source).toContain('['
-      + '\'基本信息\', \'用地需求\', \'投资项目\', \'融资及联系人\', \'确认提交\''
-      + ']')
+    for (const label of ['基本信息', '用地需求', '投资项目', '融资及联系人', '确认提交']) {
+      expect(source).toContain(`<text class="wizard-progress__label">${label}</text>`)
+    }
     expect(source).toContain('wizard-progress__connector')
   })
 

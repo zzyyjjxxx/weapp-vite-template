@@ -24,6 +24,7 @@ export interface LandDemandRepository {
 
 interface StoredVerification extends VerificationChallenge {
   attempts: number
+  createdAt?: number
   invalidated?: boolean
 }
 
@@ -107,9 +108,11 @@ export function createMockLandDemandRepository(options: {
         throw new Error('填报记录已存在')
       }
 
+      const updatedAt = new Date(now()).toISOString()
       const record: LandDemandRecord = {
         ...payload,
-        updatetime: new Date(now()).toISOString(),
+        updatetime: updatedAt,
+        lastSubmittedAt: payload.landusedemand === '1' ? updatedAt : undefined,
         updateuser: getUpdateUser(payload),
       }
       storage.set(recordKey(record.creditcode), cloneRecord(record))
@@ -123,6 +126,11 @@ export function createMockLandDemandRepository(options: {
         throw new Error('填报记录不存在')
       }
 
+      const updatedAt = new Date(now()).toISOString()
+      const lastSubmittedAt = payload.landusedemand === '1'
+        ? updatedAt
+        : existing.lastSubmittedAt
+          ?? (existing.landusedemand === '1' ? existing.updatetime : undefined)
       const record: LandDemandRecord = {
         ...existing,
         ...payload,
@@ -135,7 +143,8 @@ export function createMockLandDemandRepository(options: {
         energy_time: preserved(payload.energy_time, existing.energy_time),
         qyhydm: preserved(payload.qyhydm, existing.qyhydm),
         registrationType: preserved(payload.registrationType, existing.registrationType),
-        updatetime: new Date(now()).toISOString(),
+        updatetime: updatedAt,
+        lastSubmittedAt,
         updateuser: getUpdateUser(payload),
       }
       storage.set(recordKey(record.creditcode), cloneRecord(record))
@@ -159,8 +168,13 @@ export function createMockLandDemandRepository(options: {
       await wait(delayMs)
       const timestamp = now()
       const previous = storage.get<StoredVerification>(verificationKey(phone))
-      if (previous && timestamp < previous.retryAt) {
+      const isExhausted = previous?.invalidated && previous.attempts >= MAX_VERIFICATION_ATTEMPTS
+      const isLegacyChallenge = previous?.createdAt === undefined
+      if (isExhausted && !isLegacyChallenge && timestamp < previous.retryAt) {
         throw new Error('请稍后再试')
+      }
+      if (previous && !previous.invalidated && timestamp < previous.retryAt) {
+        return cloneChallenge(previous)
       }
 
       const challenge: StoredVerification = {
@@ -169,6 +183,7 @@ export function createMockLandDemandRepository(options: {
         retryAt: timestamp + RESEND_DELAY_MS,
         mockCode: randomCode(),
         attempts: 0,
+        createdAt: timestamp,
       }
       storage.set(verificationKey(phone), challenge)
       return cloneChallenge(challenge)
@@ -189,7 +204,7 @@ export function createMockLandDemandRepository(options: {
       }
 
       if (code === stored.mockCode) {
-        storage.set(verificationKey(phone), { ...stored, invalidated: true })
+        storage.remove(verificationKey(phone))
         return
       }
 

@@ -16,6 +16,13 @@ function cloneForm(form: LandDemandForm): LandDemandForm {
   }
 }
 
+function formSignature(value: LandDemandForm): string {
+  return JSON.stringify({
+    ...value,
+    deploy_park: [...value.deploy_park],
+  })
+}
+
 function withAuthenticatedIdentity(
   form: LandDemandForm,
   enterprise: EnterpriseProfile,
@@ -34,8 +41,11 @@ export const useLandDemandStore = defineStore('land-demand', () => {
   const currentStep = ref<LandDemandStep>(1)
   const progressStep = ref<LandDemandStep>(1)
   const hasRecord = ref(false)
+  const hasLocalDraft = ref(false)
   const isDirty = ref(false)
   let enterprise: EnterpriseProfile | undefined
+  let baselineSignature = ''
+  let submittedBaselineSignature: string | undefined
 
   function initialize(
     nextEnterprise: EnterpriseProfile,
@@ -43,15 +53,26 @@ export const useLandDemandStore = defineStore('land-demand', () => {
     draft?: LandDemandDraft,
   ): void {
     enterprise = { ...nextEnterprise }
-    form.value = withAuthenticatedIdentity(
+    const initializedForm = withAuthenticatedIdentity(
       cloneForm(draft?.form ?? createLandDemandForm(nextEnterprise, record)),
       nextEnterprise,
     )
-    const initializedStep = draft?.currentStep ?? 1
+    form.value = initializedForm
+    const submittedForm = record?.landusedemand === '1'
+      ? withAuthenticatedIdentity(createLandDemandForm(nextEnterprise, record), nextEnterprise)
+      : undefined
+    submittedBaselineSignature = submittedForm ? formSignature(submittedForm) : undefined
+    baselineSignature = submittedBaselineSignature ?? formSignature(initializedForm)
+    const submitted = record?.landusedemand === '1'
+    const initializedStep = draft?.currentStep ?? (submitted ? 5 : 1)
     currentStep.value = initializedStep
-    progressStep.value = Math.max(initializedStep, draft?.progressStep ?? initializedStep) as LandDemandStep
+    progressStep.value = Math.max(
+      initializedStep,
+      submitted ? 5 : (draft?.progressStep ?? initializedStep),
+    ) as LandDemandStep
     hasRecord.value = Boolean(record)
-    isDirty.value = false
+    hasLocalDraft.value = Boolean(draft)
+    isDirty.value = formSignature(form.value) !== baselineSignature
   }
 
   function initializeFromLocalDraft(
@@ -76,7 +97,7 @@ export const useLandDemandStore = defineStore('land-demand', () => {
     form.value = enterprise
       ? withAuthenticatedIdentity(nextForm, enterprise)
       : nextForm
-    isDirty.value = true
+    isDirty.value = formSignature(form.value) !== baselineSignature
   }
 
   function goToStep(step: LandDemandStep): void {
@@ -91,22 +112,39 @@ export const useLandDemandStore = defineStore('land-demand', () => {
       progressStep: progressStep.value,
       savedAt: Date.now(),
     })
-    isDirty.value = false
+    hasLocalDraft.value = true
+    if (!submittedBaselineSignature) {
+      baselineSignature = formSignature(form.value)
+    }
+    isDirty.value = formSignature(form.value) !== baselineSignature
   }
 
   function discardLocalDraft(): void {
     getLandDemandRepository().removeDraft(form.value.creditcode)
-    isDirty.value = false
+    hasLocalDraft.value = false
+    isDirty.value = formSignature(form.value) !== baselineSignature
   }
 
   function markPersisted(record: LandDemandRecord): void {
+    const isDraftRecord = record.landusedemand === '2'
     hasRecord.value = true
-    progressStep.value = 5
-    isDirty.value = false
-    getLandDemandRepository().removeDraft(record.creditcode)
+    if (isDraftRecord) {
+      submittedBaselineSignature = undefined
+      // A temporary save still needs the local step metadata so the workbench
+      // can show the latest completed step after the page is replaced.
+      saveLocalDraft()
+    }
+    else {
+      hasLocalDraft.value = false
+      progressStep.value = 5
+      getLandDemandRepository().removeDraft(record.creditcode)
+    }
     if (enterprise) {
       form.value = createLandDemandForm(enterprise, record)
     }
+    baselineSignature = formSignature(form.value)
+    submittedBaselineSignature = isDraftRecord ? undefined : baselineSignature
+    isDirty.value = false
   }
 
   return {
@@ -114,6 +152,7 @@ export const useLandDemandStore = defineStore('land-demand', () => {
     currentStep,
     progressStep,
     hasRecord,
+    hasLocalDraft,
     isDirty,
     initialize,
     initializeFromLocalDraft,

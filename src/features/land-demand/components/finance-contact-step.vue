@@ -2,14 +2,25 @@
 import type { FieldError, FinancingChoice, LandDemandForm } from '../models'
 
 import { ref } from 'wevu'
+import SinglePicker from '@/components/ui/single-picker/index.vue'
 import { readStringDetail } from '@/platform/event-detail'
+import { useInvalidFieldScroll } from '../invalid-field-scroll'
 
 const props = defineProps<{ form: LandDemandForm, errors: readonly FieldError[] }>()
 const emit = defineEmits<{ change: [patch: Partial<LandDemandForm>] }>()
 
 defineComponentJson({ component: true, styleIsolation: 'apply-shared' })
 
-const emptyOptions = ref<string[]>([])
+useInvalidFieldScroll(() => props.errors, {
+  is_financing: 'is-financing-field',
+  financing_money: 'financing-money-field',
+  financing_time: 'financing-time-field',
+  contact: 'contact-field',
+  office: 'office-field',
+  phone: 'phone-field',
+}, 'finance-contact-step')
+
+const financingOptions = ['有', '没有'] as const
 const financingTimeVisible = ref(false)
 
 function fieldError(field: keyof LandDemandForm): string {
@@ -46,22 +57,21 @@ function changeFinancingTime(detail: unknown): void {
     <text class="step-card__title">融资及联系人</text>
     <text class="step-card__description">融资需求默认选择“没有”；如选择“有”，请补充金额和期望时间。</text>
 
-    <view class="field">
-      <text class="field__label"><text class="field__required">*</text>是否有融资需求</text>
-      <t-radio-group
+    <view id="is-financing-field" data-testid="is-financing-field" class="field field--selector">
+      <SinglePicker
         data-testid="is-financing"
-        :value="props.form.is_financing"
-        :options="emptyOptions"
+        title="是否有融资需求"
+        :value="props.form.is_financing || ''"
+        :options="financingOptions"
+        placeholder="请选择"
+        required
         @change="changeFinancing"
-      >
-        <t-radio data-testid="is-financing-yes" value="有">有</t-radio>
-        <t-radio value="没有">没有</t-radio>
-      </t-radio-group>
+      />
       <text v-if="fieldError('is_financing')" class="field__error">{{ fieldError('is_financing') }}</text>
     </view>
 
-    <view v-if="props.form.is_financing === '有'" class="field field--control">
-      <text class="field__label"><text class="field__required">*</text>融资金额（万元）</text>
+    <view v-if="props.form.is_financing === '有'" id="financing-money-field" data-testid="financing-money-field" class="field field--control">
+      <view class="field__label"><text>融资金额（万元）</text><text class="field__required">*</text></view>
       <t-input
         data-testid="financing-money"
         label=""
@@ -79,11 +89,13 @@ function changeFinancingTime(detail: unknown): void {
         {{ fieldError('financing_money') }}
       </text>
     </view>
-    <view v-if="props.form.is_financing === '有'" class="field field--selector">
+    <view v-if="props.form.is_financing === '有'" id="financing-time-field" data-testid="financing-time-field" class="field field--selector">
       <t-cell
         data-testid="financing-time"
         title="融资时间"
         :note="props.form.financing_time || '请选择年月'"
+        t-class-center="field-selector__center"
+        t-class-note="field-selector__note"
         arrow
         required
         @tap="openFinancingTime"
@@ -110,8 +122,8 @@ function changeFinancingTime(detail: unknown): void {
       </text>
     </view>
 
-    <view class="field field--control">
-      <text class="field__label"><text class="field__required">*</text>联系人</text>
+    <view id="contact-field" data-testid="contact-field" class="field field--control">
+      <view class="field__label"><text>联系人</text><text class="field__required">*</text></view>
       <t-input
         data-testid="contact"
         label=""
@@ -122,8 +134,8 @@ function changeFinancingTime(detail: unknown): void {
       />
       <text v-if="fieldError('contact')" class="field__error">{{ fieldError('contact') }}</text>
     </view>
-    <view class="field field--control">
-      <text class="field__label">职务（选填）</text>
+    <view id="office-field" data-testid="office-field" class="field field--control">
+      <view class="field__label"><text>职务（选填）</text></view>
       <t-input
         data-testid="office"
         label=""
@@ -134,8 +146,8 @@ function changeFinancingTime(detail: unknown): void {
       />
       <text v-if="fieldError('office')" class="field__error">{{ fieldError('office') }}</text>
     </view>
-    <view class="field field--control">
-      <text class="field__label"><text class="field__required">*</text>手机号码</text>
+    <view id="phone-field" data-testid="phone-field" class="field field--control">
+      <view class="field__label"><text>手机号码</text><text class="field__required">*</text></view>
       <t-input
         data-testid="phone"
         label=""

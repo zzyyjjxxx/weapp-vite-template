@@ -19,7 +19,7 @@
         "miniprogramNpmDistDir": "./dist"
       }
     ],
-    "ignoreUploadUnusedFiles": true,
+    "ignoreUploadUnusedFiles": false,
     "compileHotReLoad": false,
     "skylineRenderEnable": false,
     "packNpmManually": true,
@@ -37,7 +37,12 @@
   "libVersion": "3.13.2",
   "packOptions": {
     "ignore": [],
-    "include": []
+    "include": [
+      {
+        "type": "file",
+        "value": "assets/land-planning-hero.png"
+      }
+    ]
   },
-  "appid": "wx75dcf8b64b21bcdf"
+  "appid": "wx491b28d7d178edbe"
 }

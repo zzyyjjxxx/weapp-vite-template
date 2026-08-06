@@ -149,6 +149,38 @@ describe('mock land demand repository', () => {
     })
   })
 
+  it('preserves the last successful submission time while saving a later draft', async () => {
+    let time = 1_000
+    const repository = createMockLandDemandRepository({
+      storage: createMemoryStorage(),
+      now: () => time,
+    })
+
+    const submitted = await repository.save({
+      ...savePayload,
+      landusedemand: '1',
+    })
+    const submittedAt = new Date(1_000).toISOString()
+    expect(submitted.lastSubmittedAt).toBe(submittedAt)
+
+    time = 2_000
+    const draft = await repository.update({
+      ...savePayload,
+      landusedemand: '2',
+      newproject: '1',
+    })
+    expect(draft.updatetime).toBe(new Date(2_000).toISOString())
+    expect(draft.lastSubmittedAt).toBe(submittedAt)
+
+    time = 3_000
+    const resubmitted = await repository.update({
+      ...savePayload,
+      landusedemand: '1',
+      newproject: '1',
+    })
+    expect(resubmitted.lastSubmittedAt).toBe(new Date(3_000).toISOString())
+  })
+
   it('expires codes after five minutes and after five incorrect attempts', async () => {
     let time = 1_000
     const repository = createMockLandDemandRepository({
@@ -164,7 +196,7 @@ describe('mock land demand repository', () => {
       retryAt: 61_000,
       mockCode: '123456',
     })
-    await expect(repository.sendCode('13800000000')).rejects.toThrow('请稍后再试')
+    await expect(repository.sendCode('13800000000')).resolves.toEqual(challenge)
     for (let index = 0; index < 5; index += 1) {
       await expect(repository.verifyCode('13800000000', '000000')).rejects.toThrow()
     }
@@ -187,8 +219,8 @@ describe('mock land demand repository', () => {
     await expect(repository.verifyCode(challenge.phone, challenge.mockCode)).rejects.toThrow('验证码已失效')
   })
 
-  it('keeps the resend cooldown after successful verification', async () => {
-    let time = 1_000
+  it('allows a new verification code immediately after successful verification', async () => {
+    const time = 1_000
     const repository = createMockLandDemandRepository({
       storage: createMemoryStorage(),
       now: () => time,
@@ -198,11 +230,51 @@ describe('mock land demand repository', () => {
 
     await repository.verifyCode(challenge.phone, challenge.mockCode)
     await expect(repository.verifyCode(challenge.phone, challenge.mockCode)).rejects.toThrow('验证码已失效')
-    await expect(repository.sendCode(challenge.phone)).rejects.toThrow('请稍后再试')
-    time = challenge.retryAt - 1
-    await expect(repository.sendCode(challenge.phone)).rejects.toThrow('请稍后再试')
-    time = challenge.retryAt
-    await expect(repository.sendCode(challenge.phone)).resolves.toBeDefined()
+    const resent = await repository.sendCode(challenge.phone)
+    expect(resent.retryAt).toBe(time + 60_000)
+    await expect(repository.sendCode(challenge.phone)).resolves.toEqual(resent)
+  })
+
+  it('recovers a legacy successful challenge without blocking a new request', async () => {
+    const storage = createMemoryStorage()
+    storage.set('mock:verification:13800000000', {
+      phone: '13800000000',
+      expiresAt: 301_000,
+      retryAt: 61_000,
+      mockCode: '123456',
+      attempts: 0,
+      invalidated: true,
+    })
+    const repository = createMockLandDemandRepository({
+      storage,
+      now: () => 1_000,
+      randomCode: () => '654321',
+    })
+
+    await expect(repository.sendCode('13800000000')).resolves.toMatchObject({
+      mockCode: '654321',
+    })
+  })
+
+  it('recovers a legacy exhausted challenge without clearing other storage', async () => {
+    const storage = createMemoryStorage()
+    storage.set('mock:verification:13800000000', {
+      phone: '13800000000',
+      expiresAt: 301_000,
+      retryAt: 61_000,
+      mockCode: '123456',
+      attempts: 5,
+      invalidated: true,
+    })
+    const repository = createMockLandDemandRepository({
+      storage,
+      now: () => 1_000,
+      randomCode: () => '654321',
+    })
+
+    await expect(repository.sendCode('13800000000')).resolves.toMatchObject({
+      mockCode: '654321',
+    })
   })
 
   it('keeps the resend cooldown after the fifth incorrect attempt', async () => {
