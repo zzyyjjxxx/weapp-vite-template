@@ -1338,3 +1338,21 @@ is clicked.
 
 No browser-to-Forguncy request was performed in this cycle; CORS or same-origin
 behavior remains dependent on the deployment host.
+
+## Safe API error diagnostics - 2026-08-07
+
+Unexpected `500` responses now accept the opt-in `diagnostics=1` query
+parameter. All eight routes report their operation code, exception type, and
+safe detail code; only explicitly allow-listed messages are returned. The
+default response remains `{"error":"server_error"}` and sensitive exception
+text is covered by tests.
+
+| Check | Exit | Result |
+| --- | ---: | --- |
+| Full Release tests | 0 | 242 passed, 0 failed |
+| Release server build with the restricted-SDK workaround | 0 | 0 warnings, 0 errors |
+| Inline HTML script compilation with Node | 0 | HTML_SCRIPT_SYNTAX_OK; diagnostics enabled by default |
+| `git diff --check` | 0 | No whitespace errors; only expected LF-to-CRLF warnings |
+
+No live Forguncy HTTP request, database write, or SMS integration was
+performed in this cycle.

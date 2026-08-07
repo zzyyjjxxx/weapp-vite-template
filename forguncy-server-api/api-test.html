@@ -61,6 +61,19 @@
       grid-column: 1 / -1;
     }
 
+    .diagnostics-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 10px;
+      font-weight: 400;
+    }
+
+    .diagnostics-toggle input {
+      width: auto;
+      margin: 0;
+    }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -271,6 +284,10 @@
       <div class="hint">
         建议使用同源地址或已允许 CORS 的地址访问。直接双击 file:// 打开时，浏览器可能拦截跨域请求；
         也可在本目录执行 <code>python -m http.server 8765</code> 后访问此页面。
+        <label class="diagnostics-toggle">
+          <input id="includeDiagnostics" type="checkbox" checked>
+          请求安全错误诊断信息
+        </label>
       </div>
     </section>
 
@@ -471,7 +488,12 @@
       }
 
       function buildUrl(path) {
-        return getBaseUrl() + path;
+        var url = getBaseUrl() + path;
+        var diagnostics = $("#includeDiagnostics");
+        if (diagnostics && diagnostics.checked) {
+          url += (url.indexOf("?") >= 0 ? "&" : "?") + "diagnostics=1";
+        }
+        return url;
       }
 
       function getAccessToken() {

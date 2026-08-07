@@ -32,7 +32,11 @@ public class LandDemandApi : ForguncyApi
         catch (Exception exception)
         {
             LandDemandDiagnostics.RecordGet(Context.RequestServices, exception);
-            await WriteErrorAsync(500, "server_error", cancellationToken);
+            await ApiResponseWriter.WriteJsonAsync(
+                Context.Response,
+                500,
+                ApiErrorDiagnostics.CreateServerError(Context.Request, "land_demand.get", exception),
+                cancellationToken);
         }
     }
 
@@ -65,7 +69,11 @@ public class LandDemandApi : ForguncyApi
         catch (Exception exception)
         {
             LandDemandDiagnostics.RecordAdd(Context.RequestServices, exception);
-            await WriteErrorAsync(500, "server_error", cancellationToken);
+            await ApiResponseWriter.WriteJsonAsync(
+                Context.Response,
+                500,
+                ApiErrorDiagnostics.CreateServerError(Context.Request, "land_demand.add", exception),
+                cancellationToken);
         }
     }
 
@@ -98,7 +106,11 @@ public class LandDemandApi : ForguncyApi
         catch (Exception exception)
         {
             LandDemandDiagnostics.RecordUpdate(Context.RequestServices, exception);
-            await WriteErrorAsync(500, "server_error", cancellationToken);
+            await ApiResponseWriter.WriteJsonAsync(
+                Context.Response,
+                500,
+                ApiErrorDiagnostics.CreateServerError(Context.Request, "land_demand.update", exception),
+                cancellationToken);
         }
     }
 

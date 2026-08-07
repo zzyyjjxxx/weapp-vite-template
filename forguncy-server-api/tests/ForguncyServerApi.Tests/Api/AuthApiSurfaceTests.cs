@@ -720,6 +720,75 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
+    public void Api_error_diagnostics_are_opt_in_and_never_return_exception_messages_by_default()
+    {
+        var diagnosticsType = typeof(EnterpriseApi).Assembly.GetType(
+            "ForguncyServerApi.Api.ApiErrorDiagnostics");
+        Assert.NotNull(diagnosticsType);
+
+        var factory = diagnosticsType!.GetMethod(
+            "CreateServerError",
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(factory);
+
+        const string secret = "password=diagnostics-secret;server=private";
+        var exception = new InvalidOperationException(secret);
+        var context = new DefaultHttpContext();
+
+        var fixedPayload = factory!.Invoke(
+            null,
+            new object?[] { context.Request, "enterprise.login", exception });
+        Assert.Equal("{\"error\":\"server_error\"}", JsonConvert.SerializeObject(fixedPayload));
+
+        context.Request.QueryString = new QueryString("?diagnostics=1");
+        var diagnosticPayload = factory.Invoke(
+            null,
+            new object?[] { context.Request, "enterprise.login", exception });
+        var diagnosticJson = JsonConvert.SerializeObject(diagnosticPayload);
+        var diagnosticObject = JObject.Parse(diagnosticJson);
+
+        Assert.Equal("server_error", diagnosticObject["error"]?.Value<string>());
+        Assert.Equal("enterprise.login", diagnosticObject["operation"]?.Value<string>());
+        Assert.Equal(nameof(InvalidOperationException), diagnosticObject["exception_type"]?.Value<string>());
+        Assert.Equal("unexpected_exception", diagnosticObject["detail_code"]?.Value<string>());
+        Assert.Null(diagnosticObject["message"]);
+        Assert.DoesNotContain(secret, diagnosticJson);
+        Assert.DoesNotContain("password", diagnosticJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("server=private", diagnosticJson, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Api_error_diagnostics_include_only_allowlisted_messages()
+    {
+        var diagnosticsType = typeof(EnterpriseApi).Assembly.GetType(
+            "ForguncyServerApi.Api.ApiErrorDiagnostics");
+        Assert.NotNull(diagnosticsType);
+
+        var factory = diagnosticsType!.GetMethod(
+            "CreateServerError",
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(factory);
+
+        var context = new DefaultHttpContext();
+        context.Request.QueryString = new QueryString("?diagnostics=true");
+        var payload = factory!.Invoke(
+            null,
+            new object?[]
+            {
+                context.Request,
+                "enterprise.send_code",
+                new InvalidOperationException("The Forguncy SMS configuration is invalid.")
+            });
+        var json = JsonConvert.SerializeObject(payload);
+        var response = JObject.Parse(json);
+
+        Assert.Equal("sms_config_invalid", response["detail_code"]?.Value<string>());
+        Assert.Equal(
+            "The Forguncy SMS configuration is invalid.",
+            response["message"]?.Value<string>());
+    }
+
+    [Fact]
     public void EnterpriseApi_maps_send_code_outcomes_to_success_cooldown_and_failure_responses()
     {
         WithEnterpriseApiType(type =>

@@ -205,8 +205,8 @@ other media type.
 
 ## Error contract
 
-Every error response is the fixed non-sensitive JSON shape shown below, and
-responses never expose exception details, configuration values, database
+Every error response without diagnostics enabled uses the fixed non-sensitive
+JSON shape shown below. Responses never expose configuration values, database
 connection information, signing keys, SQL text, or credentials.
 
 | Route | Status | Body |
@@ -227,6 +227,24 @@ connection information, signing keys, SQL text, or credentials.
 
 Request cancellation is always propagated and never converted into a `500`
 response.
+
+For troubleshooting, append `diagnostics=1` to a request. An unexpected `500`
+then includes the safe operation code, exception type, detail code, and an
+allow-listed message when one is available. It never includes the raw
+exception message. The HTML quick-test page enables this query parameter by
+default; uncheck `请求安全错误诊断信息` to test the normal fixed response.
+
+Example diagnostic response:
+
+```json
+{
+  "error": "server_error",
+  "operation": "enterprise.login",
+  "exception_type": "InvalidOperationException",
+  "detail_code": "forguncy_connection_config_invalid",
+  "message": "The Forguncy authentication connection configuration is invalid."
+}
+```
 
 ## Database contract
 
@@ -292,7 +310,8 @@ python -m http.server 8765
 
 Then open http://localhost:8765/api-test.html?base=http://localhost:8080.
 The page stores only test tokens in sessionStorage; it does not store the
-login password.
+login password. The page requests safe error diagnostics by default so a
+failed call shows its operation and server-side failure category.
 
 ## Test and release build
 

@@ -50,7 +50,7 @@ public class EnterpriseApi : ForguncyApi
             await ApiResponseWriter.WriteJsonAsync(
                 Context.Response,
                 500,
-                CreateServerErrorResponse(),
+                ApiErrorDiagnostics.CreateServerError(Context.Request, "enterprise.login", exception),
                 cancellationToken);
         }
     }
@@ -95,7 +95,7 @@ public class EnterpriseApi : ForguncyApi
             await ApiResponseWriter.WriteJsonAsync(
                 Context.Response,
                 500,
-                CreateServerErrorResponse(),
+                ApiErrorDiagnostics.CreateServerError(Context.Request, "enterprise.refresh", exception),
                 cancellationToken);
         }
     }
@@ -148,7 +148,7 @@ public class EnterpriseApi : ForguncyApi
             await ApiResponseWriter.WriteJsonAsync(
                 Context.Response,
                 500,
-                CreateServerErrorResponse(),
+                ApiErrorDiagnostics.CreateServerError(Context.Request, "enterprise.get_info", exception),
                 cancellationToken);
         }
     }
@@ -229,7 +229,7 @@ public class EnterpriseApi : ForguncyApi
             await ApiResponseWriter.WriteJsonAsync(
                 Context.Response,
                 500,
-                CreateServerErrorResponse(),
+                ApiErrorDiagnostics.CreateServerError(Context.Request, "enterprise.send_code", exception),
                 cancellationToken);
         }
     }
@@ -310,7 +310,7 @@ public class EnterpriseApi : ForguncyApi
             await ApiResponseWriter.WriteJsonAsync(
                 Context.Response,
                 500,
-                CreateServerErrorResponse(),
+                ApiErrorDiagnostics.CreateServerError(Context.Request, "enterprise.verify_code", exception),
                 cancellationToken);
         }
     }
