@@ -24,6 +24,17 @@ public sealed class JwtTokenService : IJwtTokenService
 
     public string CreateRefreshToken(AuthUser user) => CreateToken(user, options.JwtRefreshLifetime, "refresh");
 
+    public ClaimsPrincipal ValidateAccessToken(string token)
+    {
+        var principal = ValidateSignedToken(token);
+        if (!string.Equals(principal.FindFirst("token_use")?.Value, "access", StringComparison.Ordinal))
+        {
+            throw new SecurityTokenException("The JWT is not an access token.");
+        }
+
+        return principal;
+    }
+
     public ClaimsPrincipal ValidateToken(string token) => ValidateSignedToken(token);
 
     public ClaimsPrincipal ValidateRefreshToken(string token)

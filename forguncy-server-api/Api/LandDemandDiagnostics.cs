@@ -3,18 +3,20 @@ using Microsoft.Extensions.Logging;
 
 namespace ForguncyServerApi.Api;
 
-public static class AuthDiagnostics
+public static class LandDemandDiagnostics
 {
-    private const string UnexpectedLoginOperationCode = "auth.login.unexpected_failure";
-    private const string UnexpectedRefreshOperationCode = "auth.refresh.unexpected_failure";
-    private static readonly EventId UnexpectedLoginEvent = new(1001, "AuthLoginUnexpectedFailure");
-    private static readonly EventId UnexpectedRefreshEvent = new(1002, "AuthRefreshUnexpectedFailure");
+    private static readonly EventId UnexpectedGetEvent = new(1201, "LandDemandGetUnexpectedFailure");
+    private static readonly EventId UnexpectedAddEvent = new(1202, "LandDemandAddUnexpectedFailure");
+    private static readonly EventId UnexpectedUpdateEvent = new(1203, "LandDemandUpdateUnexpectedFailure");
 
-    public static void RecordLogin(IServiceProvider? services, Exception exception) =>
-        Record(services, exception, UnexpectedLoginEvent, UnexpectedLoginOperationCode);
+    public static void RecordGet(IServiceProvider? services, Exception exception) =>
+        Record(services, exception, UnexpectedGetEvent, "land_demand.get");
 
-    public static void RecordRefresh(IServiceProvider? services, Exception exception) =>
-        Record(services, exception, UnexpectedRefreshEvent, UnexpectedRefreshOperationCode);
+    public static void RecordAdd(IServiceProvider? services, Exception exception) =>
+        Record(services, exception, UnexpectedAddEvent, "land_demand.add");
+
+    public static void RecordUpdate(IServiceProvider? services, Exception exception) =>
+        Record(services, exception, UnexpectedUpdateEvent, "land_demand.update");
 
     private static void Record(
         IServiceProvider? services,
@@ -26,11 +28,11 @@ public static class AuthDiagnostics
 
         try
         {
-            var logger = services?.GetService(typeof(ILogger<AuthApi>)) as ILogger
+            var logger = services?.GetService(typeof(ILogger<LandDemandApi>)) as ILogger
                 ?? services?.GetService(typeof(ILogger)) as ILogger;
             if (logger is null && services?.GetService(typeof(ILoggerFactory)) is ILoggerFactory loggerFactory)
             {
-                logger = loggerFactory.CreateLogger(typeof(AuthApi).FullName ?? nameof(AuthApi));
+                logger = loggerFactory.CreateLogger(typeof(LandDemandApi).FullName ?? nameof(LandDemandApi));
             }
 
             if (logger is not null)
@@ -45,7 +47,6 @@ public static class AuthDiagnostics
         }
         catch (Exception)
         {
-            // Diagnostics must never replace the fixed client error response.
         }
 
         try
@@ -57,7 +58,6 @@ public static class AuthDiagnostics
         }
         catch (Exception)
         {
-            // A failing Trace listener must not alter the client response.
         }
     }
 }

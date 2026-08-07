@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>企业用地需求 API 快速测试</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+      background: #f4f7fb;
+      color: #172033;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+    }
+
+    .app {
+      width: min(1440px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 24px 0 48px;
+    }
+
+    h1, h2, h3, p {
+      margin-top: 0;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+      font-size: clamp(24px, 3vw, 34px);
+    }
+
+    .subtitle {
+      color: #63708a;
+      margin-bottom: 20px;
+    }
+
+    .toolbar, .card {
+      background: #fff;
+      border: 1px solid #dce4f0;
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(41, 63, 99, .06);
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) auto auto;
+      gap: 12px;
+      align-items: end;
+      padding: 16px;
+      margin-bottom: 18px;
+    }
+
+    .toolbar .hint {
+      grid-column: 1 / -1;
+    }
+
+    .diagnostics-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 10px;
+      font-weight: 400;
+    }
+
+    .diagnostics-toggle input {
+      width: auto;
+      margin: 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      min-width: 0;
+      padding: 18px;
+    }
+
+    .card.wide {
+      grid-column: 1 / -1;
+    }
+
+    .card-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .card-heading h2 {
+      margin-bottom: 0;
+      font-size: 19px;
+    }
+
+    .route {
+      color: #65738b;
+      font: 12px/1.5 Consolas, "SFMono-Regular", monospace;
+      word-break: break-all;
+    }
+
+    .fields {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 12px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      color: #4a5870;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    input, textarea, button {
+      font: inherit;
+    }
+
+    input, textarea {
+      width: 100%;
+      border: 1px solid #cbd6e6;
+      border-radius: 8px;
+      padding: 9px 10px;
+      color: #172033;
+      background: #fbfdff;
+    }
+
+    input:focus, textarea:focus {
+      outline: 2px solid rgba(45, 108, 223, .2);
+      border-color: #2d6cdf;
+    }
+
+    textarea {
+      min-height: 190px;
+      resize: vertical;
+      font: 12px/1.55 Consolas, "SFMono-Regular", monospace;
+    }
+
+    textarea.tokens {
+      min-height: 72px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 9px 15px;
+      color: #fff;
+      background: #2d6cdf;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button.secondary {
+      color: #2d5cae;
+      background: #eaf1ff;
+    }
+
+    button.danger {
+      color: #a63232;
+      background: #fff0f0;
+    }
+
+    button:disabled {
+      opacity: .55;
+      cursor: wait;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .hint {
+      color: #718099;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .result {
+      margin: 12px 0 0;
+      min-height: 78px;
+      max-height: 320px;
+      overflow: auto;
+      padding: 11px;
+      border-radius: 8px;
+      background: #111827;
+      color: #dbeafe;
+      font: 12px/1.55 Consolas, "SFMono-Regular", monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .result.ok {
+      border-left: 4px solid #2f9e67;
+    }
+
+    .result.error {
+      border-left: 4px solid #e05252;
+    }
+
+    .auth-state {
+      justify-self: end;
+      align-self: center;
+      color: #718099;
+      font-size: 13px;
+    }
+
+    .auth-state.ready {
+      color: #258052;
+      font-weight: 600;
+    }
+
+    @media (max-width: 850px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .card.wide {
+        grid-column: auto;
+      }
+
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .auth-state {
+        justify-self: start;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .app {
+        width: min(100% - 20px, 1440px);
+        padding-top: 14px;
+      }
+
+      .fields {
+        grid-template-columns: 1fr;
+      }
+
+      .field.full {
+        grid-column: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>企业用地需求 API 快速测试</h1>
+    <p class="subtitle">登录后自动携带 access token，可直接测试 8 个正式接口并查看原始响应。</p>
+
+    <section class="toolbar">
+      <div class="field">
+        <label for="baseUrl">API 基地址</label>
+        <input id="baseUrl" type="url" placeholder="例如：http://localhost:8080">
+      </div>
+      <button id="clearTokens" class="danger" type="button">清空 Token</button>
+      <div id="authState" class="auth-state">未登录</div>
+      <div class="field full">
+        <label for="accessToken">access_token</label>
+        <textarea id="accessToken" class="tokens" spellcheck="false" placeholder="登录后自动填充，也可手工粘贴"></textarea>
+      </div>
+      <div class="hint">
+        建议使用同源地址或已允许 CORS 的地址访问。直接双击 file:// 打开时，浏览器可能拦截跨域请求；
+        也可在本目录执行 <code>python -m http.server 8765</code> 后访问此页面。
+        <label class="diagnostics-toggle">
+          <input id="includeDiagnostics" type="checkbox" checked>
+          请求安全错误诊断信息
+        </label>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <div class="card-heading">
+          <h2>1. 登录</h2>
+          <span class="route">POST /customapi/enterpriseapi/login</span>
+        </div>
+        <div class="fields">
+          <div class="field">
+            <label for="loginUsername">username / 统一社会信用代码</label>
+            <input id="loginUsername" autocomplete="username" placeholder="91330200SYNTHETIC">
+          </div>
+          <div class="field">
+            <label for="loginPassword">password</label>
+            <input id="loginPassword" type="password" autocomplete="current-password">
+          </div>
+        </div>
+        <div class="actions">
+          <button id="loginButton" type="button">登录</button>
+        </div>
+        <pre id="loginResult" class="result">尚未调用</pre>
+      </article>
+
+      <article class="card">
+        <div class="card-heading">
+          <h2>2. 刷新 Token</h2>
+          <span class="route">POST /customapi/enterpriseapi/refresh</span>
+        </div>
+        <div class="field">
+          <label for="refreshToken">refresh_token</label>
+          <textarea id="refreshToken" class="tokens" spellcheck="false" placeholder="登录后自动填充，也可手工粘贴"></textarea>
+        </div>
+        <div class="actions">
+          <button id="refreshButton" type="button">刷新</button>
+        </div>
+        <pre id="refreshResult" class="result">尚未调用</pre>
+      </article>
+
+      <article class="card">
+        <div class="card-heading">
+          <h2>3. 企业信息</h2>
+          <span class="route">GET /customapi/enterpriseapi/getinfo</span>
+        </div>
+        <p class="hint">使用当前 access token 查询企业名称、统一社会信用代码、县区和区域。</p>
+        <div class="actions">
+          <button id="getInfoButton" type="button">查询企业信息</button>
+        </div>
+        <pre id="getInfoResult" class="result">尚未调用</pre>
+      </article>
+
+      <article class="card">
+        <div class="card-heading">
+          <h2>4. 发送短信验证码</h2>
+          <span class="route">POST /customapi/enterpriseapi/sendcode</span>
+        </div>
+        <div class="field">
+          <label for="sendMobile">mobile</label>
+          <input id="sendMobile" inputmode="numeric" value="13800000000">
+        </div>
+        <div class="actions">
+          <button id="sendCodeButton" type="button">发送验证码</button>
+        </div>
+        <pre id="sendCodeResult" class="result">尚未调用</pre>
+      </article>
+
+      <article class="card">
+        <div class="card-heading">
+          <h2>5. 校验短信验证码</h2>
+          <span class="route">POST /customapi/enterpriseapi/verifycode</span>
+        </div>
+        <div class="fields">
+          <div class="field">
+            <label for="verifyMobile">mobile</label>
+            <input id="verifyMobile" inputmode="numeric" value="13800000000">
+          </div>
+          <div class="field">
+            <label for="verifyCode">code</label>
+            <input id="verifyCode" inputmode="numeric" maxlength="6" placeholder="6 位验证码">
+          </div>
+        </div>
+        <div class="actions">
+          <button id="verifyCodeButton" type="button">校验验证码</button>
+        </div>
+        <pre id="verifyCodeResult" class="result">尚未调用</pre>
+      </article>
+
+      <article class="card">
+        <div class="card-heading">
+          <h2>6. 查询用地需求</h2>
+          <span class="route">GET /customapi/landdemandapi/getlanddemand</span>
+        </div>
+        <p class="hint">使用当前 access token，企业归属从 Token 的 name claim 获取。</p>
+        <div class="actions">
+          <button id="getDemandButton" type="button">查询用地需求</button>
+        </div>
+        <pre id="getDemandResult" class="result">尚未调用</pre>
+      </article>
+
+      <article class="card wide">
+        <div class="card-heading">
+          <h2>7. 新增用地需求</h2>
+          <span class="route">POST /customapi/landdemandapi/addlanddemand</span>
+        </div>
+        <div class="field">
+          <label for="addDemandPayload">JSON 请求体（草稿 landusedemand=2；正式提交改为 1）</label>
+          <textarea id="addDemandPayload" spellcheck="false"></textarea>
+        </div>
+        <div class="actions">
+          <button id="addDemandButton" type="button">新增用地需求</button>
+        </div>
+        <pre id="addDemandResult" class="result">尚未调用</pre>
+      </article>
+
+      <article class="card wide">
+        <div class="card-heading">
+          <h2>8. 更新用地需求</h2>
+          <span class="route">POST /customapi/landdemandapi/updatelanddemand</span>
+        </div>
+        <div class="field">
+          <label for="updateDemandPayload">JSON 请求体（只允许 26 个业务字段）</label>
+          <textarea id="updateDemandPayload" spellcheck="false"></textarea>
+        </div>
+        <div class="actions">
+          <button id="updateDemandButton" type="button">更新用地需求</button>
+        </div>
+        <pre id="updateDemandResult" class="result">尚未调用</pre>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var TOKEN_STORAGE_KEY = "enterprise-land-demand-api-test-tokens";
+      var $ = function (selector) {
+        return document.querySelector(selector);
+      };
+
+      var state = {
+        accessToken: "",
+        refreshToken: ""
+      };
+
+      var sampleDemand = {
+        area: "330212",
+        building_area: 1234.56,
+        expect_park: "测试园区",
+        expect_time: "2026-12",
+        is_deploy: "1",
+        deploy_park: "测试园区",
+        is_specialuse: "0",
+        deploy_landtype: null,
+        deploy_height: 12.34,
+        deploy_weight: 56.78,
+        investment: 1000,
+        project_hydm: "C3990",
+        keyindustry: "测试产业",
+        futureindustry: "测试方向",
+        pred_ys: 100,
+        pred_tax: 80,
+        pred_rdex: 50,
+        pred_unitenergy: 60,
+        projectdata: "测试项目说明",
+        is_financing: "0",
+        financing_money: null,
+        financing_time: null,
+        contact: "测试联系人",
+        office: "测试部门",
+        phone: "13800000000",
+        landusedemand: "2"
+      };
+
+      function pretty(value) {
+        if (typeof value === "string") {
+          return value || "(empty response)";
+        }
+        try {
+          return JSON.stringify(value, null, 2);
+        } catch (error) {
+          return String(value);
+        }
+      }
+
+      function renderResult(id, result) {
+        var element = $("#" + id);
+        var status = result.status + (result.elapsedMs === undefined ? "" : " · " + result.elapsedMs + " ms");
+        var body = result.body !== undefined ? result.body : result.error;
+        element.className = "result " + (result.ok ? "ok" : "error");
+        element.textContent = status + "\n" + pretty(body);
+      }
+
+      function getBaseUrl() {
+        var value = $("#baseUrl").value.trim();
+        return value.replace(/\/+$/, "");
+      }
+
+      function buildUrl(path) {
+        var url = getBaseUrl() + path;
+        var diagnostics = $("#includeDiagnostics");
+        if (diagnostics && diagnostics.checked) {
+          url += (url.indexOf("?") >= 0 ? "&" : "?") + "diagnostics=1";
+        }
+        return url;
+      }
+
+      function getAccessToken() {
+        var token = $("#accessToken");
+        return token ? token.value.trim() : state.accessToken;
+      }
+
+      function getRefreshToken() {
+        return $("#refreshToken").value.trim() || state.refreshToken;
+      }
+
+      function saveTokens(accessToken, refreshToken) {
+        if (accessToken) {
+          state.accessToken = accessToken;
+          $("#accessToken").value = accessToken;
+        }
+        if (refreshToken) {
+          state.refreshToken = refreshToken;
+          $("#refreshToken").value = refreshToken;
+        }
+        sessionStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(state));
+        updateAuthState();
+      }
+
+      function updateAuthState() {
+        var element = $("#authState");
+        var hasAccessToken = Boolean(getAccessToken());
+        element.textContent = hasAccessToken ? "access token 已就绪" : "未登录";
+        element.className = "auth-state" + (hasAccessToken ? " ready" : "");
+      }
+
+      function resetTokens() {
+        state.accessToken = "";
+        state.refreshToken = "";
+        $("#accessToken").value = "";
+        $("#refreshToken").value = "";
+        sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+        updateAuthState();
+      }
+
+      async function callApi(method, path, body, tokenKind) {
+        var headers = {
+          Accept: "application/json"
+        };
+        var token = tokenKind === "access" ? getAccessToken() : "";
+        if (token) {
+          headers.Authorization = "Bearer " + token;
+        }
+        if (body !== undefined) {
+          headers["Content-Type"] = "application/json";
+        }
+
+        var startedAt = performance.now();
+        try {
+          var response = await fetch(buildUrl(path), {
+            method: method,
+            headers: headers,
+            body: body === undefined ? undefined : JSON.stringify(body)
+          });
+          var text = await response.text();
+          var parsed = text;
+          try {
+            parsed = text ? JSON.parse(text) : "";
+          } catch (error) {
+            // Keep non-JSON responses visible for diagnosing proxies and CORS.
+          }
+          return {
+            status: response.status,
+            ok: response.ok,
+            elapsedMs: Math.round(performance.now() - startedAt),
+            body: parsed
+          };
+        } catch (error) {
+          return {
+            status: "NETWORK_ERROR",
+            ok: false,
+            elapsedMs: Math.round(performance.now() - startedAt),
+            error: error && error.message ? error.message : String(error)
+          };
+        }
+      }
+
+      function readJsonPayload(id) {
+        try {
+          return JSON.parse($("#" + id).value);
+        } catch (error) {
+          throw new Error("JSON 请求体格式错误：" + error.message);
+        }
+      }
+
+      function applyTokenResponse(result) {
+        if (!result || !result.body || typeof result.body !== "object") {
+          return;
+        }
+        saveTokens(result.body.access_token, result.body.refresh_token);
+      }
+
+      async function run(buttonId, resultId, action) {
+        var button = $("#" + buttonId);
+        button.disabled = true;
+        try {
+          var result = await action();
+          renderResult(resultId, result);
+          return result;
+        } catch (error) {
+          var failed = {
+            status: "CLIENT_ERROR",
+            ok: false,
+            error: error && error.message ? error.message : String(error)
+          };
+          renderResult(resultId, failed);
+          return failed;
+        } finally {
+          button.disabled = false;
+          updateAuthState();
+        }
+      }
+
+      $("#baseUrl").value = new URLSearchParams(location.search).get("base")
+        || (location.protocol === "http:" || location.protocol === "https:" ? location.origin : "http://localhost:8080");
+      $("#addDemandPayload").value = JSON.stringify(sampleDemand, null, 2);
+      $("#updateDemandPayload").value = JSON.stringify(sampleDemand, null, 2);
+
+      try {
+        var stored = JSON.parse(sessionStorage.getItem(TOKEN_STORAGE_KEY) || "{}");
+        state.accessToken = stored.accessToken || "";
+        state.refreshToken = stored.refreshToken || "";
+      } catch (error) {
+        resetTokens();
+      }
+
+      $("#accessToken").value = state.accessToken;
+      $("#refreshToken").value = state.refreshToken;
+      $("#accessToken").addEventListener("input", updateAuthState);
+      $("#refreshToken").addEventListener("input", updateAuthState);
+      updateAuthState();
+
+      $("#clearTokens").addEventListener("click", resetTokens);
+
+      $("#loginButton").addEventListener("click", function () {
+        run("loginButton", "loginResult", async function () {
+          var result = await callApi(
+            "POST",
+            "/customapi/enterpriseapi/login",
+            {
+              username: $("#loginUsername").value.trim(),
+              password: $("#loginPassword").value
+            }
+          );
+          applyTokenResponse(result);
+          return result;
+        });
+      });
+
+      $("#refreshButton").addEventListener("click", function () {
+        run("refreshButton", "refreshResult", async function () {
+          var result = await callApi(
+            "POST",
+            "/customapi/enterpriseapi/refresh",
+            { refresh_token: getRefreshToken() }
+          );
+          applyTokenResponse(result);
+          return result;
+        });
+      });
+
+      $("#getInfoButton").addEventListener("click", function () {
+        run("getInfoButton", "getInfoResult", function () {
+          return callApi("GET", "/customapi/enterpriseapi/getinfo", undefined, "access");
+        });
+      });
+
+      $("#sendCodeButton").addEventListener("click", function () {
+        run("sendCodeButton", "sendCodeResult", function () {
+          return callApi(
+            "POST",
+            "/customapi/enterpriseapi/sendcode",
+            { mobile: $("#sendMobile").value.trim() },
+            "access"
+          );
+        });
+      });
+
+      $("#verifyCodeButton").addEventListener("click", function () {
+        run("verifyCodeButton", "verifyCodeResult", function () {
+          return callApi(
+            "POST",
+            "/customapi/enterpriseapi/verifycode",
+            {
+              mobile: $("#verifyMobile").value.trim(),
+              code: $("#verifyCode").value.trim()
+            },
+            "access"
+          );
+        });
+      });
+
+      $("#getDemandButton").addEventListener("click", function () {
+        run("getDemandButton", "getDemandResult", function () {
+          return callApi("GET", "/customapi/landdemandapi/getlanddemand", undefined, "access");
+        });
+      });
+
+      $("#addDemandButton").addEventListener("click", function () {
+        run("addDemandButton", "addDemandResult", function () {
+          return callApi(
+            "POST",
+            "/customapi/landdemandapi/addlanddemand",
+            readJsonPayload("addDemandPayload"),
+            "access"
+          );
+        });
+      });
+
+      $("#updateDemandButton").addEventListener("click", function () {
+        run("updateDemandButton", "updateDemandResult", function () {
+          return callApi(
+            "POST",
+            "/customapi/landdemandapi/updatelanddemand",
+            readJsonPayload("updateDemandPayload"),
+            "access"
+          );
+        });
+      });
+    }());
+  </script>
+</body>
+</html>

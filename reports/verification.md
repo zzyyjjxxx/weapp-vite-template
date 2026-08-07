@@ -1182,3 +1182,222 @@ Post-commit status contained only the pre-existing user-owned item:
   machine has only SDK `9.0.302`. The local Forguncy 8 dependency was present
   at `C:\Program Files\Forguncy 8\Website\bin` and its ServerApi DLL reported
   version `8.0.4.0`.
+## Enterprise land-demand API delivery - 2026-08-07
+
+This cycle implemented and verified the explicit enterprise auth API
+(login/refresh/getinfo), the shared composition root, and the land-demand
+filing API (getlanddemand/addlanddemand/updatelanddemand) against Forguncy
+8.0.4 / .NET Framework 4.7.2 in worktree
+`C:\Users\18556\.codex\worktrees\e919\weapp-vite-template`. All commands below
+are the actually observed results of this cycle; nothing was fabricated.
+
+No secret, connection string, password, or signing key was printed or
+recorded. The read-only database preflight received the task-scoped local
+database password only through the process environment.
+
+### Task 4 - EnterpriseApi and shared composition root
+
+Commit `3ed091f810a8c63c646789fe97400fdb41673cf3`
+(`fix: share enterprise composition root cache`).
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| Focused `AuthApiSurfaceTests` (Release, `-p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'`) | 0 | 51 passed, 0 failed |
+| Full Release tests | 0 | 176 passed, 0 failed |
+| `dotnet build ... --configuration Release` | 0 | 0 warnings, 0 errors |
+| SDK reflection probe | 0 | `EnterpriseApi` derives from `GrapeCity.Forguncy.ServerApi.ForguncyApi`; exactly `Login`/`Refresh`/`GetInfo` parameterless handlers with Post/Post/Get attributes |
+
+### Task 5 - LandDemandApi request parsing and routes
+
+Commits `08d79b2c3c3847fc5e609681fac0bd9578817543`
+(`feat: add land demand web api`) and
+`db46aef88ea05043ea8b8659d60c7b39346ec3d5`
+(`fix: propagate land demand cancellation`).
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| Focused `LandDemandRequestReaderTests|LandDemandApiSurfaceTests` (initial) | 0 | 40 passed, 0 failed |
+| Focused same filter after cancellation fix | 0 | 42 passed, 0 failed |
+| Full Release tests after cancellation fix | 0 | 218 passed, 0 failed |
+| `dotnet build ... --configuration Release` | 0 | 0 warnings, 0 errors |
+| `git diff --cached --check` | 0 | No whitespace errors; only expected LF-to-CRLF warnings |
+
+The write body is read with a `CancellationToken`-aware streaming loop; Add
+and Update cancellation during body reads is covered by regression tests and
+never becomes a 500 response.
+
+### Task 6 - Documentation, final surface assertions, release verification
+
+Documentation contract tests were written first. Focused RED command
+(`FullyQualifiedName~AuthApiSurfaceTests|FullyQualifiedName~LandDemandApiSurfaceTests`)
+exited `1` with 3 failed / 44 passed; the failures were the expected README
+assertions (six-route list, error-contract rows, response/write whitelist
+examples) against the then-current README.
+
+After updating `forguncy-server-api/README.md`:
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| Focused `AuthApiSurfaceTests|LandDemandApiSurfaceTests` | 0 | 47 passed, 0 failed |
+| Full Release tests | 0 | 223 passed, 0 failed |
+| `dotnet build .\ForguncyServerApi.csproj --configuration Release --no-restore -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'` | 0 | 0 warnings, 0 errors |
+| `git diff --check` | 0 | No whitespace errors |
+
+SDK reflection probe (loaded with the Forguncy 8.0.4
+`GrapeCity.Forguncy.ServerApi.dll`):
+
+```text
+TYPE=ForguncyServerApi.Api.EnterpriseApi BASE=GrapeCity.Forguncy.ServerApi.ForguncyApi
+METHOD=GetInfo;PARAMS=0;ATTRS=AsyncStateMachineAttribute,GetAttribute
+METHOD=Login;PARAMS=0;ATTRS=AsyncStateMachineAttribute,PostAttribute
+METHOD=Refresh;PARAMS=0;ATTRS=AsyncStateMachineAttribute,PostAttribute
+TYPE=ForguncyServerApi.Api.LandDemandApi BASE=GrapeCity.Forguncy.ServerApi.ForguncyApi
+METHOD=AddLandDemand;PARAMS=0;ATTRS=AsyncStateMachineAttribute,PostAttribute
+METHOD=GetLandDemand;PARAMS=0;ATTRS=AsyncStateMachineAttribute,GetAttribute
+METHOD=UpdateLandDemand;PARAMS=0;ATTRS=AsyncStateMachineAttribute,PostAttribute
+AUTHAPI ABSENT
+PROBE=PASS
+```
+
+### Read-only MySQL preflight (local development database, no writes)
+
+Connection used `mujunbigdata` with the task-scoped password supplied only
+through the process environment. Only read-only queries ran; no
+`INSERT`/`UPDATE`/`DELETE`, DDL, or schema change was executed.
+
+| Check | Result |
+| --- | --- |
+| Tables | `landusedemand_info`, `m_preliminary_list`, `yj_regioninfo` all exist as BASE TABLE |
+| Column counts | `landusedemand_info` 44, `m_preliminary_list` 113, `yj_regioninfo` 4 |
+| Enterprise/region join | 8215 enterprise rows, 8215 county matches (100% coverage via `yj_regioninfo.id = m_preliminary_list.county`) |
+| Filing keys | `landusedemand_info`: PRIMARY (`id`) and unique `crd` (`creditcode`) |
+
+### Acceptance boundary
+
+Unit, build, reflection, and read-only database checks passed locally. No live
+Forguncy Designer upload, no real HTTP round-trip, and no real land-demand
+database write was performed or claimed in this cycle. Deployment to the
+Forguncy 8.0.4 site and end-to-end HTTP acceptance remain separate, unverified
+steps.
+
+## Enterprise getinfo region extension - 2026-08-07
+
+This cycle extended the public `GET /customapi/enterpriseapi/getinfo`
+response with the authenticated enterprise `region` field. The response
+whitelist is now `businessname`, `creditcode`, `county`, and `region`.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `dotnet restore .\forguncy-server-api\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj` | 0 | Server and test project assets restored successfully |
+| `dotnet test .\forguncy-server-api\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~AuthApiSurfaceTests --logger "console;verbosity=normal"` | 1 | Compilation stopped before test discovery because the Forguncy 8.0.4 SDK path is absent; no test pass claimed |
+| `pnpm test` | 0 | 35 test files, 155 tests passed |
+| `pnpm typecheck:app` | 0 | Passed |
+| `git diff --check` | 0 | No whitespace errors; only expected LF-to-CRLF warnings |
+
+The failed .NET command could not resolve `GrapeCity.Forguncy.ServerApi` and
+IdentityModel references from the configured
+`D:\Program Files\Forguncy 8.0.4\Website\bin` path. No live Forguncy
+Designer upload, HTTP round-trip, database write, or SMS integration was
+performed in this cycle.
+
+## Bundle Forguncy references - 2026-08-07
+
+The five requested assemblies were copied from the installed Forguncy 8.0.4
+runtime into `forguncy-server-api/lib/` and both project files now resolve
+them from that repository directory by default. The copied files and SHA-256
+hashes are:
+
+```text
+GrapeCity.Forguncy.ServerApi.dll|20992|22F73426BE998AD7C7D4511ECBDA72D80E8E8C2639FBFFE3A2C39EE3EC75F54A
+Microsoft.IdentityModel.JsonWebTokens.dll|62840|D60426410E7E647253135AC26B75C9BEA07121B95D487BDF0365D8D033702EEE
+Microsoft.IdentityModel.Logging.dll|30072|D1AFB987FD12CB057B0E995DAFBA9EFC931FD6CA09705DE61A767B6B1850256E
+Microsoft.IdentityModel.Tokens.dll|917408|01E783FE73D241F4B1AF1A5361BE93D3AE0F8E07B6DB499DDD0CF7396AD5AE68
+System.IdentityModel.Tokens.Jwt.dll|81784|B173D50731F91A4ACEC60EF575C94290852ED71D894D7880ECFCFF6EAC6882DC
+```
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `dotnet restore .\forguncy-server-api\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj` | 0 | Server and test assets restored successfully |
+| `dotnet test .\forguncy-server-api\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj --configuration Release --no-restore` | 0 | 223 passed, 0 failed |
+| `dotnet build .\forguncy-server-api\ForguncyServerApi.csproj --configuration Release --no-restore` | 0 | 0 warnings, 0 errors |
+| `git diff --check` | 0 | No whitespace errors; only expected LF-to-CRLF warnings |
+
+The test assembly resolver and README route assertion were updated to work
+without the former machine-specific `D:\Program Files\Forguncy 8.0.4` path.
+No live Designer upload, HTTP round-trip, database write, or SMS integration
+was performed in this cycle.
+
+## Enterprise SMS verification API - 2026-08-07
+
+This cycle added sendcode and verifycode to EnterpriseApi, the
+one-row-per-enterprise enterprise_sms_verification table script, Forguncy
+config/message-log repositories, and replaceable HTTP clients for the SMS
+authentication and send calls. The HTTP and service tests use in-memory mocks;
+the internal SMS endpoints were not contacted.
+
+Because the restricted local SDK process cannot read
+C:\Users\hp\AppData\Local\Microsoft SDKs, the .NET Framework commands below
+pass empty TargetPlatform* properties to use the repository-bundled
+references without probing that denied SDK location.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| Focused SMS service tests (FullyQualifiedName~SmsVerificationServiceTests) | 0 | 6 passed, 0 failed |
+| Focused SMS HTTP/request tests (FullyQualifiedName~SmsHttpClientsTests\|FullyQualifiedName~VerificationCodeRequestReaderTests) | 0 | 9 passed, 0 failed |
+| Focused API surface tests (FullyQualifiedName~AuthApiSurfaceTests) | 0 | 33 passed, 0 failed |
+| Full Release tests | 0 | 240 passed, 0 failed |
+| Release server build with the restricted-SDK workaround | 0 | 0 warnings, 0 errors |
+| git diff --check | 0 | No whitespace errors; only expected LF-to-CRLF warnings |
+
+No live Forguncy deployment, real HTTP round-trip, database write, or SMS
+integration was performed in this cycle.
+
+## API quick-test HTML - 2026-08-07
+
+Added forguncy-server-api/api-test.html as a dependency-free browser page
+for the eight custom routes. It keeps test tokens in sessionStorage, does
+not persist the login password, and does not make any request until a button
+is clicked.
+
+| Check | Exit | Result |
+| --- | ---: | --- |
+| Extract the inline script and compile it with Node new Function | 0 | HTML_SCRIPT_SYNTAX_OK |
+| Extract unique route declarations with rg | 0 | Exactly 8 routes: login, refresh, getinfo, sendcode, verifycode, getlanddemand, addlanddemand, updatelanddemand |
+
+No browser-to-Forguncy request was performed in this cycle; CORS or same-origin
+behavior remains dependent on the deployment host.
+
+## Safe API error diagnostics - 2026-08-07
+
+Unexpected `500` responses now accept the opt-in `diagnostics=1` query
+parameter. All eight routes report their operation code, exception type, and
+safe detail code; only explicitly allow-listed messages are returned. The
+default response remains `{"error":"server_error"}` and sensitive exception
+text is covered by tests.
+
+| Check | Exit | Result |
+| --- | ---: | --- |
+| Full Release tests | 0 | 242 passed, 0 failed |
+| Release server build with the restricted-SDK workaround | 0 | 0 warnings, 0 errors |
+| Inline HTML script compilation with Node | 0 | HTML_SCRIPT_SYNTAX_OK; diagnostics enabled by default |
+| `git diff --check` | 0 | No whitespace errors; only expected LF-to-CRLF warnings |
+
+No live Forguncy HTTP request, database write, or SMS integration was
+performed in this cycle.
+
+## SMS persistence data-access boundary - 2026-08-07
+
+After deployment testing showed that the physical verification table existed
+but the `IDataAccess` lookup still failed, the SMS persistence adapters were
+aligned with the confirmed project boundary. `config` remains on Forguncy
+`IDataAccess`; `enterprise_sms_verification` and `m_message_log` now use the
+existing SqlSugar/MySQL client factory. Enterprise and land-demand tables
+already used that same SqlSugar path.
+
+| Check | Exit | Result |
+| --- | ---: | --- |
+| Full Release tests | 0 | 246 passed, 0 failed |
+| Release server build with the restricted-SDK workaround | 0 | 0 warnings, 0 errors |
+| SqlSugar mapping/query tests | 0 | Verification table and message-log column/table/update mappings passed |
+
+No live SMS request or database write was performed in this cycle.

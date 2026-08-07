@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using ForguncyServerApi.Configuration;
 using ForguncyServerApi.Domain;
 using ForguncyServerApi.Security;
+using Microsoft.IdentityModel.Tokens;
 using Xunit;
 
 namespace ForguncyServerApi.Tests.Security;
@@ -38,6 +39,28 @@ public sealed class JwtTokenServiceTests
         Assert.Equal("refresh", Assert.Single(jwt.Claims.Where(claim => claim.Type == "token_use")).Value);
         Assert.Equal("7", principal.FindFirst("sub")?.Value);
         Assert.Equal("demo", principal.FindFirst("name")?.Value);
+    }
+
+    [Fact]
+    public void ValidateAccessToken_accepts_an_access_token_and_preserves_identity_claims()
+    {
+        var service = new JwtTokenService(TestOptions());
+        var token = service.CreateToken(new AuthUser { Id = 7, Username = "91330200SYNTHETIC" });
+
+        var principal = service.ValidateAccessToken(token);
+
+        Assert.Equal("7", principal.FindFirst("sub")?.Value);
+        Assert.Equal("91330200SYNTHETIC", principal.FindFirst("name")?.Value);
+        Assert.Equal("access", principal.FindFirst("token_use")?.Value);
+    }
+
+    [Fact]
+    public void ValidateAccessToken_rejects_a_refresh_token()
+    {
+        var service = new JwtTokenService(TestOptions());
+        var token = service.CreateRefreshToken(new AuthUser { Id = 7, Username = "91330200SYNTHETIC" });
+
+        Assert.Throws<SecurityTokenException>(() => service.ValidateAccessToken(token));
     }
 
     [Fact]

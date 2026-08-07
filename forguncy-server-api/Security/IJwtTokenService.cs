@@ -9,6 +9,8 @@ public interface IJwtTokenService
 
     string CreateRefreshToken(AuthUser user);
 
+    ClaimsPrincipal ValidateAccessToken(string token);
+
     ClaimsPrincipal ValidateToken(string token);
 
     ClaimsPrincipal ValidateRefreshToken(string token);
