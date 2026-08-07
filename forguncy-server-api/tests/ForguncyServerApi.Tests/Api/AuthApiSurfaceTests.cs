@@ -79,16 +79,18 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
-    public void EnterpriseApi_exposes_only_parameterless_login_refresh_and_get_info_methods()
+    public void EnterpriseApi_exposes_only_parameterless_auth_and_verification_methods()
     {
         WithEnterpriseApiType(type =>
         {
             var declaredPublicMethods = type.GetMethods(
                 BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-            Assert.Equal(3, declaredPublicMethods.Length);
+            Assert.Equal(5, declaredPublicMethods.Length);
 
             AssertPublicPostMethod(declaredPublicMethods, "Login");
             AssertPublicPostMethod(declaredPublicMethods, "Refresh");
+            AssertPublicPostMethod(declaredPublicMethods, "SendCode");
+            AssertPublicPostMethod(declaredPublicMethods, "VerifyCode");
             AssertPublicGetMethod(declaredPublicMethods, "GetInfo");
 
             Assert.Equal("GrapeCity.Forguncy.ServerApi.ForguncyApi", type.BaseType?.FullName);
@@ -97,12 +99,12 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
-    public void README_documents_exactly_the_six_formal_routes_without_legacy_auth_aliases()
+    public void README_documents_exactly_the_eight_formal_routes_without_legacy_auth_aliases()
     {
         var readme = File.ReadAllText(SourceFile("README.md"));
         var documentedRoutes = System.Text.RegularExpressions.Regex
             .Matches(
-                readme,
+                readme.Split(new[] { "## Authentication" }, StringSplitOptions.None)[0],
                 "^(GET|POST) /customapi/[a-z]+/[a-z]+(?=\\r?$)",
                 System.Text.RegularExpressions.RegexOptions.Multiline)
             .Cast<System.Text.RegularExpressions.Match>()
@@ -115,6 +117,8 @@ public sealed class AuthApiSurfaceTests
                 "POST /customapi/enterpriseapi/login",
                 "POST /customapi/enterpriseapi/refresh",
                 "GET /customapi/enterpriseapi/getinfo",
+                "POST /customapi/enterpriseapi/sendcode",
+                "POST /customapi/enterpriseapi/verifycode",
                 "GET /customapi/landdemandapi/getlanddemand",
                 "POST /customapi/landdemandapi/addlanddemand",
                 "POST /customapi/landdemandapi/updatelanddemand"
@@ -184,6 +188,9 @@ public sealed class AuthApiSurfaceTests
             Assert.Equal(typeof(EnterpriseService), compositionRoot.GetProperty("EnterpriseService")!.PropertyType);
             Assert.Equal(typeof(LandDemandService), compositionRoot.GetProperty("LandDemandService")!.PropertyType);
             Assert.Equal("ForguncyServerApi.Security.IJwtTokenService", compositionRoot.GetProperty("Tokens")!.PropertyType.FullName);
+            Assert.Equal(
+                typeof(SmsVerificationService),
+                compositionRoot.GetMethod("CreateSmsVerificationService")!.ReturnType);
         });
     }
 
@@ -713,6 +720,63 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
+    public void EnterpriseApi_maps_send_code_outcomes_to_success_cooldown_and_failure_responses()
+    {
+        WithEnterpriseApiType(type =>
+        {
+            var mapper = type.GetMethod("CreateSendCodeResponse", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.NotNull(mapper);
+
+            var expiresAt = new DateTimeOffset(2026, 8, 7, 12, 39, 48, TimeSpan.FromHours(8));
+            var retryAt = new DateTimeOffset(2026, 8, 7, 12, 35, 48, TimeSpan.FromHours(8));
+            var expiresJson = JsonConvert.SerializeObject(expiresAt);
+            var retryJson = JsonConvert.SerializeObject(retryAt);
+
+            AssertMappedResponse(
+                mapper!,
+                new SendVerificationCodeResult(SendVerificationCodeStatus.Success, expiresAt, retryAt),
+                200,
+                $"{{\"success\":true,\"status\":\"success\",\"expires_at\":{expiresJson},\"retry_at\":{retryJson}}}");
+            AssertMappedResponse(
+                mapper!,
+                new SendVerificationCodeResult(SendVerificationCodeStatus.Cooldown, expiresAt, retryAt),
+                429,
+                $"{{\"success\":false,\"status\":\"cooldown\",\"expires_at\":{expiresJson},\"retry_at\":{retryJson}}}");
+            AssertMappedResponse(
+                mapper!,
+                new SendVerificationCodeResult(SendVerificationCodeStatus.Failed, expiresAt, retryAt),
+                502,
+                $"{{\"success\":false,\"status\":\"failed\",\"expires_at\":{expiresJson},\"retry_at\":{retryJson}}}");
+        });
+    }
+
+    [Fact]
+    public void EnterpriseApi_maps_verify_code_outcomes_to_success_failed_and_expired_responses()
+    {
+        WithEnterpriseApiType(type =>
+        {
+            var mapper = type.GetMethod("CreateVerifyCodeResponse", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.NotNull(mapper);
+
+            AssertMappedResponse(
+                mapper!,
+                new VerifyVerificationCodeResult(VerifyVerificationCodeStatus.Success),
+                200,
+                "{\"success\":true,\"status\":\"success\"}");
+            AssertMappedResponse(
+                mapper!,
+                new VerifyVerificationCodeResult(VerifyVerificationCodeStatus.Failed),
+                400,
+                "{\"success\":false,\"status\":\"failed\"}");
+            AssertMappedResponse(
+                mapper!,
+                new VerifyVerificationCodeResult(VerifyVerificationCodeStatus.Expired),
+                410,
+                "{\"success\":false,\"status\":\"expired\"}");
+        });
+    }
+
+    [Fact]
     public void EnterpriseApi_maps_get_info_success_to_businessname_creditcode_county_and_region()
     {
         WithEnterpriseApiType(type =>
@@ -940,7 +1004,8 @@ public sealed class AuthApiSurfaceTests
             enterpriseService,
             landDemandService,
             tokens,
-            new Func<SqlSugarClient>(() => throw new NotSupportedException("Test composition root does not create SqlSugar clients."))
+            new Func<SqlSugarClient>(() => throw new NotSupportedException("Test composition root does not create SqlSugar clients.")),
+            null!
         });
     }
 

@@ -1298,3 +1298,43 @@ The test assembly resolver and README route assertion were updated to work
 without the former machine-specific `D:\Program Files\Forguncy 8.0.4` path.
 No live Designer upload, HTTP round-trip, database write, or SMS integration
 was performed in this cycle.
+
+## Enterprise SMS verification API - 2026-08-07
+
+This cycle added sendcode and verifycode to EnterpriseApi, the
+one-row-per-enterprise enterprise_sms_verification table script, Forguncy
+config/message-log repositories, and replaceable HTTP clients for the SMS
+authentication and send calls. The HTTP and service tests use in-memory mocks;
+the internal SMS endpoints were not contacted.
+
+Because the restricted local SDK process cannot read
+C:\Users\hp\AppData\Local\Microsoft SDKs, the .NET Framework commands below
+pass empty TargetPlatform* properties to use the repository-bundled
+references without probing that denied SDK location.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| Focused SMS service tests (FullyQualifiedName~SmsVerificationServiceTests) | 0 | 6 passed, 0 failed |
+| Focused SMS HTTP/request tests (FullyQualifiedName~SmsHttpClientsTests\|FullyQualifiedName~VerificationCodeRequestReaderTests) | 0 | 9 passed, 0 failed |
+| Focused API surface tests (FullyQualifiedName~AuthApiSurfaceTests) | 0 | 33 passed, 0 failed |
+| Full Release tests | 0 | 240 passed, 0 failed |
+| Release server build with the restricted-SDK workaround | 0 | 0 warnings, 0 errors |
+| git diff --check | 0 | No whitespace errors; only expected LF-to-CRLF warnings |
+
+No live Forguncy deployment, real HTTP round-trip, database write, or SMS
+integration was performed in this cycle.
+
+## API quick-test HTML - 2026-08-07
+
+Added forguncy-server-api/api-test.html as a dependency-free browser page
+for the eight custom routes. It keeps test tokens in sessionStorage, does
+not persist the login password, and does not make any request until a button
+is clicked.
+
+| Check | Exit | Result |
+| --- | ---: | --- |
+| Extract the inline script and compile it with Node new Function | 0 | HTML_SCRIPT_SYNTAX_OK |
+| Extract unique route declarations with rg | 0 | Exactly 8 routes: login, refresh, getinfo, sendcode, verifycode, getlanddemand, addlanddemand, updatelanddemand |
+
+No browser-to-Forguncy request was performed in this cycle; CORS or same-origin
+behavior remains dependent on the deployment host.

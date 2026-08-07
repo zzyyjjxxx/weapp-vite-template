@@ -1,11 +1,13 @@
 # Forguncy enterprise land-demand Web API
 
-This class library targets Forguncy 8.0.4 and exposes six custom Web API routes:
+This class library targets Forguncy 8.0.4 and exposes eight custom Web API routes:
 
 ```text
 POST /customapi/enterpriseapi/login
 POST /customapi/enterpriseapi/refresh
 GET /customapi/enterpriseapi/getinfo
+POST /customapi/enterpriseapi/sendcode
+POST /customapi/enterpriseapi/verifycode
 GET /customapi/landdemandapi/getlanddemand
 POST /customapi/landdemandapi/addlanddemand
 POST /customapi/landdemandapi/updatelanddemand
@@ -39,6 +41,36 @@ JWT `name` claim. Business ownership is derived exclusively from the validated
 access token's `name` claim; it is never read from the request body, query
 string, or path. Only the refresh route accepts a refresh token, and it
 consumes nothing else.
+
+## SMS verification contract
+
+`sendcode` and `verifycode` require the same bearer access token as the other
+business routes. The enterprise credit code is read only from the validated
+JWT `name` claim. Requests accept either JSON or URL-encoded form data:
+
+```json
+POST /customapi/enterpriseapi/sendcode
+{"mobile":"13800000000"}
+
+POST /customapi/enterpriseapi/verifycode
+{"mobile":"13800000000","code":"123456"}
+```
+
+The send response is `200` with `{"success":true,"status":"success"}` and
+the `expires_at`/`retry_at` timestamps. A repeated request during the
+60-second cooldown returns `429` with status `cooldown`; an external send
+failure returns `502` with status `failed`. Verification returns `200` for
+success, `400` with status `failed` for a wrong code, and `410` with status
+`expired` when the one-time code is missing, used, or expired.
+
+Before sending, the API reads `client_id`, `client_secret`, and `tenant` from
+the Forguncy `config` table, calls the configured SMS authentication endpoint,
+and immediately stores its `data` value in `config.item='token'`. It then
+reads `zzqscode` and `zzqssecret`, writes `m_message_log`, calls the SMS
+endpoint with `zzqscode`, `zzqssecret`, and `Auth-Token`, and updates the log
+by `transactionID`: successful calls store `retMsg`, while failed calls store
+the response `message`. The runtime clients are replaceable; local tests use
+mock authentication and SMS clients and never call the internal network.
 
 Missing, malformed, expired, wrong-key, wrong-use, or otherwise invalid access
 tokens return `401 Unauthorized` with `{"error":"invalid_token"}` for every
@@ -166,8 +198,10 @@ Login and refresh accept `application/json` or
 `application/x-www-form-urlencoded`. Multipart form data is not accepted.
 Login accepts `username` and `password`; refresh accepts `refresh_token`.
 
-The three land-demand routes require `application/json` (with an optional
-`charset` parameter) and reject any other media type.
+The two SMS verification routes accept `application/json` or
+`application/x-www-form-urlencoded`. The three land-demand routes require
+`application/json` (with an optional `charset` parameter) and reject any
+other media type.
 
 ## Error contract
 
@@ -183,6 +217,10 @@ connection information, signing keys, SQL text, or credentials.
 | Refresh | 401 | `{"error":"invalid_refresh_token"}` |
 | Business operations | 401 | `{"error":"invalid_token"}` |
 | Business operations | 404 | `{"error":"enterprise_not_found"}` |
+| Send code | 429 | `{"success":false,"status":"cooldown"}` |
+| Send code | 502 | `{"success":false,"status":"failed"}` |
+| Verify code | 400 | `{"success":false,"status":"failed"}` |
+| Verify code | 410 | `{"success":false,"status":"expired"}` |
 | Get land demand | 404 | `{"error":"land_demand_not_found"}` |
 | Add land demand | 409 | `{"error":"land_demand_exists"}` |
 | All routes | 500 | `{"error":"server_error"}` |
@@ -193,10 +231,11 @@ response.
 ## Database contract
 
 Forguncy supplies the existing database and tables (`c_userinfo`,
-`m_preliminary_list`, `landusedemand_info`, `yj_regioninfo`). This API only
-reads matching records and writes the approved filing fields; it does not
-create or alter schemas, seed enterprises, or initialize database content. Do
-not run database bootstrap SQL for this API.
+`m_preliminary_list`, `landusedemand_info`, `yj_regioninfo`, and
+`m_message_log`). The API runtime does not create or alter schemas, seed
+enterprises, or initialize database content. Apply
+`sql/002-create-enterprise-sms-verification.sql` once before deploying the
+SMS routes; it creates the one-row-per-enterprise verification table.
 
 The MySQL connection is not configured through environment variables. The
 existing database connection is selected by `config.item='ssl'`: set its
@@ -218,6 +257,12 @@ generates or fills the value and persists it before serving login requests.
 | `FGC_JWT_ISSUER` | JWT issuer | Generates `forguncy-server-api-` plus a new 32-character lowercase GUID. |
 | `FGC_JWT_EXPIRES_MINUTES` | Token lifetime in minutes | Stores `60`. |
 | `FGC_JWT_REFRESH_EXPIRES_MINUTES` | Refresh-token lifetime in minutes | Stores `10080`. |
+| `client_id` | SMS authentication client id | Required; no default. |
+| `client_secret` | SMS authentication client secret | Required; no default. |
+| `tenant` | SMS authentication tenant | Required; no default. |
+| `token` | Latest SMS authentication token | Written after successful authentication. |
+| `zzqscode` | SMS service code | Required; no default. |
+| `zzqssecret` | SMS service secret | Required; no default. |
 
 Existing non-blank values are used as-is. The signing key must contain at
 least 32 characters and the expiration values must be positive integers.
@@ -227,9 +272,27 @@ not put JWT values in environment variables or commit them to source control.
 Restart the Forguncy application process after changing JWT rows in the
 `config` table so the composition is rebuilt.
 
-Expose all six routes only through the Forguncy site's HTTPS endpoint or an
+Expose all eight routes only through the Forguncy site's HTTPS endpoint or an
 equivalent trusted network boundary. Never expose credentials through an
 unprotected direct HTTP endpoint.
+
+## HTML API quick test
+
+api-test.html is a dependency-free browser test page for all eight routes.
+Set the API base URL, log in, and then use the access token to call the
+enterprise, SMS, and land-demand operations. The add/update payloads are
+editable JSON and start with a draft example (landusedemand=2).
+
+Serve the file through a local static server instead of opening it directly
+as file:// when the API does not enable CORS:
+
+```powershell
+python -m http.server 8765
+```
+
+Then open http://localhost:8765/api-test.html?base=http://localhost:8080.
+The page stores only test tokens in sessionStorage; it does not store the
+login password.
 
 ## Test and release build
 

@@ -5,6 +5,7 @@ using ForguncyServerApi.Infrastructure;
 using ForguncyServerApi.Security;
 using GrapeCity.Forguncy.ServerApi;
 using SqlSugar;
+using System.Net.Http;
 
 namespace ForguncyServerApi.Api;
 
@@ -17,14 +18,18 @@ public sealed class EnterpriseCompositionRoot
         EnterpriseService enterpriseService,
         LandDemandService landDemandService,
         IJwtTokenService tokens,
-        Func<SqlSugarClient> clientFactory)
+        Func<SqlSugarClient> clientFactory,
+        Func<IDataAccess, SmsVerificationService>? smsVerificationServiceFactory)
     {
         AuthService = authService;
         EnterpriseService = enterpriseService;
         LandDemandService = landDemandService;
         Tokens = tokens;
         ClientFactory = clientFactory;
+        this.smsVerificationServiceFactory = smsVerificationServiceFactory;
     }
+
+    private readonly Func<IDataAccess, SmsVerificationService>? smsVerificationServiceFactory;
 
     public AuthService AuthService { get; }
 
@@ -35,6 +40,18 @@ public sealed class EnterpriseCompositionRoot
     public IJwtTokenService Tokens { get; }
 
     public Func<SqlSugarClient> ClientFactory { get; }
+
+    public SmsVerificationService CreateSmsVerificationService(IDataAccess dataAccess)
+    {
+        if (dataAccess is null)
+        {
+            throw new ArgumentNullException(nameof(dataAccess));
+        }
+
+        return smsVerificationServiceFactory is not null
+            ? smsVerificationServiceFactory(dataAccess)
+            : throw new InvalidOperationException("SMS verification is not configured.");
+    }
 
     public static Task<EnterpriseCompositionRoot> GetOrCreateAsync(
         IDataAccess dataAccess,
@@ -62,6 +79,18 @@ public sealed class EnterpriseCompositionRoot
         var tokens = new JwtTokenService(options);
         var enterpriseRepository = new EnterpriseRepository(clientFactory);
         var enterpriseService = new EnterpriseService(enterpriseRepository);
+        var authenticationClient = new HttpSmsAuthenticationClient(new HttpClient());
+        var smsGateway = new HttpSmsGateway(new HttpClient());
+        Func<IDataAccess, SmsVerificationService> smsVerificationServiceFactory = currentDataAccess =>
+            new SmsVerificationService(
+                new ForguncyConfigValueStore(currentDataAccess),
+                new ForguncySmsVerificationRepository(currentDataAccess),
+                new ForguncyMessageLogRepository(currentDataAccess),
+                authenticationClient,
+                smsGateway,
+                new RandomVerificationCodeGenerator(),
+                new SequentialTransactionIdGenerator(),
+                () => DateTimeOffset.Now);
 
         return Task.FromResult(
             new EnterpriseCompositionRoot(
@@ -77,7 +106,8 @@ public sealed class EnterpriseCompositionRoot
                     new LandDemandRepository(clientFactory),
                     () => DateTimeOffset.Now),
                 tokens,
-                clientFactory));
+                clientFactory,
+                smsVerificationServiceFactory));
     }
 
     public Task<LoginResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken) =>

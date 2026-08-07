@@ -420,7 +420,8 @@ public sealed class LandDemandApiSurfaceTests
             enterpriseService,
             landDemandService,
             tokens,
-            new Func<SqlSugarClient>(() => throw new NotSupportedException("Tests do not create SqlSugar clients."))
+            new Func<SqlSugarClient>(() => throw new NotSupportedException("Tests do not create SqlSugar clients.")),
+            null!
         });
     }
 

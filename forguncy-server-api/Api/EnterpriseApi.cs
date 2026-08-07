@@ -153,6 +153,168 @@ public class EnterpriseApi : ForguncyApi
         }
     }
 
+    [Post]
+    public async Task SendCode()
+    {
+        var cancellationToken = Context.RequestAborted;
+        try
+        {
+            var enterprise = await GetEnterpriseAsync(cancellationToken);
+            EnterpriseIdentity identity;
+            try
+            {
+                identity = await AccessTokenReader.ReadRequiredIdentity(
+                    Context.Request,
+                    enterprise.Tokens,
+                    cancellationToken);
+            }
+            catch (AccessTokenFormatException)
+            {
+                await ApiResponseWriter.WriteJsonAsync(
+                    Context.Response,
+                    401,
+                    new ErrorResponse("invalid_token"),
+                    cancellationToken);
+                return;
+            }
+
+            SendVerificationCodeRequest request;
+            try
+            {
+                request = await VerificationCodeRequestReader.ReadSendAsync(
+                    Context.Request,
+                    cancellationToken);
+            }
+            catch (VerificationCodeRequestFormatException)
+            {
+                await ApiResponseWriter.WriteJsonAsync(
+                    Context.Response,
+                    400,
+                    new ErrorResponse("invalid_request"),
+                    cancellationToken);
+                return;
+            }
+
+            SendVerificationCodeResult result;
+            try
+            {
+                result = await enterprise
+                    .CreateSmsVerificationService(DataAccess)
+                    .SendAsync(identity, request.Mobile, cancellationToken);
+            }
+            catch (ArgumentException)
+            {
+                await ApiResponseWriter.WriteJsonAsync(
+                    Context.Response,
+                    400,
+                    new ErrorResponse("invalid_request"),
+                    cancellationToken);
+                return;
+            }
+
+            var response = CreateSendCodeResponse(result);
+            await ApiResponseWriter.WriteJsonAsync(
+                Context.Response,
+                response.StatusCode,
+                response.Payload,
+                cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            RecordUnexpectedSendCodeFailure(Context.RequestServices, exception);
+            await ApiResponseWriter.WriteJsonAsync(
+                Context.Response,
+                500,
+                CreateServerErrorResponse(),
+                cancellationToken);
+        }
+    }
+
+    [Post]
+    public async Task VerifyCode()
+    {
+        var cancellationToken = Context.RequestAborted;
+        try
+        {
+            var enterprise = await GetEnterpriseAsync(cancellationToken);
+            EnterpriseIdentity identity;
+            try
+            {
+                identity = await AccessTokenReader.ReadRequiredIdentity(
+                    Context.Request,
+                    enterprise.Tokens,
+                    cancellationToken);
+            }
+            catch (AccessTokenFormatException)
+            {
+                await ApiResponseWriter.WriteJsonAsync(
+                    Context.Response,
+                    401,
+                    new ErrorResponse("invalid_token"),
+                    cancellationToken);
+                return;
+            }
+
+            VerifyVerificationCodeRequest request;
+            try
+            {
+                request = await VerificationCodeRequestReader.ReadVerifyAsync(
+                    Context.Request,
+                    cancellationToken);
+            }
+            catch (VerificationCodeRequestFormatException)
+            {
+                await ApiResponseWriter.WriteJsonAsync(
+                    Context.Response,
+                    400,
+                    new ErrorResponse("invalid_request"),
+                    cancellationToken);
+                return;
+            }
+
+            VerifyVerificationCodeResult result;
+            try
+            {
+                result = await enterprise
+                    .CreateSmsVerificationService(DataAccess)
+                    .VerifyAsync(identity, request.Mobile, request.Code, cancellationToken);
+            }
+            catch (ArgumentException)
+            {
+                await ApiResponseWriter.WriteJsonAsync(
+                    Context.Response,
+                    400,
+                    new ErrorResponse("invalid_request"),
+                    cancellationToken);
+                return;
+            }
+
+            var response = CreateVerifyCodeResponse(result);
+            await ApiResponseWriter.WriteJsonAsync(
+                Context.Response,
+                response.StatusCode,
+                response.Payload,
+                cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            RecordUnexpectedVerifyCodeFailure(Context.RequestServices, exception);
+            await ApiResponseWriter.WriteJsonAsync(
+                Context.Response,
+                500,
+                CreateServerErrorResponse(),
+                cancellationToken);
+        }
+    }
+
     internal static IDisposable PushCompositionRootFactoryOverrideForTests(
         Func<CancellationToken, Task<EnterpriseCompositionRoot>> factory)
     {
@@ -191,11 +353,55 @@ public class EnterpriseApi : ForguncyApi
     private static void RecordUnexpectedGetInfoFailure(IServiceProvider? services, Exception exception) =>
         EnterpriseDiagnostics.RecordGetInfo(services, exception);
 
+    private static void RecordUnexpectedSendCodeFailure(IServiceProvider? services, Exception exception) =>
+        EnterpriseDiagnostics.RecordSendCode(services, exception);
+
+    private static void RecordUnexpectedVerifyCodeFailure(IServiceProvider? services, Exception exception) =>
+        EnterpriseDiagnostics.RecordVerifyCode(services, exception);
+
     private static ErrorResponse CreateServerErrorResponse() => new("server_error");
 
     private static ApiResponse CreateInvalidAccessTokenResponse() => new(401, new ErrorResponse("invalid_token"));
 
     private static ApiResponse CreateGetInfoNotFoundResponse() => new(404, new ErrorResponse("enterprise_not_found"));
+
+    private static ApiResponse CreateSendCodeResponse(SendVerificationCodeResult result)
+    {
+        if (result is null)
+        {
+            throw new ArgumentNullException(nameof(result));
+        }
+
+        return result.Status switch
+        {
+            SendVerificationCodeStatus.Success => new(
+                200,
+                new SendCodeResponse(true, "success", result.ExpiresAt, result.RetryAt)),
+            SendVerificationCodeStatus.Cooldown => new(
+                429,
+                new SendCodeResponse(false, "cooldown", result.ExpiresAt, result.RetryAt)),
+            SendVerificationCodeStatus.Failed => new(
+                502,
+                new SendCodeResponse(false, "failed", result.ExpiresAt, result.RetryAt)),
+            _ => throw new InvalidOperationException("The send code result status is not supported.")
+        };
+    }
+
+    private static ApiResponse CreateVerifyCodeResponse(VerifyVerificationCodeResult result)
+    {
+        if (result is null)
+        {
+            throw new ArgumentNullException(nameof(result));
+        }
+
+        return result.Status switch
+        {
+            VerifyVerificationCodeStatus.Success => new(200, new VerifyCodeResponse(true, "success")),
+            VerifyVerificationCodeStatus.Failed => new(400, new VerifyCodeResponse(false, "failed")),
+            VerifyVerificationCodeStatus.Expired => new(410, new VerifyCodeResponse(false, "expired")),
+            _ => throw new InvalidOperationException("The verify code result status is not supported.")
+        };
+    }
 
     private static ApiResponse CreateGetInfoResponse(EnterpriseProfile profile) =>
         new(
@@ -260,6 +466,16 @@ public class EnterpriseApi : ForguncyApi
         [property: JsonProperty("creditcode")] string CreditCode,
         [property: JsonProperty("county")] string County,
         [property: JsonProperty("region")] string Region);
+
+    private record SendCodeResponse(
+        [property: JsonProperty("success")] bool Success,
+        [property: JsonProperty("status")] string Status,
+        [property: JsonProperty("expires_at")] DateTimeOffset ExpiresAt,
+        [property: JsonProperty("retry_at")] DateTimeOffset RetryAt);
+
+    private record VerifyCodeResponse(
+        [property: JsonProperty("success")] bool Success,
+        [property: JsonProperty("status")] string Status);
 
     private record ErrorResponse([property: JsonProperty("error")] string Error);
 
