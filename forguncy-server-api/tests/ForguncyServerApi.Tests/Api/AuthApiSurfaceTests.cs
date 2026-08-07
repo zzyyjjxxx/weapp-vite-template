@@ -97,6 +97,59 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
+    public void README_documents_exactly_the_six_formal_routes_without_legacy_auth_aliases()
+    {
+        var readme = File.ReadAllText(SourceFile("README.md"));
+        var documentedRoutes = System.Text.RegularExpressions.Regex
+            .Matches(
+                readme,
+                "^(GET|POST) /customapi/[a-z]+/[a-z]+$",
+                System.Text.RegularExpressions.RegexOptions.Multiline)
+            .Cast<System.Text.RegularExpressions.Match>()
+            .Select(match => match.Value)
+            .ToArray();
+
+        Assert.Equal(
+            new[]
+            {
+                "POST /customapi/enterpriseapi/login",
+                "POST /customapi/enterpriseapi/refresh",
+                "GET /customapi/enterpriseapi/getinfo",
+                "GET /customapi/landdemandapi/getlanddemand",
+                "POST /customapi/landdemandapi/addlanddemand",
+                "POST /customapi/landdemandapi/updatelanddemand"
+            },
+            documentedRoutes);
+        Assert.DoesNotContain("/customapi/authapi/login", readme);
+        Assert.DoesNotContain("/customapi/authapi/refresh", readme);
+        Assert.DoesNotContain("AuthApi", readme);
+    }
+
+    [Fact]
+    public void README_documents_identity_configuration_and_fixed_error_contracts_without_credentials()
+    {
+        var readme = File.ReadAllText(SourceFile("README.md"));
+
+        Assert.Contains("config.item='ssl'", readme);
+        Assert.Contains("c_userinfo", readme);
+        Assert.Contains("m_preliminary_list.county", readme);
+        Assert.Contains("yj_regioninfo.id", readme);
+        Assert.Contains("JWT `name` claim", readme);
+        Assert.Contains("refresh token", readme);
+        Assert.Contains("| Login | 400 | `{\"error\":\"invalid_request\"}` |", readme);
+        Assert.Contains("| Login | 401 | `{\"error\":\"invalid_credentials\"}` |", readme);
+        Assert.Contains("| Refresh | 401 | `{\"error\":\"invalid_refresh_token\"}` |", readme);
+        Assert.Contains("| Business operations | 401 | `{\"error\":\"invalid_token\"}` |", readme);
+        Assert.Contains("| Add land demand | 409 | `{\"error\":\"land_demand_exists\"}` |", readme);
+        Assert.Contains("| All routes | 500 | `{\"error\":\"server_error\"}` |", readme);
+
+        Assert.DoesNotMatch(
+            "(?is)(server|host|data source)\\s*=.*?(password|pwd)\\s*=",
+            readme);
+        Assert.DoesNotMatch("(?i)mysql://[^\\s]+:[^\\s]+@", readme);
+    }
+
+    [Fact]
     public void EnterpriseCompositionRoot_requires_forguncy_data_access_before_initialization()
     {
         WithEnterpriseApiType(type =>

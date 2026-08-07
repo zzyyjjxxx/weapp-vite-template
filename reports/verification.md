@@ -1153,3 +1153,101 @@ Post-commit status contained only the pre-existing user-owned item:
 ```text
 ?? forguncy-server-api/.vs/
 ```
+
+## Enterprise land-demand API delivery - 2026-08-07
+
+This cycle implemented and verified the explicit enterprise auth API
+(login/refresh/getinfo), the shared composition root, and the land-demand
+filing API (getlanddemand/addlanddemand/updatelanddemand) against Forguncy
+8.0.4 / .NET Framework 4.7.2 in worktree
+`C:\Users\18556\.codex\worktrees\e919\weapp-vite-template`. All commands below
+are the actually observed results of this cycle; nothing was fabricated.
+
+No secret, connection string, password, or signing key was printed or
+recorded. The read-only database preflight received the task-scoped local
+database password only through the process environment.
+
+### Task 4 - EnterpriseApi and shared composition root
+
+Commit `3ed091f810a8c63c646789fe97400fdb41673cf3`
+(`fix: share enterprise composition root cache`).
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| Focused `AuthApiSurfaceTests` (Release, `-p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'`) | 0 | 51 passed, 0 failed |
+| Full Release tests | 0 | 176 passed, 0 failed |
+| `dotnet build ... --configuration Release` | 0 | 0 warnings, 0 errors |
+| SDK reflection probe | 0 | `EnterpriseApi` derives from `GrapeCity.Forguncy.ServerApi.ForguncyApi`; exactly `Login`/`Refresh`/`GetInfo` parameterless handlers with Post/Post/Get attributes |
+
+### Task 5 - LandDemandApi request parsing and routes
+
+Commits `08d79b2c3c3847fc5e609681fac0bd9578817543`
+(`feat: add land demand web api`) and
+`db46aef88ea05043ea8b8659d60c7b39346ec3d5`
+(`fix: propagate land demand cancellation`).
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| Focused `LandDemandRequestReaderTests|LandDemandApiSurfaceTests` (initial) | 0 | 40 passed, 0 failed |
+| Focused same filter after cancellation fix | 0 | 42 passed, 0 failed |
+| Full Release tests after cancellation fix | 0 | 218 passed, 0 failed |
+| `dotnet build ... --configuration Release` | 0 | 0 warnings, 0 errors |
+| `git diff --cached --check` | 0 | No whitespace errors; only expected LF-to-CRLF warnings |
+
+The write body is read with a `CancellationToken`-aware streaming loop; Add
+and Update cancellation during body reads is covered by regression tests and
+never becomes a 500 response.
+
+### Task 6 - Documentation, final surface assertions, release verification
+
+Documentation contract tests were written first. Focused RED command
+(`FullyQualifiedName~AuthApiSurfaceTests|FullyQualifiedName~LandDemandApiSurfaceTests`)
+exited `1` with 3 failed / 44 passed; the failures were the expected README
+assertions (six-route list, error-contract rows, response/write whitelist
+examples) against the then-current README.
+
+After updating `forguncy-server-api/README.md`:
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| Focused `AuthApiSurfaceTests|LandDemandApiSurfaceTests` | 0 | 47 passed, 0 failed |
+| Full Release tests | 0 | 223 passed, 0 failed |
+| `dotnet build .\ForguncyServerApi.csproj --configuration Release --no-restore -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'` | 0 | 0 warnings, 0 errors |
+| `git diff --check` | 0 | No whitespace errors |
+
+SDK reflection probe (loaded with the Forguncy 8.0.4
+`GrapeCity.Forguncy.ServerApi.dll`):
+
+```text
+TYPE=ForguncyServerApi.Api.EnterpriseApi BASE=GrapeCity.Forguncy.ServerApi.ForguncyApi
+METHOD=GetInfo;PARAMS=0;ATTRS=AsyncStateMachineAttribute,GetAttribute
+METHOD=Login;PARAMS=0;ATTRS=AsyncStateMachineAttribute,PostAttribute
+METHOD=Refresh;PARAMS=0;ATTRS=AsyncStateMachineAttribute,PostAttribute
+TYPE=ForguncyServerApi.Api.LandDemandApi BASE=GrapeCity.Forguncy.ServerApi.ForguncyApi
+METHOD=AddLandDemand;PARAMS=0;ATTRS=AsyncStateMachineAttribute,PostAttribute
+METHOD=GetLandDemand;PARAMS=0;ATTRS=AsyncStateMachineAttribute,GetAttribute
+METHOD=UpdateLandDemand;PARAMS=0;ATTRS=AsyncStateMachineAttribute,PostAttribute
+AUTHAPI ABSENT
+PROBE=PASS
+```
+
+### Read-only MySQL preflight (local development database, no writes)
+
+Connection used `mujunbigdata` with the task-scoped password supplied only
+through the process environment. Only read-only queries ran; no
+`INSERT`/`UPDATE`/`DELETE`, DDL, or schema change was executed.
+
+| Check | Result |
+| --- | --- |
+| Tables | `landusedemand_info`, `m_preliminary_list`, `yj_regioninfo` all exist as BASE TABLE |
+| Column counts | `landusedemand_info` 44, `m_preliminary_list` 113, `yj_regioninfo` 4 |
+| Enterprise/region join | 8215 enterprise rows, 8215 county matches (100% coverage via `yj_regioninfo.id = m_preliminary_list.county`) |
+| Filing keys | `landusedemand_info`: PRIMARY (`id`) and unique `crd` (`creditcode`) |
+
+### Acceptance boundary
+
+Unit, build, reflection, and read-only database checks passed locally. No live
+Forguncy Designer upload, no real HTTP round-trip, and no real land-demand
+database write was performed or claimed in this cycle. Deployment to the
+Forguncy 8.0.4 site and end-to-end HTTP acceptance remain separate, unverified
+steps.

@@ -1,32 +1,204 @@
-# Forguncy enterprise auth Web API
+# Forguncy enterprise land-demand Web API
 
-This class library targets Forguncy 8.0.4 and exposes three custom Web API routes:
+This class library targets Forguncy 8.0.4 and exposes six custom Web API routes:
 
 ```text
 POST /customapi/enterpriseapi/login
 POST /customapi/enterpriseapi/refresh
 GET /customapi/enterpriseapi/getinfo
+GET /customapi/landdemandapi/getlanddemand
+POST /customapi/landdemandapi/addlanddemand
+POST /customapi/landdemandapi/updatelanddemand
 ```
 
-Both routes accept either JSON or URL-encoded form data. The API does not
-expose issue, validate, logout, or any other external authentication route.
+The enterprise routes own login, refresh, and enterprise profile lookup. The
+land-demand routes own querying, creating, and updating an enterprise's filing
+record. There are no issue, validate, logout, or legacy alias routes.
 
-## Existing database contract
+## Authentication and ownership
 
-Forguncy supplies the existing database and `c_userinfo` table. This API only
-reads matching user records; it does not create or alter schemas, seed users,
-or initialize database content. Do not run database bootstrap SQL for this API.
-
-The login request field `username` means the enterprise credit code stored in
-`c_userinfo.creditCode`. The existing `c_userinfo.password` value must use the
-lowercase middle 16 characters of the password's MD5 digest:
+Login identifies the enterprise by the `c_userinfo` record whose `creditCode`
+equals the submitted `username`. The existing `c_userinfo.password` value must
+use the lowercase middle 16 characters of the password's MD5 digest:
 
 ```text
 lowercaseHex(MD5(UTF8(password))).Substring(8, 16)
 ```
 
-A matching user can log in only when `c_userinfo.isopen` equals the integer
-`1`.
+A matching enterprise can log in only when `c_userinfo.isopen` equals the
+integer `1`.
+
+The login response carries an access JWT and a refresh JWT. The access JWT
+holds the user id in the `sub` claim and the enterprise credit code in the
+JWT `name` claim. Business ownership is derived exclusively from the validated
+access token's `name` claim; it is never read from the request body, query
+string, or path. Only the refresh route accepts a refresh token, and it
+consumes nothing else.
+
+Missing, malformed, expired, wrong-key, wrong-use, or otherwise invalid access
+tokens return `401 Unauthorized` with `{"error":"invalid_token"}` for every
+business operation. The land-demand write routes validate the access token
+before reading the request body, so an unauthenticated request cannot use body
+parsing as an oracle.
+
+## Enterprise info contract
+
+The getinfo route resolves the enterprise profile from `m_preliminary_list`
+and joins the county name through `m_preliminary_list.county` to
+`yj_regioninfo.id`. It returns exactly these three fields and nothing else:
+
+```json
+{
+  "businessname": "<enterprise-name>",
+  "creditcode": "<credit-code>",
+  "county": "<county-name>"
+}
+```
+
+If the authenticated enterprise profile cannot be found, the route returns
+`404 Not Found` with `{"error":"enterprise_not_found"}`. The enterprise API
+never updates internal columns.
+
+## Land-demand contracts
+
+The three land-demand routes operate on the enterprise's filing record in
+`landusedemand_info`, scoped by the access token identity. The write JSON
+accepts exactly the 26 approved writable fields; identity, audit, and internal
+property names (for example `id`, `updatetime`, `updateuser`,
+`region_remark`, `county_isrecommend`, `reviewstatus`, and
+`review_opinion`) are rejected with `400 invalid_request` before any
+persistence work.
+
+`landusedemand` is required and must be `1` (submit) or `2` (draft). All
+remaining fields are optional draft values; the existing validation layer
+enforces the conditional rules, decimal precision, and units (万元 for
+`investment`, `pred_ys`, `pred_tax`, `pred_rdex`; 万元/吨标煤 for
+`pred_unitenergy`) when a record is submitted.
+
+The query and both write routes return the saved filing with exactly the 31
+fields below, including `updatetime` formatted as `yyyy-MM-dd HH:mm:ss`.
+
+### Land-demand response JSON
+
+```json
+{
+  "area": "330212",
+  "building_area": 1234.56,
+  "businessname": "Synthetic Enterprise",
+  "contact": "Synthetic Contact",
+  "county": "Synthetic County",
+  "creditcode": "91330200SYNTHETIC",
+  "deploy_height": 12.34,
+  "deploy_landtype": "Industrial",
+  "deploy_park": "Park A,Park B",
+  "deploy_weight": 56.78,
+  "expect_park": "Synthetic Park",
+  "expect_time": "2026-12",
+  "financing_money": 100,
+  "financing_time": "2026-12",
+  "futureindustry": "Synthetic Direction",
+  "investment": 12345678901234.123456,
+  "is_deploy": "1",
+  "is_financing": "0",
+  "is_specialuse": "1",
+  "keyindustry": "Synthetic Track",
+  "landusedemand": "1",
+  "office": "Synthetic Office",
+  "phone": "13800000000",
+  "pred_rdex": 300.000003,
+  "pred_tax": 200.000002,
+  "pred_unitenergy": 400.000004,
+  "pred_ys": 100.000001,
+  "project_hydm": "C3990",
+  "projectdata": "Synthetic project",
+  "region": "330212000000",
+  "updatetime": "2026-08-06 12:34:56"
+}
+```
+
+### Land-demand write JSON
+
+```json
+{
+  "area": "330212",
+  "building_area": 1234.56,
+  "contact": "Synthetic Contact",
+  "deploy_height": 12.34,
+  "deploy_landtype": "Industrial",
+  "deploy_park": "Park A,Park B",
+  "deploy_weight": 56.78,
+  "expect_park": "Synthetic Park",
+  "expect_time": "2026-12",
+  "financing_money": 100,
+  "financing_time": "2026-12",
+  "futureindustry": "Synthetic Direction",
+  "investment": 12345678901234.123456,
+  "is_deploy": "1",
+  "is_financing": "0",
+  "is_specialuse": "1",
+  "keyindustry": "Synthetic Track",
+  "landusedemand": "1",
+  "office": "Synthetic Office",
+  "phone": "13800000000",
+  "pred_rdex": 300.000003,
+  "pred_tax": 200.000002,
+  "pred_unitenergy": 400.000004,
+  "pred_ys": 100.000001,
+  "project_hydm": "C3990",
+  "projectdata": "Synthetic project"
+}
+```
+
+The add route returns `409 Conflict` with
+`{"error":"land_demand_exists"}` when a filing already exists for the
+enterprise. The update route returns `404 Not Found` with
+`{"error":"land_demand_not_found"}` when no filing exists.
+
+## Request formats
+
+Login and refresh accept `application/json` or
+`application/x-www-form-urlencoded`. Multipart form data is not accepted.
+Login accepts `username` and `password`; refresh accepts `refresh_token`.
+
+The three land-demand routes require `application/json` (with an optional
+`charset` parameter) and reject any other media type.
+
+## Error contract
+
+Every error response is the fixed non-sensitive JSON shape shown below, and
+responses never expose exception details, configuration values, database
+connection information, signing keys, SQL text, or credentials.
+
+| Route | Status | Body |
+| --- | --- | --- |
+| Login | 400 | `{"error":"invalid_request"}` |
+| Login | 401 | `{"error":"invalid_credentials"}` |
+| Refresh | 400 | `{"error":"invalid_request"}` |
+| Refresh | 401 | `{"error":"invalid_refresh_token"}` |
+| Business operations | 401 | `{"error":"invalid_token"}` |
+| Business operations | 404 | `{"error":"enterprise_not_found"}` |
+| Get land demand | 404 | `{"error":"land_demand_not_found"}` |
+| Add land demand | 409 | `{"error":"land_demand_exists"}` |
+| All routes | 500 | `{"error":"server_error"}` |
+
+Request cancellation is always propagated and never converted into a `500`
+response.
+
+## Database contract
+
+Forguncy supplies the existing database and tables (`c_userinfo`,
+`m_preliminary_list`, `landusedemand_info`, `yj_regioninfo`). This API only
+reads matching records and writes the approved filing fields; it does not
+create or alter schemas, seed enterprises, or initialize database content. Do
+not run database bootstrap SQL for this API.
+
+The MySQL connection is not configured through environment variables. The
+existing database connection is selected by `config.item='ssl'`: set its
+connection string in that row's `value` column. The Forguncy 8.0.4 SDK
+`IDataAccess` reads that row, and the application uses its `value` as the
+SqlSugar/MySQL connection string. The lookup intentionally does not filter on
+`enable`. Keep the connection string and its credentials out of environment
+variables, documentation, diagnostics, and logs.
 
 ## Configuration
 
@@ -41,221 +213,17 @@ generates or fills the value and persists it before serving login requests.
 | `FGC_JWT_EXPIRES_MINUTES` | Token lifetime in minutes | Stores `60`. |
 | `FGC_JWT_REFRESH_EXPIRES_MINUTES` | Refresh-token lifetime in minutes | Stores `10080`. |
 
-Existing non-blank values are used as-is. The signing key must contain at least
-32 characters and the expiration values must be positive integers. Invalid
-non-blank values fail initialization instead of being overwritten. Do not put
-JWT values in environment variables or commit them to source control.
-
-The MySQL connection is not configured with
-`FGC_AUTH_MYSQL_CONNECTION`. The existing database connection is selected by
-`config.item='ssl'`: set its connection string in that row's `value` column.
-The Forguncy 8.0.4 SDK `IDataAccess` reads that row, and the application uses
-its `value` as the SqlSugar/MySQL connection string. The lookup intentionally
-does not filter on `enable`. Keep the connection string and its credentials out
-of environment variables, documentation, diagnostics, and logs.
+Existing non-blank values are used as-is. The signing key must contain at
+least 32 characters and the expiration values must be positive integers.
+Invalid non-blank values fail initialization instead of being overwritten. Do
+not put JWT values in environment variables or commit them to source control.
 
 Restart the Forguncy application process after changing JWT rows in the
-`config` table so the authentication composition is rebuilt.
+`config` table so the composition is rebuilt.
 
-Expose the login, refresh, and getinfo routes only through the Forguncy site's HTTPS
-endpoint or an equivalent trusted network boundary. Never expose credentials
-through an unprotected direct HTTP endpoint.
-
-## Login contract
-
-### JSON request
-
-```http
-Content-Type: application/json
-```
-
-```json
-{
-  "username": "<username>",
-  "password": "<password>"
-}
-```
-
-### Form request
-
-```http
-Content-Type: application/x-www-form-urlencoded
-```
-
-```text
-username=<username>&password=<password>
-```
-
-Multipart form data is not accepted.
-
-### Responses
-
-Successful login returns `200 OK`:
-
-```json
-{
-  "access_token": "<jwt>",
-  "refresh_token": "<jwt>",
-  "token_type": "Bearer",
-  "expires_in": 3600,
-  "refresh_expires_in": 604800
-}
-```
-
-The authenticated user identity is carried in the JWT `sub` and `name` claims;
-the login response does not repeat user details as a separate object.
-
-Malformed input, missing fields, or empty credentials return `400 Bad Request`:
-
-```json
-{
-  "error": "invalid_request"
-}
-```
-
-An unknown, disabled, or incorrectly authenticated user returns `401 Unauthorized`:
-
-```json
-{
-  "error": "invalid_credentials"
-}
-```
-
-Unexpected server or configuration failures return `500 Internal Server Error`
-with the same non-sensitive shape every time:
-
-```json
-{
-  "error": "server_error"
-}
-```
-
-The `500` response does not expose exception details, configuration values,
-database connection information, signing keys, or credentials.
-
-## Refresh contract
-
-### JSON request
-
-```http
-Content-Type: application/json
-```
-
-```json
-{
-  "refresh_token": "<jwt>"
-}
-```
-
-### Form request
-
-```http
-Content-Type: application/x-www-form-urlencoded
-```
-
-```text
-refresh_token=<jwt>
-```
-
-Multipart form data is not accepted.
-
-### Responses
-
-Successful refresh returns `200 OK`:
-
-```json
-{
-  "access_token": "<jwt>",
-  "refresh_token": "<jwt>",
-  "token_type": "Bearer",
-  "expires_in": 3600,
-  "refresh_expires_in": 604800
-}
-```
-
-The refresh response contains exactly the same five token fields and does not
-include a user object.
-
-Malformed input, missing fields, or an empty refresh token return `400 Bad Request`:
-
-```json
-{
-  "error": "invalid_request"
-}
-```
-
-An expired, malformed, unsigned, wrong-issuer, wrong-use, or otherwise invalid
-refresh token returns `401 Unauthorized`:
-
-```json
-{
-  "error": "invalid_refresh_token"
-}
-```
-
-Unexpected server or configuration failures return `500 Internal Server Error`
-with the same non-sensitive shape every time:
-
-```json
-{
-  "error": "server_error"
-}
-```
-
-Refresh JWTs are stateless. They are not persisted for per-token tracking and
-cannot be revoked before expiry. This API does not promise refresh-token
-rotation enforcement, logout-triggered invalidation, persistence, or immediate
-disablement.
-
-## Enterprise info contract
-
-### Request
-
-```http
-GET /customapi/enterpriseapi/getinfo
-Authorization: Bearer <access-token>
-```
-
-### Responses
-
-Successful lookup returns `200 OK`:
-
-```json
-{
-  "businessname": "<enterprise-name>",
-  "creditcode": "<credit-code>",
-  "county": "<county-name>"
-}
-```
-
-Only these three enterprise fields are returned. The response does not include
-`region`, internal identifiers, review fields, or update metadata.
-
-Missing, malformed, expired, wrong-key, refresh-use, or otherwise invalid access tokens return `401 Unauthorized`:
-
-```json
-{
-  "error": "invalid_token"
-}
-```
-
-If the authenticated enterprise profile cannot be found, the API returns
-`404 Not Found`:
-
-```json
-{
-  "error": "enterprise_not_found"
-}
-```
-
-Unexpected server or configuration failures return `500 Internal Server Error`
-with the same fixed non-sensitive payload:
-
-```json
-{
-  "error": "server_error"
-}
-```
+Expose all six routes only through the Forguncy site's HTTPS endpoint or an
+equivalent trusted network boundary. Never expose credentials through an
+unprotected direct HTTP endpoint.
 
 ## Test and release build
 
@@ -274,16 +242,15 @@ bin\Release\net472\ForguncyServerApi.dll
 
 The build output contains the exact `SqlSugar` 5.1.4.111 and `MySql.Data`
 8.0.30 dependencies and other compatible dependency DLLs used by this API.
-The application, database, JWT, and diagnostics types are public so they can be
-consumed directly by other .NET code. Because these public types are inspected
-by the Forguncy 8.0.4 designer, upload the complete Release output directory
-together with the API DLL; uploading only the API DLL is not sufficient for this
-public surface.
-
-The Release output now also contains the four JWT assemblies referenced from
-the Forguncy 8.0.4 `Website\bin`. Keep the complete Release DLL bundle
-together when uploading to the designer; uploading only the API DLL is not
+The application, database, JWT, and diagnostics types are public so they can
+be consumed directly by other .NET code. Because these public types are
+inspected by the Forguncy 8.0.4 designer, upload the complete Release output
+directory together with the API DLL; uploading only the API DLL is not
 sufficient for this public surface.
+
+The Release output also contains the four JWT assemblies referenced from the
+Forguncy 8.0.4 `Website\bin`. Keep the complete Release DLL bundle together
+when uploading to the designer.
 
 The application-specific DLLs in the final bundle are:
 
@@ -319,9 +286,8 @@ File -> Settings -> Custom Web API -> Upload Web API Assembly
 
 Upload the DLL bundle from `bin\Release\net472`, including
 `ForguncyServerApi.dll`, then configure JWT values through the Forguncy
-`config` table as described above.
-Configure the existing database connection only through the Forguncy `config`
-table row where `item='ssl'`; the API does not initialize that database. The
-designer integration intentionally contains only the `login`, `refresh`, and
-`getinfo` routes; issue, validate, logout, and legacy auth aliases are
-intentionally absent by design.
+`config` table as described above. Configure the existing database connection
+only through the Forguncy `config` table row where `item='ssl'`; the API does
+not initialize that database. The designer integration intentionally contains
+only the six documented routes; issue, validate, logout, and legacy aliases
+are intentionally absent by design.

@@ -17,6 +17,31 @@ namespace ForguncyServerApi.Tests.Api;
 
 public sealed class LandDemandApiSurfaceTests
 {
+    private static readonly string[] ResponseProperties =
+    {
+        "area", "building_area", "businessname", "contact", "county", "creditcode",
+        "deploy_height", "deploy_landtype", "deploy_park", "deploy_weight", "expect_park",
+        "expect_time", "financing_money", "financing_time", "futureindustry", "investment",
+        "is_deploy", "is_financing", "is_specialuse", "keyindustry", "landusedemand", "office",
+        "phone", "pred_rdex", "pred_tax", "pred_unitenergy", "pred_ys", "project_hydm",
+        "projectdata", "region", "updatetime"
+    };
+
+    private static readonly string[] WritableProperties =
+    {
+        "area", "building_area", "contact", "deploy_height", "deploy_landtype", "deploy_park",
+        "deploy_weight", "expect_park", "expect_time", "financing_money", "financing_time",
+        "futureindustry", "investment", "is_deploy", "is_financing", "is_specialuse",
+        "keyindustry", "landusedemand", "office", "phone", "pred_rdex", "pred_tax",
+        "pred_unitenergy", "pred_ys", "project_hydm", "projectdata"
+    };
+
+    private static readonly string[] ForbiddenInternalProperties =
+    {
+        "id", "businessname", "creditcode", "county", "region", "updatetime", "updateuser",
+        "region_remark", "county_isrecommend", "reviewstatus", "review_opinion"
+    };
+
     static LandDemandApiSurfaceTests()
     {
         AppDomain.CurrentDomain.AssemblyResolve += ResolveForguncyServerApi;
@@ -38,6 +63,60 @@ public sealed class LandDemandApiSurfaceTests
     }
 
     [Fact]
+    public void LandDemandApi_uses_the_shared_enterprise_composition_cache_and_no_legacy_auth_type_exists()
+    {
+        var source = File.ReadAllText(SourceFile("Api", "LandDemandApi.cs"));
+
+        Assert.Contains("EnterpriseCompositionRoot.GetOrCreateAsync", source);
+        Assert.DoesNotContain("RetryableAsyncCache<EnterpriseCompositionRoot>", source);
+        Assert.Null(typeof(LandDemandApi).Assembly.GetType("ForguncyServerApi.Api.AuthApi"));
+    }
+
+    [Fact]
+    public void Land_demand_models_expose_exactly_the_approved_response_and_write_properties()
+    {
+        var responseProperties = typeof(LandDemandResponse)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(property => property.GetCustomAttribute<Newtonsoft.Json.JsonPropertyAttribute>()?.PropertyName)
+            .OrderBy(name => name)
+            .ToArray();
+        var writableField = typeof(LandDemandRequestReader).GetField(
+            "WritableProperties",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(writableField);
+        var writableProperties = Assert.IsAssignableFrom<IEnumerable<string>>(writableField!.GetValue(null))
+            .OrderBy(name => name)
+            .ToArray();
+
+        Assert.Equal(ResponseProperties, responseProperties);
+        Assert.Equal(WritableProperties, writableProperties);
+        Assert.Equal(31, responseProperties.Length);
+        Assert.Equal(26, writableProperties.Length);
+        Assert.DoesNotContain(responseProperties, property => property is null);
+        foreach (var forbidden in ForbiddenInternalProperties)
+        {
+            Assert.DoesNotContain(forbidden, writableProperties);
+        }
+    }
+
+    [Fact]
+    public void README_examples_enumerate_the_exact_response_and_write_whitelists()
+    {
+        var readme = File.ReadAllText(SourceFile("README.md"));
+        var response = ReadJsonExample(readme, "### Land-demand response JSON");
+        var request = ReadJsonExample(readme, "### Land-demand write JSON");
+        var responseProperties = response.Properties().Select(property => property.Name).OrderBy(name => name).ToArray();
+        var writableProperties = request.Properties().Select(property => property.Name).OrderBy(name => name).ToArray();
+
+        Assert.Equal(ResponseProperties, responseProperties);
+        Assert.Equal(WritableProperties, writableProperties);
+        foreach (var forbidden in ForbiddenInternalProperties)
+        {
+            Assert.DoesNotContain(forbidden, writableProperties);
+        }
+    }
+
+    [Fact]
     public async Task GetLandDemand_returns_only_the_filing_whitelist_and_update_time()
     {
         var record = SyntheticRecord();
@@ -46,16 +125,7 @@ public sealed class LandDemandApiSurfaceTests
 
         Assert.Equal(200, response.StatusCode);
         var json = JObject.Parse(response.Body);
-        var expected = new[]
-        {
-            "area", "building_area", "businessname", "contact", "county", "creditcode",
-            "deploy_height", "deploy_landtype", "deploy_park", "deploy_weight", "expect_park",
-            "expect_time", "financing_money", "financing_time", "futureindustry", "investment",
-            "is_deploy", "is_financing", "is_specialuse", "keyindustry", "landusedemand", "office",
-            "phone", "pred_rdex", "pred_tax", "pred_unitenergy", "pred_ys", "project_hydm",
-            "projectdata", "region", "updatetime"
-        };
-        Assert.Equal(expected, json.Properties().Select(property => property.Name).OrderBy(name => name));
+        Assert.Equal(ResponseProperties, json.Properties().Select(property => property.Name).OrderBy(name => name));
         Assert.Equal("Synthetic project", json["projectdata"]?.Value<string>());
         Assert.Equal("2026-08-06 12:34:56", json["updatetime"]?.Value<string>());
         Assert.Null(json["id"]);
@@ -240,6 +310,18 @@ public sealed class LandDemandApiSurfaceTests
         Assert.Contains(method.GetCustomAttributes(false), attribute => attribute.GetType().FullName == attributeName);
     }
 
+    private static JObject ReadJsonExample(string readme, string heading)
+    {
+        var headingIndex = readme.IndexOf(heading, StringComparison.Ordinal);
+        Assert.True(headingIndex >= 0, $"README heading not found: {heading}");
+        var fenceStart = readme.IndexOf("```json", headingIndex, StringComparison.Ordinal);
+        Assert.True(fenceStart >= 0, $"JSON fence not found after: {heading}");
+        var jsonStart = fenceStart + "```json".Length;
+        var fenceEnd = readme.IndexOf("```", jsonStart, StringComparison.Ordinal);
+        Assert.True(fenceEnd >= 0, $"JSON fence is not closed after: {heading}");
+        return JObject.Parse(readme.Substring(jsonStart, fenceEnd - jsonStart));
+    }
+
     private static async Task<ApiResult> InvokeAsync(
         string handler,
         StubLandDemandRepository repository,
@@ -394,6 +476,12 @@ public sealed class LandDemandApiSurfaceTests
             ? Assembly.LoadFrom("D:\\Program Files\\Forguncy 8.0.4\\Website\\bin\\GrapeCity.Forguncy.ServerApi.dll")
             : null;
     }
+
+    private static string ProjectRoot() =>
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+
+    private static string SourceFile(params string[] segments) =>
+        Path.Combine(new[] { ProjectRoot() }.Concat(segments).ToArray());
 
     private sealed record ApiResult(int StatusCode, string Body);
 
