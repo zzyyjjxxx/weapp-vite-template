@@ -596,7 +596,7 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
-    public async Task EnterpriseApi_get_info_handler_returns_only_businessname_creditcode_and_county_for_valid_access_token()
+    public async Task EnterpriseApi_get_info_handler_returns_businessname_creditcode_county_and_region_for_valid_access_token()
     {
         await WithEnterpriseApiTypeAsync(async type =>
         {
@@ -622,7 +622,7 @@ public sealed class AuthApiSurfaceTests
             await AssertJsonResponseAsync(
                 context,
                 200,
-                "{\"businessname\":\"Synthetic Enterprise\",\"creditcode\":\"91330200SUCCESS\",\"county\":\"Yinzhou\"}");
+                "{\"businessname\":\"Synthetic Enterprise\",\"creditcode\":\"91330200SUCCESS\",\"county\":\"Yinzhou\",\"region\":\"330212\"}");
         });
     }
 
@@ -713,7 +713,7 @@ public sealed class AuthApiSurfaceTests
     }
 
     [Fact]
-    public void EnterpriseApi_maps_get_info_success_to_only_businessname_creditcode_and_county()
+    public void EnterpriseApi_maps_get_info_success_to_businessname_creditcode_county_and_region()
     {
         WithEnterpriseApiType(type =>
         {
@@ -739,12 +739,11 @@ public sealed class AuthApiSurfaceTests
             var json = JsonConvert.SerializeObject(payload);
 
             Assert.Equal(
-                "{\"businessname\":\"Synthetic Enterprise\",\"creditcode\":\"91330200SYNTHETIC\",\"county\":\"Yinzhou\"}",
+                "{\"businessname\":\"Synthetic Enterprise\",\"creditcode\":\"91330200SYNTHETIC\",\"county\":\"Yinzhou\",\"region\":\"330212\"}",
                 json);
 
             var propertyNames = JObject.Parse(json).Properties().Select(property => property.Name).ToArray();
-            Assert.Equal(new[] { "businessname", "creditcode", "county" }, propertyNames);
-            Assert.DoesNotContain("region", propertyNames);
+            Assert.Equal(new[] { "businessname", "creditcode", "county", "region" }, propertyNames);
             Assert.DoesNotContain("id", propertyNames);
             Assert.DoesNotContain("updateuser", propertyNames);
             Assert.DoesNotContain("reviewstatus", propertyNames);

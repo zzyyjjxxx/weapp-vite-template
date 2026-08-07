@@ -38,7 +38,8 @@ GET  /customapi/enterpriseapi/getinfo
 {
   "businessname": "企业名称",
   "creditcode": "统一社会信用代码",
-  "county": "区县名称"
+  "county": "区县名称",
+  "region": "乡镇名称"
 }
 ```
 

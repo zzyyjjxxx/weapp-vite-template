@@ -45,13 +45,14 @@ parsing as an oracle.
 
 The getinfo route resolves the enterprise profile from `m_preliminary_list`
 and joins the county name through `m_preliminary_list.county` to
-`yj_regioninfo.id`. It returns exactly these three fields and nothing else:
+`yj_regioninfo.id`. It returns exactly these four fields and nothing else:
 
 ```json
 {
   "businessname": "<enterprise-name>",
   "creditcode": "<credit-code>",
-  "county": "<county-name>"
+  "county": "<county-name>",
+  "region": "<township-or-region>"
 }
 ```
 

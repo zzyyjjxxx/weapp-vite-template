@@ -105,7 +105,7 @@ git commit -m "feat: enforce enterprise access token identity"
 - Create: `forguncy-server-api/tests/ForguncyServerApi.Tests/Application/EnterpriseServiceTests.cs`
 
 **Interfaces:**
-- `EnterpriseProfile` stores the internal `UserId`, `CreditCode`, `BusinessName`, `CountyName`, and `Region`; the API response mapper exposes only the approved three public fields.
+- `EnterpriseProfile` stores the internal `UserId`, `CreditCode`, `BusinessName`, `CountyName`, and `Region`; the API response mapper exposes only the approved four public fields: `businessname`, `creditcode`, `county`, and `region`.
 - `IEnterpriseRepository.FindByCreditCodeAsync(string creditCode, CancellationToken cancellationToken)` returns `EnterpriseProfile?`.
 - `EnterpriseService.GetProfileAsync(EnterpriseIdentity identity, CancellationToken cancellationToken)` returns the profile or `null` and never accepts a caller-supplied credit code.
 
@@ -296,7 +296,7 @@ git commit -m "feat: add land demand persistence service"
 
 - [ ] **Step 1: Write failing surface and handler tests.**
 
-Change `AuthApiSurfaceTests` to load `ForguncyServerApi.Api.EnterpriseApi`, assert it derives from `ForguncyApi`, and require exactly `Login`, `Refresh`, and `GetInfo` with the specified attributes and no `AuthApi` exported type. Update exported-type assertions for `EnterpriseCompositionRoot`, `EnterpriseService`, and the new domain/application types. Add response tests for the existing five-field token JSON and for `GetInfo` returning only `businessname`, `creditcode`, and `county`; assert that `region`, `id`, `updateuser`, and review fields are absent. Add tests for `GetInfo` mapping to 401, 404, and fixed 500 responses. Preserve the existing login/refresh JSON and form-reader tests under the new enterprise surface.
+Change `AuthApiSurfaceTests` to load `ForguncyServerApi.Api.EnterpriseApi`, assert it derives from `ForguncyApi`, and require exactly `Login`, `Refresh`, and `GetInfo` with the specified attributes and no `AuthApi` exported type. Update exported-type assertions for `EnterpriseCompositionRoot`, `EnterpriseService`, and the new domain/application types. Add response tests for the existing five-field token JSON and for `GetInfo` returning only `businessname`, `creditcode`, `county`, and `region`; assert that `id`, `updateuser`, and review fields are absent. Add tests for `GetInfo` mapping to 401, 404, and fixed 500 responses. Preserve the existing login/refresh JSON and form-reader tests under the new enterprise surface.
 
 - [ ] **Step 2: Run the focused surface tests and verify RED.**
 
@@ -308,7 +308,7 @@ Expected result: compilation or reflection assertions fail because the old `Auth
 
 - [ ] **Step 3: Implement the enterprise composition and HTTP adapter.**
 
-Move the current auth composition into `EnterpriseCompositionRoot` and add the typed enterprise and land-demand services from Tasks 2 and 3. Use one static `RetryableAsyncCache<EnterpriseCompositionRoot>` shared by both API classes. `Login` and `Refresh` retain the existing request readers and `AuthService` result mapping, but write through `ApiResponseWriter` and record enterprise operation diagnostics. `GetInfo` reads `EnterpriseIdentity` from `AccessTokenReader`, calls `EnterpriseService`, maps a missing profile to `404 enterprise_not_found`, serializes a three-property response record, and catches unexpected errors as fixed `500 server_error`. Remove the old files/classes so no ambiguous auth route remains.
+Move the current auth composition into `EnterpriseCompositionRoot` and add the typed enterprise and land-demand services from Tasks 2 and 3. Use one static `RetryableAsyncCache<EnterpriseCompositionRoot>` shared by both API classes. `Login` and `Refresh` retain the existing request readers and `AuthService` result mapping, but write through `ApiResponseWriter` and record enterprise operation diagnostics. `GetInfo` reads `EnterpriseIdentity` from `AccessTokenReader`, calls `EnterpriseService`, maps a missing profile to `404 enterprise_not_found`, serializes a four-property response record including `region`, and catches unexpected errors as fixed `500 server_error`. Remove the old files/classes so no ambiguous auth route remains.
 
 - [ ] **Step 4: Run the focused surface tests and verify GREEN.**
 

@@ -1251,3 +1251,23 @@ Forguncy Designer upload, no real HTTP round-trip, and no real land-demand
 database write was performed or claimed in this cycle. Deployment to the
 Forguncy 8.0.4 site and end-to-end HTTP acceptance remain separate, unverified
 steps.
+
+## Enterprise getinfo region extension - 2026-08-07
+
+This cycle extended the public `GET /customapi/enterpriseapi/getinfo`
+response with the authenticated enterprise `region` field. The response
+whitelist is now `businessname`, `creditcode`, `county`, and `region`.
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `dotnet restore .\forguncy-server-api\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj` | 0 | Server and test project assets restored successfully |
+| `dotnet test .\forguncy-server-api\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj --configuration Release --no-restore --filter FullyQualifiedName~AuthApiSurfaceTests --logger "console;verbosity=normal"` | 1 | Compilation stopped before test discovery because the Forguncy 8.0.4 SDK path is absent; no test pass claimed |
+| `pnpm test` | 0 | 35 test files, 155 tests passed |
+| `pnpm typecheck:app` | 0 | Passed |
+| `git diff --check` | 0 | No whitespace errors; only expected LF-to-CRLF warnings |
+
+The failed .NET command could not resolve `GrapeCity.Forguncy.ServerApi` and
+IdentityModel references from the configured
+`D:\Program Files\Forguncy 8.0.4\Website\bin` path. No live Forguncy
+Designer upload, HTTP round-trip, database write, or SMS integration was
+performed in this cycle.
