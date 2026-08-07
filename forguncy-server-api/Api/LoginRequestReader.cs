@@ -1,0 +1,149 @@
+using System.Text;
+using ForguncyServerApi.Application;
+using Microsoft.AspNetCore.Http;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
+namespace ForguncyServerApi.Api;
+
+public sealed class LoginRequestFormatException : Exception
+{
+    public LoginRequestFormatException()
+        : base("The login request format is invalid.")
+    {
+    }
+}
+
+public static class LoginRequestReader
+{
+    public static async Task<LoginRequest> ReadAsync(HttpRequest request, CancellationToken cancellationToken)
+    {
+        if (request is null)
+        {
+            throw new ArgumentNullException(nameof(request));
+        }
+
+        if (IsJsonContentType(request))
+        {
+            return await ReadJsonAsync(request, cancellationToken);
+        }
+
+        if (IsUrlEncodedForm(request))
+        {
+            return await ReadFormAsync(request, cancellationToken);
+        }
+
+        throw new LoginRequestFormatException();
+    }
+
+    public static async Task<string> ReadRefreshTokenAsync(HttpRequest request, CancellationToken cancellationToken)
+    {
+        if (request is null)
+        {
+            throw new ArgumentNullException(nameof(request));
+        }
+
+        if (IsJsonContentType(request))
+        {
+            return await ReadRefreshTokenJsonAsync(request, cancellationToken);
+        }
+
+        if (IsUrlEncodedForm(request))
+        {
+            return await ReadRefreshTokenFormAsync(request, cancellationToken);
+        }
+
+        throw new LoginRequestFormatException();
+    }
+
+    private static async Task<LoginRequest> ReadJsonAsync(HttpRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            using var reader = new StreamReader(request.Body, Encoding.UTF8, true, 1024, true);
+            var json = await reader.ReadToEndAsync();
+            cancellationToken.ThrowIfCancellationRequested();
+            var payload = JObject.Parse(json);
+            return new LoginRequest(
+                ReadRequiredString(payload, "username"),
+                ReadRequiredString(payload, "password"));
+        }
+        catch (JsonException)
+        {
+            throw new LoginRequestFormatException();
+        }
+    }
+
+    private static async Task<LoginRequest> ReadFormAsync(HttpRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var form = await request.ReadFormAsync(cancellationToken);
+            return form.ContainsKey("username") && form.ContainsKey("password")
+                ? new LoginRequest(form["username"].ToString(), form["password"].ToString())
+                : throw new LoginRequestFormatException();
+        }
+        catch (InvalidDataException)
+        {
+            throw new LoginRequestFormatException();
+        }
+    }
+
+    private static async Task<string> ReadRefreshTokenJsonAsync(HttpRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            using var reader = new StreamReader(request.Body, Encoding.UTF8, true, 1024, true);
+            var json = await reader.ReadToEndAsync();
+            cancellationToken.ThrowIfCancellationRequested();
+            var payload = JObject.Parse(json);
+            return ReadRequiredString(payload, "refresh_token");
+        }
+        catch (JsonException)
+        {
+            throw new LoginRequestFormatException();
+        }
+    }
+
+    private static async Task<string> ReadRefreshTokenFormAsync(HttpRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var form = await request.ReadFormAsync(cancellationToken);
+            return form.ContainsKey("refresh_token")
+                ? form["refresh_token"].ToString()
+                : throw new LoginRequestFormatException();
+        }
+        catch (InvalidDataException)
+        {
+            throw new LoginRequestFormatException();
+        }
+    }
+
+    private static string ReadRequiredString(JObject payload, string name)
+    {
+        var token = payload[name];
+        return token?.Type == JTokenType.String
+            ? token.Value<string>()!
+            : throw new LoginRequestFormatException();
+    }
+
+    private static bool IsUrlEncodedForm(HttpRequest request)
+    {
+        var mediaType = GetMediaType(request.ContentType);
+        return string.Equals(mediaType, "application/x-www-form-urlencoded", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsJsonContentType(HttpRequest request)
+    {
+        var mediaType = GetMediaType(request.ContentType);
+        return string.Equals(mediaType, "application/json", StringComparison.OrdinalIgnoreCase)
+            || (mediaType?.EndsWith("+json", StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    private static string? GetMediaType(string? contentType) =>
+        contentType?.Split(new[] { ';' }, 2)[0].Trim();
+
+}
