@@ -473,7 +473,7 @@ public sealed class LandDemandApiSurfaceTests
     {
         var name = new AssemblyName(args.Name);
         return name.Name == "GrapeCity.Forguncy.ServerApi"
-            ? Assembly.LoadFrom("D:\\Program Files\\Forguncy 8.0.4\\Website\\bin\\GrapeCity.Forguncy.ServerApi.dll")
+            ? Assembly.LoadFrom(Path.Combine(AppContext.BaseDirectory, "GrapeCity.Forguncy.ServerApi.dll"))
             : null;
     }
 

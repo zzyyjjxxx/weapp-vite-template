@@ -8,7 +8,7 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-    <ForguncyBin Condition="'$(ForguncyBin)' == ''">D:\Program Files\Forguncy 8.0.4\Website\bin</ForguncyBin>
+    <ForguncyBin Condition="'$(ForguncyBin)' == ''">$(MSBuildProjectDirectory)\..\..\lib</ForguncyBin>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,12 +23,17 @@
     <PackageReference Include="System.Reflection.DispatchProxy" Version="4.7.0" />
     <PackageReference Include="System.Text.Encodings.Web" Version="6.0.0" />
     <Compile Include="..\..\Compatibility\IsExternalInit.cs" Link="Compatibility\IsExternalInit.cs" />
-    <Reference Include="System.IdentityModel.Tokens.Jwt">
-      <HintPath>$(ForguncyBin)\System.IdentityModel.Tokens.Jwt.dll</HintPath>
-      <Private>true</Private>
-    </Reference>
-    <Reference Include="Microsoft.IdentityModel.Tokens">
-      <HintPath>$(ForguncyBin)\Microsoft.IdentityModel.Tokens.dll</HintPath>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.7.2" />
+    <PackageReference Include="xunit" Version="2.4.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="GrapeCity.Forguncy.ServerApi">
+      <HintPath>$(ForguncyBin)\GrapeCity.Forguncy.ServerApi.dll</HintPath>
       <Private>true</Private>
     </Reference>
     <Reference Include="Microsoft.IdentityModel.JsonWebTokens">
@@ -39,11 +44,13 @@
       <HintPath>$(ForguncyBin)\Microsoft.IdentityModel.Logging.dll</HintPath>
       <Private>true</Private>
     </Reference>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.7.2" />
-    <PackageReference Include="xunit" Version="2.4.2" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+    <Reference Include="Microsoft.IdentityModel.Tokens">
+      <HintPath>$(ForguncyBin)\Microsoft.IdentityModel.Tokens.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.IdentityModel.Tokens.Jwt">
+      <HintPath>$(ForguncyBin)\System.IdentityModel.Tokens.Jwt.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
   </ItemGroup>
 </Project>

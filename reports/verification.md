@@ -1271,3 +1271,30 @@ IdentityModel references from the configured
 `D:\Program Files\Forguncy 8.0.4\Website\bin` path. No live Forguncy
 Designer upload, HTTP round-trip, database write, or SMS integration was
 performed in this cycle.
+
+## Bundle Forguncy references - 2026-08-07
+
+The five requested assemblies were copied from the installed Forguncy 8.0.4
+runtime into `forguncy-server-api/lib/` and both project files now resolve
+them from that repository directory by default. The copied files and SHA-256
+hashes are:
+
+```text
+GrapeCity.Forguncy.ServerApi.dll|20992|22F73426BE998AD7C7D4511ECBDA72D80E8E8C2639FBFFE3A2C39EE3EC75F54A
+Microsoft.IdentityModel.JsonWebTokens.dll|62840|D60426410E7E647253135AC26B75C9BEA07121B95D487BDF0365D8D033702EEE
+Microsoft.IdentityModel.Logging.dll|30072|D1AFB987FD12CB057B0E995DAFBA9EFC931FD6CA09705DE61A767B6B1850256E
+Microsoft.IdentityModel.Tokens.dll|917408|01E783FE73D241F4B1AF1A5361BE93D3AE0F8E07B6DB499DDD0CF7396AD5AE68
+System.IdentityModel.Tokens.Jwt.dll|81784|B173D50731F91A4ACEC60EF575C94290852ED71D894D7880ECFCFF6EAC6882DC
+```
+
+| Command | Exit | Result |
+| --- | ---: | --- |
+| `dotnet restore .\forguncy-server-api\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj` | 0 | Server and test assets restored successfully |
+| `dotnet test .\forguncy-server-api\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj --configuration Release --no-restore` | 0 | 223 passed, 0 failed |
+| `dotnet build .\forguncy-server-api\ForguncyServerApi.csproj --configuration Release --no-restore` | 0 | 0 warnings, 0 errors |
+| `git diff --check` | 0 | No whitespace errors; only expected LF-to-CRLF warnings |
+
+The test assembly resolver and README route assertion were updated to work
+without the former machine-specific `D:\Program Files\Forguncy 8.0.4` path.
+No live Designer upload, HTTP round-trip, database write, or SMS integration
+was performed in this cycle.

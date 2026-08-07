@@ -11,6 +11,11 @@ POST /customapi/landdemandapi/addlanddemand
 POST /customapi/landdemandapi/updatelanddemand
 ```
 
+The five Forguncy/IdentityModel compile-time assemblies required by the
+Forguncy 8.0.4 target are included in `lib/` and both project files reference
+that repository directory by default. `ForguncyBin` can still be overridden
+when building against a deliberately selected external Forguncy SDK.
+
 The enterprise routes own login, refresh, and enterprise profile lookup. The
 land-demand routes own querying, creating, and updating an enterprise's filing
 record. There are no issue, validate, logout, or legacy alias routes.
@@ -231,8 +236,8 @@ unprotected direct HTTP endpoint.
 From `forguncy-server-api`, run:
 
 ```powershell
-dotnet test .\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj --configuration Release --no-restore -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
-dotnet build .\ForguncyServerApi.csproj --configuration Release --no-restore -p:ForguncyBin='D:\Program Files\Forguncy 8.0.4\Website\bin'
+dotnet test .\tests\ForguncyServerApi.Tests\ForguncyServerApi.Tests.csproj --configuration Release --no-restore
+dotnet build .\ForguncyServerApi.csproj --configuration Release --no-restore
 ```
 
 The Release build produces:

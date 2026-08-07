@@ -103,7 +103,7 @@ public sealed class AuthApiSurfaceTests
         var documentedRoutes = System.Text.RegularExpressions.Regex
             .Matches(
                 readme,
-                "^(GET|POST) /customapi/[a-z]+/[a-z]+$",
+                "^(GET|POST) /customapi/[a-z]+/[a-z]+(?=\\r?$)",
                 System.Text.RegularExpressions.RegexOptions.Multiline)
             .Cast<System.Text.RegularExpressions.Match>()
             .Select(match => match.Value)
@@ -991,7 +991,7 @@ public sealed class AuthApiSurfaceTests
     {
         var name = new AssemblyName(args.Name);
         return name.Name == "GrapeCity.Forguncy.ServerApi"
-            ? Assembly.LoadFrom("D:\\Program Files\\Forguncy 8.0.4\\Website\\bin\\GrapeCity.Forguncy.ServerApi.dll")
+            ? Assembly.LoadFrom(Path.Combine(AppContext.BaseDirectory, "GrapeCity.Forguncy.ServerApi.dll"))
             : null;
     }
 
