@@ -1356,3 +1356,20 @@ text is covered by tests.
 
 No live Forguncy HTTP request, database write, or SMS integration was
 performed in this cycle.
+
+## SMS persistence data-access boundary - 2026-08-07
+
+After deployment testing showed that the physical verification table existed
+but the `IDataAccess` lookup still failed, the SMS persistence adapters were
+aligned with the confirmed project boundary. `config` remains on Forguncy
+`IDataAccess`; `enterprise_sms_verification` and `m_message_log` now use the
+existing SqlSugar/MySQL client factory. Enterprise and land-demand tables
+already used that same SqlSugar path.
+
+| Check | Exit | Result |
+| --- | ---: | --- |
+| Full Release tests | 0 | 246 passed, 0 failed |
+| Release server build with the restricted-SDK workaround | 0 | 0 warnings, 0 errors |
+| SqlSugar mapping/query tests | 0 | Verification table and message-log column/table/update mappings passed |
+
+No live SMS request or database write was performed in this cycle.

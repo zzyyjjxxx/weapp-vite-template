@@ -84,8 +84,8 @@ public sealed class EnterpriseCompositionRoot
         Func<IDataAccess, SmsVerificationService> smsVerificationServiceFactory = currentDataAccess =>
             new SmsVerificationService(
                 new ForguncyConfigValueStore(currentDataAccess),
-                new ForguncySmsVerificationRepository(currentDataAccess),
-                new ForguncyMessageLogRepository(currentDataAccess),
+                new SqlSugarVerificationCodeRepository(clientFactory),
+                new SqlSugarMessageLogRepository(clientFactory),
                 authenticationClient,
                 smsGateway,
                 new RandomVerificationCodeGenerator(),

@@ -255,6 +255,13 @@ enterprises, or initialize database content. Apply
 `sql/002-create-enterprise-sms-verification.sql` once before deploying the
 SMS routes; it creates the one-row-per-enterprise verification table.
 
+Only the `config` table is accessed through Forguncy `IDataAccess` because it
+stores the connection and API configuration values. All business tables,
+including `c_userinfo`, `m_preliminary_list`, `yj_regioninfo`,
+`landusedemand_info`, `enterprise_sms_verification`, and `m_message_log`, are
+read and written through SqlSugar using the connection string from
+`config.item='ssl'`.
+
 The MySQL connection is not configured through environment variables. The
 existing database connection is selected by `config.item='ssl'`: set its
 connection string in that row's `value` column. The Forguncy 8.0.4 SDK

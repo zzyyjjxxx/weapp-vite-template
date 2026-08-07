@@ -224,6 +224,117 @@ public sealed class SqlSugarPersistenceTests
         Assert.DoesNotContain("id` =", sql, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Sms_verification_row_maps_to_enterprise_sms_verification_columns()
+    {
+        var rowType = typeof(SqlSugarVerificationCodeRepository).GetNestedType(
+            "VerificationCodeRow",
+            BindingFlags.NonPublic);
+        Assert.NotNull(rowType);
+
+        var table = rowType!.GetCustomAttribute<SugarTable>();
+        Assert.NotNull(table);
+        Assert.Equal("enterprise_sms_verification", table!.TableName);
+
+        AssertNestedColumn(rowType, "Id", "id", isPrimaryKey: true);
+        AssertNestedColumn(rowType, "CreditCode", "creditcode");
+        AssertNestedColumn(rowType, "Mobile", "mobile");
+        AssertNestedColumn(rowType, "Code", "code");
+        AssertNestedColumn(rowType, "ExpiresAt", "expires_at");
+        AssertNestedColumn(rowType, "RetryAt", "retry_at");
+        AssertNestedColumn(rowType, "VerifiedAt", "verified_at");
+    }
+
+    [Fact]
+    public void Sms_verification_lookup_targets_enterprise_sms_verification_and_creditcode()
+    {
+        using var client = AuthSqlSugarClientFactory.Create(
+            "Server=localhost;Database=synthetic;User=root;Password=synthetic;");
+
+        var method = typeof(SqlSugarVerificationCodeRepository).GetMethod(
+            "BuildLookupQuery",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var query = method!.Invoke(null, new object[] { client, "91330200SYNTHETIC" });
+        Assert.NotNull(query);
+        var toSql = query!.GetType().GetMethod("ToSql", Type.EmptyTypes);
+        Assert.NotNull(toSql);
+        var sqlResult = toSql!.Invoke(query, null);
+        Assert.NotNull(sqlResult);
+        var keyProperty = sqlResult!.GetType().GetProperty("Key");
+        Assert.NotNull(keyProperty);
+        var sql = Assert.IsType<string>(keyProperty!.GetValue(sqlResult));
+
+        Assert.Contains("enterprise_sms_verification", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("creditcode", sql, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Sms_message_log_rows_map_to_the_required_columns()
+    {
+        var repositoryType = typeof(SqlSugarMessageLogRepository);
+        var insertRowType = repositoryType.GetNestedType(
+            "MessageLogInsertRow",
+            BindingFlags.NonPublic);
+        var stateRowType = repositoryType.GetNestedType(
+            "MessageLogStateRow",
+            BindingFlags.NonPublic);
+        Assert.NotNull(insertRowType);
+        Assert.NotNull(stateRowType);
+
+        Assert.Equal(
+            "m_message_log",
+            insertRowType!.GetCustomAttribute<SugarTable>()!.TableName);
+        Assert.Equal(
+            "m_message_log",
+            stateRowType!.GetCustomAttribute<SugarTable>()!.TableName);
+
+        AssertNestedColumn(insertRowType, "Sender", "sender");
+        AssertNestedColumn(insertRowType, "Mobile", "mobile");
+        AssertNestedColumn(insertRowType, "Content", "content");
+        AssertNestedColumn(insertRowType, "Reciveder", "reciveder");
+        AssertNestedColumn(insertRowType, "TransactionId", "transactionID");
+        AssertNestedColumn(stateRowType, "TransactionId", "transactionID");
+        AssertNestedColumn(stateRowType, "Date", "date");
+        AssertNestedColumn(stateRowType, "State", "state");
+    }
+
+    [Fact]
+    public void Sms_message_log_state_update_targets_transactionID()
+    {
+        using var client = AuthSqlSugarClientFactory.Create(
+            "Server=localhost;Database=synthetic;User=root;Password=synthetic;");
+
+        var method = typeof(SqlSugarMessageLogRepository).GetMethod(
+            "BuildUpdateStateCommand",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var command = method!.Invoke(
+            null,
+            new object[]
+            {
+                client,
+                "msg-2026080748-000000001",
+                DateTime.Parse("2026-08-07 12:34:56"),
+                "调用成功!"
+            });
+        Assert.NotNull(command);
+        var toSql = command!.GetType().GetMethod("ToSql", Type.EmptyTypes);
+        Assert.NotNull(toSql);
+        var sqlResult = toSql!.Invoke(command, null);
+        Assert.NotNull(sqlResult);
+        var keyProperty = sqlResult!.GetType().GetProperty("Key");
+        Assert.NotNull(keyProperty);
+        var sql = Assert.IsType<string>(keyProperty!.GetValue(sqlResult));
+
+        Assert.Contains("m_message_log", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("transactionID", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("date", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("state", sql, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static void AssertColumn(string propertyName, string columnName, bool isPrimaryKey = false)
     {
         var property = typeof(AuthUser).GetProperty(propertyName);
