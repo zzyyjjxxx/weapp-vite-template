@@ -12,7 +12,7 @@
 
 - 页面和步骤组件只依赖 Store、Query/Mutation 与类型化导航，不直接调用 Storage、Repository、`fetch`、`wx.request` 或原始导航。
 - 已持久化用地需求属于 Query Core；认证与正在编辑的表单属于 Store。
-- 所有业务接口保持 Mock，并明确 `demo / demo123` 只是测试账号。
+- 认证和用地需求记录使用 `src/features/*/http-repository.ts` 访问 `http://localhost:17163/`；验证码和本地草稿保持 Mock，并明确 `demo / demo123` 只是离线测试账号。
 - 每个阶段独立验证和提交，不提交用户文件、规划辅助目录、`.DS_Store` 或临时截图。
 - 路由或生成配置变化后运行 `pnpm prepare`，不要手改 `.weapp-vite/`。
 

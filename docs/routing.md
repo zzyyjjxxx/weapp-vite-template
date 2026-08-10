@@ -4,7 +4,7 @@
 
 ## 当前主包路由
 
-- `/pages/login/index`：公开的 Mock 企业登录页。
+- `/pages/login/index`：公开的企业登录页，运行时通过 HTTP Auth Repository 登录。
 - `/pages/home/index`：鉴权首页，展示用地需求状态与填报入口。
 - `/pages/land-demand/index`：鉴权的五步填报页；`mode=view` 为已持久化记录的只读详情，`mode=edit` 或缺省为编辑模式。
 - `/pages/land-demand/success`：鉴权的提交成功页；仅在 Query 返回当前企业的 `landusedemand=1` 记录后展示成功内容。

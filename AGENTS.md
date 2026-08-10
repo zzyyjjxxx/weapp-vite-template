@@ -2,7 +2,7 @@
 
 ## Product
 
-This repository is the enterprise land-demand (企业用地需求) WeChat Mini Program. It uses Mock repositories and WeChat Storage only; never add production credentials, real SMS, publishing, or production data unless the user explicitly changes scope.
+This repository is the enterprise land-demand (企业用地需求) WeChat Mini Program. Runtime authentication and land-demand records use the local HTTP adapters described in `docs/http-client.md`; verification codes and local drafts remain Mock/WeChat Storage only. Never add production credentials, real SMS, publishing, or production data unless the user explicitly changes scope.
 
 The five steps are 基本信息、用地需求、投资项目、融资及联系人、信息确认与提交. Preserve these confirmed rules:
 
@@ -41,7 +41,7 @@ The five steps are 基本信息、用地需求、投资项目、融资及联系�
 
 - `docs/architecture.md` — boundaries and data flow.
 - `docs/routing.md` — generated routes and guards.
-- `docs/http-client.md` — Mock Repository/Service and real-backend replacement.
+- `docs/http-client.md` — HTTP adapters, local API base URL, and Mock captcha boundary.
 - `docs/query-state.md` — Query/Store ownership and private cache.
 - `docs/ui-guidelines.md` — TDesign, native nodes, Tailwind and field visibility.
 - `docs/testing.md` — static, unit, E2E and runtime prerequisites.

@@ -1,12 +1,14 @@
 # 企业用地需求填报小程序
 
-基于 Weapp-Vite、Wevu、TDesign MiniProgram、构建期 TailwindCSS 和 TanStack Query Core 的企业用地需求填报小程序。当前所有业务接口均由本地 Mock Service/Repository 实现；数据写入微信小程序 Storage，仅用于开发和验收，不代表生产后端、真实短信或正式企业数据。
+基于 Weapp-Vite、Wevu、TDesign MiniProgram、构建期 TailwindCSS 和 TanStack Query Core 的企业用地需求填报小程序。认证和用地需求记录通过 `http://localhost:17163/` 的 HTTP Repository 接入；验证码和本地草稿仍使用 Mock/微信小程序 Storage，仅用于本地开发和验收，不代表生产后端、真实短信或正式企业数据。
 
 ## 本地体验
 
-- Mock 账号：`demo`
-- Mock 密码：`demo123`
+- Mock 测试账号：`demo`
+- Mock 测试密码：`demo123`
 - 测试验证码：界面在发送后显示 Repository 生成的六位 Mock 验证码；默认运行配置为 `123456`
+
+真实 HTTP 登录使用后端提供的企业账号；`demo / demo123` 仅用于注入 Mock Repository 的单元测试和离线流程测试。
 
 登录后依次完成五步：基本信息、用地需求、投资项目、融资及联系人、信息确认与提交。暂存写入状态 `2`，正式提交在完整校验、承诺确认和验证码校验通过后写入状态 `1`。
 
@@ -47,7 +49,7 @@ E2E 的冷启动恢复用例通过 Automator `callWxMethod('restartMiniProgram',
 
 - [架构](docs/architecture.md)
 - [路由](docs/routing.md)
-- [Mock Service/Repository](docs/http-client.md)
+- [HTTP Client 与 Repository](docs/http-client.md)
 - [Query 与 Store 状态归属](docs/query-state.md)
 - [界面规范](docs/ui-guidelines.md)
 - [测试](docs/testing.md)

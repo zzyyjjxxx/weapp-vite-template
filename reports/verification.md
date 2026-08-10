@@ -1401,3 +1401,55 @@ already used that same SqlSugar path.
 | SqlSugar mapping/query tests | 0 | Verification table and message-log column/table/update mappings passed |
 
 No live SMS request or database write was performed in this cycle.
+
+## Local HTTP Repository integration - 2026-08-10
+
+The mini-program now configures HTTP adapters at application startup with the
+local base URL `http://localhost:17163/`. Authentication calls login, refresh,
+and getinfo; land-demand reads and writes call the three listed land-demand
+routes.
+The sendcode and verifycode routes intentionally remain on the deterministic
+local Mock Repository, so no SMS service is contacted. The write adapter sends
+only the backend's 26 writable fields and converts form numeric strings to JSON
+numbers.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused HTTP client and repository tests | 0 | 3 files, 8 tests passed |
+| `pnpm prepare` | 0 | Generated support files refreshed |
+| `pnpm typecheck:app` | 0 | Passed |
+| `pnpm typecheck:e2e` | 0 | Passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm test` | 0 | 39 files, 167 tests passed |
+| `pnpm test:coverage` | 0 | 39 files, 167 tests passed; 74.85% statements, 68.04% branches |
+| `pnpm build` | 0 | WeChat build passed; main package 784 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+| `Test-NetConnection localhost -Port 17163` | 0 | Reachable: `True` |
+| Read-only `GET /customapi/enterpriseapi/getinfo` without token | 0 | HTTP `401`, confirming the local route is reachable and protected |
+
+No valid enterprise login credentials were used. No real SMS request, land-
+demand write, database write, or WeChat DevTools E2E/screenshot was performed
+in this cycle. The local API root was reachable during verification, but
+authenticated end-to-end acceptance remains pending a valid test account and
+runtime acceptance in WeChat Developer Tools.
+
+## HTTP adapter compatibility follow-up - 2026-08-10
+
+The response mapper now accepts the backend's numeric `1/0` representation for
+the yes/no fields and the application explicitly keeps the local Mock code at
+`123456`, matching the existing offline test flow.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused HTTP client and repository tests | 0 | 3 files, 8 tests passed |
+| `pnpm typecheck:app` | 0 | Passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm build` | 0 | WeChat build passed; main package 784 KB |
+| `Test-NetConnection localhost -Port 17163` | 0 | Reachable: `True` |
+| Read-only `GET http://localhost:17163/` | 0 | HTTP `200` |
+
+Authenticated requests and WeChat DevTools runtime acceptance still require a
+valid enterprise test account and a logged-in Developer Tools service port.

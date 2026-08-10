@@ -23,7 +23,7 @@ pnpm analyze:budget
 ## 测试层
 
 - `tests/smoke/`：产品形状、文档一致性、运行时 E2E 合约。
-- `tests/unit/features/`：字典、默认值、显隐规则、校验、Payload、Mock Repository/Service、提交控制器。
+- `tests/unit/features/`：字典、默认值、显隐规则、校验、Payload、HTTP/Mock Repository/Service、提交控制器。
 - `tests/unit/stores/`：认证和表单 Store、Storage 持久化、私有 Query 缓存。
 - `tests/unit/components/`：五步组件字段、稳定 test ID、预览分组。
 - `tests/unit/e2e/`：Playwright 到小程序 Automator Driver 的映射。

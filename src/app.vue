@@ -4,6 +4,12 @@ import autoRoutes from 'weapp-vite/auto-routes'
 import { onHide, onShow } from 'wevu'
 import { installAbortGlobals } from 'wevu/web-apis'
 
+import { createHttpAuthRepository } from '@/features/auth/http-repository'
+import { configureAuthRepository } from '@/features/auth/repository'
+import { createHttpLandDemandRepository } from '@/features/land-demand/http-repository'
+import { configureLandDemandRepository } from '@/features/land-demand/repository'
+import { API_BASE_URL } from '@/platform/api-config'
+import { createApiClient } from '@/platform/http-client'
 import { createNetworkStatusAdapter } from '@/platform/network-status'
 import { setupRouter } from '@/router'
 import { setupQueryOnlineManager } from '@/shared/query/lifecycle'
@@ -17,7 +23,16 @@ setupStorePlugins()
 setupRouter()
 setupQueryOnlineManager(createNetworkStatusAdapter())
 
-useAuthStore().markInitialized()
+const auth = useAuthStore()
+const apiClient = createApiClient({ baseUrl: API_BASE_URL })
+configureAuthRepository(createHttpAuthRepository({ client: apiClient }))
+configureLandDemandRepository(createHttpLandDemandRepository({
+  client: apiClient,
+  getAccessToken: () => auth.session.value?.token,
+  randomCode: () => '123456',
+}))
+
+auth.markInitialized()
 useAppStore().markReady()
 
 focusManager.setEventListener((setFocused) => {

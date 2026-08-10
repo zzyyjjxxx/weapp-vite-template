@@ -1,16 +1,16 @@
 # 用地需求填报架构
 
-本仓库只包含企业用地需求填报小程序。当前业务边界是可替换的 Mock Service/Repository 与微信小程序 Storage，不包含 HTTP 服务、生产凭据、真实短信或发布流程。
+本仓库只包含企业用地需求填报小程序。认证和用地需求记录通过可替换的 HTTP Service/Repository 访问本地开发 API；验证码与本地草稿仍使用 Mock 和微信小程序 Storage，不包含生产凭据、真实短信或发布流程。
 
 ## 分层
 
 - `src/pages/`：登录、首页、五步填报和提交成功页，只消费 Store、Query/Mutation 与类型化导航。
-- `src/features/auth/`：Mock 企业登录模型、Repository、Service 和 Mutation。
-- `src/features/land-demand/`：表单模型、默认值、显隐规则、校验、Payload 适配、Mock Repository/Service、Query/Mutation、字典与步骤组件。
+- `src/features/auth/`：企业登录模型、HTTP/Mock Repository、Service 和 Mutation。
+- `src/features/land-demand/`：表单模型、默认值、显隐规则、校验、Payload 适配、HTTP/Mock Repository、Query/Mutation、字典与步骤组件。
 - `src/shared/query/`：把 `@tanstack/query-core` observer 桥接为 Wevu 响应式状态。
 - `src/stores/`：认证会话、应用就绪状态以及未持久化的填报编辑状态。
 - `src/router/`：生成路由类型、鉴权元数据与导航封装。
-- `src/platform/`：Storage、网络状态等宿主适配器。
+- `src/platform/`：HTTP、Storage、网络状态等宿主适配器。
 
 ## 数据流
 
@@ -19,8 +19,8 @@
   -> Wevu Store + Query/Mutation
   -> Auth 或 LandDemand Service
   -> 可替换 Repository 接口
-  -> 当前 Mock Repository
-  -> 微信小程序 Storage
+  -> HTTP Repository -> 本地开发 API
+  -> 验证码/草稿 Mock -> 微信小程序 Storage
 ```
 
 页面和组件不得直接访问 Storage、Mock Repository、`fetch`、`wx.request` 或原始导航 API。服务端状态由 Query Core 负责，认证和正在编辑的小型客户端状态由 Wevu Store 负责；已持久化的用地需求记录不能复制进 Store 形成第二份真相。
@@ -31,7 +31,7 @@
 
 固定步骤为：基本信息、用地需求、投资项目、融资及联系人、信息确认与提交。点击步骤切换会保存本地编辑草稿；只有明确点击“暂存”或验证码提交才调用 Repository。`landusedemand=2` 表示草稿，`landusedemand=1` 表示已提交。
 
-正式提交需要完整字段校验、真实性承诺以及 Mock 六位验证码校验。新增记录调用保存语义，已有记录调用修改语义；首次保存后 Query 缓存立即拥有记录，避免重复新增。
+正式提交需要完整字段校验、真实性承诺以及本地 Mock 六位验证码校验。新增记录调用 HTTP 保存语义，已有记录调用 HTTP 修改语义；首次保存后 Query 缓存立即拥有记录，避免重复新增。
 
 已提交记录有独立只读详情模式，只复用确认分组，不创建另一份记录状态，也不显示承诺、验证码、暂存或保存动作。成功页同样从当前企业 Query 记录派生，仅 `landusedemand=1` 才展示成功信息。
 
