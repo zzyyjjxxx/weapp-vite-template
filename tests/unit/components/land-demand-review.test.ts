@@ -81,7 +81,6 @@ describe('land demand review', () => {
       'review-submit',
       'verification-code',
       'verification-resend',
-      'verification-submit',
       'submit-success',
       'success-back-home',
       'back-home',
@@ -124,7 +123,6 @@ describe('land demand review', () => {
     expect(source).not.toContain('重新发送验证码')
     expect(source).toContain('t-class="verification-dialog__input"')
     expect(source).toContain('t-class-input="verification-dialog__input-control"')
-    expect(source).toContain('t-class-content="verification-dialog__dialog-content"')
     expect(source).toContain('t-class="verification-dialog__resend-button"')
     expect(source).toContain('请输入验证码')
     expect(source).toContain('已发送至')
@@ -135,15 +133,17 @@ describe('land demand review', () => {
     expect(source).toContain('--td-input-vertical-padding: 8rpx 32rpx')
     expect(source).toContain('padding-right: 96rpx')
     expect(source).toContain('width: 88rpx')
-    expect(source).toContain('padding-right: 16rpx')
-    expect(source).toContain('padding-left: 32rpx')
     expect(source).toContain('size="extra-small"')
     expect(source).toContain('setInterval(updateCountdown, 1000)')
-    expect(source).toContain('slot="cancel-btn"')
-    expect(source).toContain('slot="confirm-btn"')
-    expect(source).toContain('提交')
-    expect(source).toContain(':disabled="submitDisabled"')
-    expect(source).toContain('@tap="confirm"')
+    expect(source).toContain('button-layout="horizontal"')
+    expect(source).toContain('cancel-btn="取消"')
+    expect(source).toContain('confirm-btn="提交"')
+    expect(source).toContain('if (!submitDisabled.value)')
+    expect(source).toContain('@cancel="close"')
+    expect(source).toContain('@confirm="confirm"')
+    expect(source).not.toContain(':cancel-btn="cancelButton"')
     expect(source).not.toContain(':confirm-btn="confirmButton"')
+    expect(source).not.toContain('slot="cancel-btn"')
+    expect(source).not.toContain('slot="confirm-btn"')
   })
 })

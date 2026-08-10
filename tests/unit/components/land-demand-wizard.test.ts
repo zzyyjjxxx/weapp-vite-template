@@ -141,6 +141,7 @@ describe('land demand wizard component contract', () => {
     expect(source).toContain('<t-dialog')
     expect(source).toContain('destructive-clear-dialog')
     expect(source).toContain('confirm-btn="继续"')
+    expect(source.match(/button-layout="horizontal"/g)).toHaveLength(2)
     expect(source).toContain('@confirm="confirmDestructiveClear"')
   })
 
@@ -175,6 +176,15 @@ describe('land demand wizard component contract', () => {
     expect(source).not.toContain('leave-draft-dialog')
     expect(home).toContain('data-testid="home-save-success-message"')
     expect(home).toContain('query?.notice === \'saved\'')
+  })
+
+  it('keeps the workbench return action compact and pill-shaped', () => {
+    const source = readFileSync('src/pages/land-demand/index.vue', 'utf8')
+
+    expect(source).toContain('t-class="land-demand-page__back-home-button"')
+    expect(source).toContain('size="extra-small"')
+    expect(source).toContain('shape="round"')
+    expect(source).toMatch(/\.land-demand-page__back-home-button\s*\{[\s\S]*width:\s*220rpx;[\s\S]*min-width:\s*0;[\s\S]*box-shadow:/)
   })
 
   it('scrolls to the first invalid field when advancing is blocked', () => {

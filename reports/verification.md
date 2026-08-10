@@ -1910,3 +1910,30 @@ already used that same SqlSugar path.
 | SqlSugar mapping/query tests | 0 | Verification table and message-log column/table/update mappings passed |
 
 No live SMS request or database write was performed in this cycle.
+
+## Unify dialogs on native TDesign actions (2026-08-06, actual results)
+
+- Restored the verification dialog's native TDesign `cancel-btn` and `confirm-btn` objects with the same horizontal footer layout as the destructive-clear and required-return dialogs. The verification input, resend countdown, six-digit guard, and loading lock remain unchanged.
+- Removed the verification dialog's custom cancel/confirm button slots and their custom action styles. All three application confirmation dialogs now explicitly use `button-layout="horizontal"`.
+- Updated the dialog contract tests to require native action props and reject the old custom footer slots. Focused dialog tests passed 31 tests; full Vitest passed 182 tests across 38 files. `pnpm typecheck`, `pnpm lint`, `pnpm stylelint`, `pnpm verify:generated-runtime`, `pnpm build`, and `git diff --check` passed. The rebuilt main package is 785 KB.
+- No live WeChat DevTools screenshot or interaction is claimed for this change.
+
+## Compact workbench return button (2026-08-06, actual results)
+
+- Styled the filling-page `返回工作台` action as a compact 220rpx TDesign extra-small round button with a light outline and subtle shadow, while keeping its existing tap, disabled, and return logic unchanged.
+- Focused wizard tests passed 26 tests; full Vitest passed 182 tests across 38 files. `pnpm typecheck`, `pnpm lint`, `pnpm stylelint`, `pnpm verify:generated-runtime`, `pnpm build`, and `git diff --check` passed. The rebuilt main package is 785 KB.
+- No live WeChat DevTools screenshot or interaction is claimed for this change.
+
+## Restore visible native verification actions (2026-08-06, actual results)
+
+- Replaced the verification dialog's dynamic `cancelButton`/`confirmButton` object bindings with native string props `cancel-btn="取消"` and `confirm-btn="提交"`, which are reliably rendered by the current Wevu/TDesign runtime.
+- Kept the six-digit guard in `confirm()`: the native 提交 action is visible, but partial codes still cannot emit submit; custom footer slots remain removed.
+- Generated WXML contains both native action props and no `slot="cancel-btn"` or `slot="confirm-btn"`. Focused dialog tests passed 31 tests; full Vitest passed 182 tests across 38 files. `pnpm typecheck`, `pnpm lint`, `pnpm stylelint`, `pnpm verify:generated-runtime`, `pnpm build`, and `git diff --check` passed. The build reported a 785 KB main package.
+- WeChat DevTools MCP reconnect timed out after 30 seconds because the project automator session was unavailable; no live screenshot or interaction is claimed.
+
+## origin/main merge verification (2026-08-10, actual results)
+
+- Fetched `origin/main` and merged it into `codex/land-demand-ui-fixes` with merge commit `26f32a9` (`merge: integrate latest origin main`).
+- The only merge conflict was `reports/verification.md`; local Mini Program verification records and the main-branch Forguncy API verification records were both preserved. No conflict markers or unmerged paths remain.
+- The pre-existing local UI changes were restored after the merge and remain uncommitted in the same five files; no local source change was overwritten.
+- Post-merge checks passed: `pnpm test` (39 files, 186 tests), `pnpm typecheck`, `pnpm lint`, `pnpm stylelint`, `pnpm verify:generated-runtime`, `pnpm build` (785 KB main package), and `git diff --check`.

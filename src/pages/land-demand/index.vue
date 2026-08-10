@@ -582,10 +582,12 @@ async function editDetail(): Promise<void> {
     <template #actions>
       <t-button
         v-if="!viewOnly"
+        t-class="land-demand-page__back-home-button"
         data-testid="land-demand-back-home"
         theme="default"
         variant="outline"
-        size="small"
+        size="extra-small"
+        shape="round"
         :disabled="saving || returningToHome"
         @tap="handleReturnToHome"
       >
@@ -719,6 +721,7 @@ async function editDetail(): Promise<void> {
         :content="clearDialogContent || ''"
         cancel-btn="取消"
         confirm-btn="继续"
+        button-layout="horizontal"
         :close-on-overlay-click="false"
         @cancel="cancelDestructiveClear"
         @close="cancelDestructiveClear"
@@ -731,6 +734,7 @@ async function editDetail(): Promise<void> {
         content="当前还有必填项未填写，是否确认返回？"
         cancel-btn="继续填写"
         confirm-btn="确认返回"
+        button-layout="horizontal"
         :close-on-overlay-click="false"
         @cancel="cancelRequiredReturn"
         @close="cancelRequiredReturn"
@@ -796,6 +800,22 @@ async function editDetail(): Promise<void> {
 
 .land-demand-page__content {
   padding-bottom: 0;
+}
+
+.land-demand-page__back-home-button {
+  box-sizing: border-box;
+  width: 220rpx;
+  min-width: 0;
+  max-width: 220rpx;
+  padding-right: 20rpx;
+  padding-left: 20rpx;
+
+  --td-button-border-radius: 999rpx;
+  --td-button-default-outline-border-color: rgb(158 190 235 / 82%);
+  --td-button-default-outline-active-bg-color: rgb(235 243 255 / 92%);
+  --td-button-default-outline-active-border-color: rgb(74 126 224 / 72%);
+
+  box-shadow: 0 6rpx 16rpx rgb(65 116 193 / 12%);
 }
 
 .land-demand-page {

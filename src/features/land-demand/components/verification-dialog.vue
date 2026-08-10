@@ -90,10 +90,13 @@ function resend(): void {
     :visible="props.visible"
     title="法人手机号验证"
     :content="description || ''"
-    t-class-content="verification-dialog__dialog-content"
+    cancel-btn="取消"
+    confirm-btn="提交"
     button-layout="horizontal"
     :close-on-overlay-click="false"
+    @cancel="close"
     @close="close"
+    @confirm="confirm"
   >
     <view slot="content" class="verification-dialog">
       <view class="verification-dialog__code-row">
@@ -129,43 +132,11 @@ function resend(): void {
       </view>
       <text v-if="props.error" class="verification-dialog__error">{{ props.error }}</text>
     </view>
-    <view slot="cancel-btn" class="verification-dialog__slot-action">
-      <t-button
-        data-testid="verification-cancel"
-        class="verification-dialog__action"
-        block
-        theme="default"
-        variant="text"
-        :disabled="props.loading"
-        @tap="close"
-      >
-        取消
-      </t-button>
-    </view>
-    <view slot="confirm-btn" class="verification-dialog__slot-action">
-      <t-button
-        data-testid="verification-submit"
-        class="verification-dialog__action"
-        block
-        theme="primary"
-        variant="text"
-        :disabled="submitDisabled"
-        @tap="confirm"
-      >
-        提交
-      </t-button>
-    </view>
   </t-dialog>
 </template>
 
 <style lang="scss">
 @use '@/styles/tokens' as *;
-
-.verification-dialog__dialog-content {
-  box-sizing: border-box;
-  padding-right: 16rpx;
-  padding-left: 32rpx;
-}
 
 .verification-dialog {
   box-sizing: border-box;
@@ -233,20 +204,5 @@ function resend(): void {
 .verification-dialog__error {
   margin-top: $space-2;
   color: $color-error;
-}
-
-.verification-dialog__slot-action {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.verification-dialog__slot-action + .verification-dialog__slot-action {
-  margin-left: 24rpx;
-}
-
-.verification-dialog__action {
-  width: 100%;
-  border-radius: $radius-md;
 }
 </style>
