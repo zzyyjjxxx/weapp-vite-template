@@ -195,14 +195,21 @@ describe('mini-program E2E driver', () => {
     await expect(driver.restart('/pages/home/index')).rejects.toThrow('not supported')
   })
 
-  it('fills native descendants and emits typed values for TDesign groups', async () => {
-    const { driver, input, trigger } = createDriverHarness()
+  it('fills native descendants and emits typed values for TDesign pickers', async () => {
+    const { driver, input, miniProgram, trigger } = createDriverHarness()
+    vi.mocked(miniProgram.evaluate).mockResolvedValueOnce(true)
 
     await driver.getByTestId('area').fill('30')
     await driver.getByTestId('deploy-park').fill('["330203","330200"]')
 
     expect(input).toHaveBeenCalledWith('30')
-    expect(trigger).toHaveBeenCalledWith('change', { value: ['330203', '330200'] })
+    expect(trigger).not.toHaveBeenCalled()
+    expect(miniProgram.evaluate).toHaveBeenCalledWith(
+      expect.any(Function),
+      '#land-info-step',
+      'deploy_park',
+      ['330203', '330200'],
+    )
   })
 
   it('waits for a TDesign control to stop loading before tapping', async () => {

@@ -80,15 +80,13 @@ describe('land demand review', () => {
       'review-accept',
       'review-submit',
       'verification-code',
-      'mock-code',
+      'verification-resend',
       'submit-success',
       'success-back-home',
       'back-home',
     ]) {
       expect(source).toContain(`data-testid="${id}"`)
     }
-    expect(source).toContain('confirm-btn="确认提交"')
-    expect(source).toContain('cancel-btn="取消"')
     expect(source).toContain('emit(\'edit\', group.step)')
   })
 
@@ -100,6 +98,10 @@ describe('land demand review', () => {
     expect(source).toContain('useVerifyVerificationCodeMutation')
     expect(source).toContain('store.markPersisted(record)')
     expect(source).toContain('replace(\'/pages/land-demand/success\')')
+    expect(source).toContain('const verificationVisible = ref(false)')
+    expect(source).toContain('existingChallenge: challenge.value')
+    expect(source).toContain('forceResend')
+    expect(source).toContain('@resend="resendVerification"')
     expect(source).not.toMatch(/wx\.(?:request|navigateTo|redirectTo|reLaunch)/)
     expect(source).not.toContain('getLandDemandRepository')
   })
@@ -112,6 +114,36 @@ describe('land demand review', () => {
 
     expect(source).toContain(':disabled="props.loading"')
     expect(source).toContain('if (!props.loading)')
+    expect(source).toContain('placeholder="请输入验证码"')
+    expect(source).not.toContain('六位验证码')
+    expect(source).not.toContain('Mock 测试验证码')
+    expect(source).toContain('retryCountdown.value}秒')
+    expect(source).not.toContain('秒后重新发送')
+    expect(source).toContain('重新发送')
+    expect(source).not.toContain('重新发送验证码')
+    expect(source).toContain('t-class="verification-dialog__input"')
+    expect(source).toContain('t-class-input="verification-dialog__input-control"')
+    expect(source).toContain('t-class="verification-dialog__resend-button"')
+    expect(source).toContain('请输入验证码')
+    expect(source).toContain('已发送至')
+    expect(source).not.toContain('验证码已发送至')
+    expect(source).toContain('margin-top: $space-2')
+    expect(source).not.toContain('verification-dialog__resend-hint')
+    expect(source).not.toContain('秒后可重新发送')
+    expect(source).toContain('--td-input-vertical-padding: 8rpx 32rpx')
+    expect(source).toContain('padding-right: 96rpx')
+    expect(source).toContain('width: 88rpx')
+    expect(source).toContain('size="extra-small"')
+    expect(source).toContain('setInterval(updateCountdown, 1000)')
+    expect(source).toContain('button-layout="horizontal"')
+    expect(source).toContain('cancel-btn="取消"')
+    expect(source).toContain('confirm-btn="提交"')
+    expect(source).toContain('if (!submitDisabled.value)')
+    expect(source).toContain('@cancel="close"')
     expect(source).toContain('@confirm="confirm"')
+    expect(source).not.toContain(':cancel-btn="cancelButton"')
+    expect(source).not.toContain(':confirm-btn="confirmButton"')
+    expect(source).not.toContain('slot="cancel-btn"')
+    expect(source).not.toContain('slot="confirm-btn"')
   })
 })

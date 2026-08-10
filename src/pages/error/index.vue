@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import PageShell from '@/components/ui/page-shell/index.vue'
+import PageTransitionLoading from '@/components/ui/page-transition-loading/index.vue'
+import { usePageTransitionLoading } from '@/platform/page-transition'
 import { navigate } from '@/router/navigation'
 
 definePageJson({
   navigationBarTitleText: '页面异常',
 })
 
+const { pending: transitioning, run: runTransition } = usePageTransitionLoading()
+
 async function goHome(): Promise<void> {
-  await navigate('/pages/home/index')
+  await runTransition(() => navigate('/pages/home/index'))
 }
 </script>
 
@@ -26,6 +30,7 @@ async function goHome(): Promise<void> {
         返回首页
       </button>
     </view>
+    <PageTransitionLoading :visible="transitioning" text="正在返回首页" />
   </PageShell>
 </template>
 

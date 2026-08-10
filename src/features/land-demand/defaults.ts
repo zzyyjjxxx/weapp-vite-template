@@ -15,6 +15,7 @@ export function createLandDemandForm(
     is_financing: savedFinancing,
     landusedemand: _landusedemand,
     updatetime: _updatetime,
+    lastSubmittedAt: _lastSubmittedAt,
     updateuser: _updateuser,
     newproject: _newproject,
     industryCode: _industryCode,

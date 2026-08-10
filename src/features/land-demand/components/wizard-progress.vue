@@ -1,30 +1,93 @@
 <script setup lang="ts">
 import type { LandDemandStep } from '../step-controller'
 
-const props = defineProps<{ currentStep: LandDemandStep }>()
+const props = withDefaults(defineProps<{
+  currentStep: LandDemandStep
+  progressStep?: LandDemandStep
+  incompleteSteps?: readonly LandDemandStep[]
+}>(), {
+  progressStep: 1,
+  incompleteSteps: () => [],
+})
 
 defineComponentJson({ component: true })
-
-const steps = ['基本信息', '用地需求', '投资项目', '融资及联系人', '确认提交']
 </script>
 
 <template>
   <view class="wizard-progress">
     <view class="wizard-progress__track">
       <view
-        v-for="(label, index) in steps"
-        :key="label"
         class="wizard-progress__step"
         :class="{
-          'wizard-progress__step--active': index + 1 <= props.currentStep,
-          'wizard-progress__step--current': index + 1 === props.currentStep,
+          'wizard-progress__step--active': 1 <= Math.max(props.currentStep, props.progressStep ?? props.currentStep),
+          'wizard-progress__step--current': props.currentStep === 1,
+          'wizard-progress__step--complete': props.currentStep === 1 && !props.incompleteSteps?.includes(1),
+          'wizard-progress__step--incomplete': props.incompleteSteps?.includes(1) ?? false,
         }"
       >
         <view class="wizard-progress__indicator">
-          <text class="wizard-progress__number">{{ index + 1 }}</text>
+          <text class="wizard-progress__number">1</text>
         </view>
-        <view v-if="index < steps.length - 1" class="wizard-progress__connector" />
-        <text class="wizard-progress__label">{{ label }}</text>
+        <view class="wizard-progress__connector" />
+        <text class="wizard-progress__label">基本信息</text>
+      </view>
+      <view
+        class="wizard-progress__step"
+        :class="{
+          'wizard-progress__step--active': 2 <= Math.max(props.currentStep, props.progressStep ?? props.currentStep),
+          'wizard-progress__step--current': props.currentStep === 2,
+          'wizard-progress__step--complete': props.currentStep === 2 && !props.incompleteSteps?.includes(2),
+          'wizard-progress__step--incomplete': props.incompleteSteps?.includes(2) ?? false,
+        }"
+      >
+        <view class="wizard-progress__indicator">
+          <text class="wizard-progress__number">2</text>
+        </view>
+        <view class="wizard-progress__connector" />
+        <text class="wizard-progress__label">用地需求</text>
+      </view>
+      <view
+        class="wizard-progress__step"
+        :class="{
+          'wizard-progress__step--active': 3 <= Math.max(props.currentStep, props.progressStep ?? props.currentStep),
+          'wizard-progress__step--current': props.currentStep === 3,
+          'wizard-progress__step--complete': props.currentStep === 3 && !props.incompleteSteps?.includes(3),
+          'wizard-progress__step--incomplete': props.incompleteSteps?.includes(3) ?? false,
+        }"
+      >
+        <view class="wizard-progress__indicator">
+          <text class="wizard-progress__number">3</text>
+        </view>
+        <view class="wizard-progress__connector" />
+        <text class="wizard-progress__label">投资项目</text>
+      </view>
+      <view
+        class="wizard-progress__step"
+        :class="{
+          'wizard-progress__step--active': 4 <= Math.max(props.currentStep, props.progressStep ?? props.currentStep),
+          'wizard-progress__step--current': props.currentStep === 4,
+          'wizard-progress__step--complete': props.currentStep === 4 && !props.incompleteSteps?.includes(4),
+          'wizard-progress__step--incomplete': props.incompleteSteps?.includes(4) ?? false,
+        }"
+      >
+        <view class="wizard-progress__indicator">
+          <text class="wizard-progress__number">4</text>
+        </view>
+        <view class="wizard-progress__connector" />
+        <text class="wizard-progress__label">融资及联系人</text>
+      </view>
+      <view
+        class="wizard-progress__step"
+        :class="{
+          'wizard-progress__step--active': 5 <= Math.max(props.currentStep, props.progressStep ?? props.currentStep),
+          'wizard-progress__step--current': props.currentStep === 5,
+          'wizard-progress__step--complete': props.currentStep === 5,
+        }"
+      >
+        <view class="wizard-progress__indicator">
+          <text class="wizard-progress__number">5</text>
+        </view>
+        <text class="wizard-progress__label">确认提交</text>
       </view>
     </view>
   </view>
@@ -111,6 +174,36 @@ const steps = ['基本信息', '用地需求', '投资项目', '融资及联系�
 .wizard-progress__step--current .wizard-progress__number {
   border-color: #bed6ff;
   box-shadow: 0 0 0 6rpx rgb(48 117 244 / 10%);
+}
+
+.wizard-progress__step--complete {
+  color: $color-success;
+}
+
+.wizard-progress__step--complete .wizard-progress__number {
+  color: #fff;
+  background: $color-success;
+  border-color: $color-success-soft;
+  box-shadow: 0 6rpx 14rpx rgb(10 168 117 / 24%);
+}
+
+.wizard-progress__step--complete .wizard-progress__connector {
+  background: $color-success;
+}
+
+.wizard-progress__step--incomplete {
+  color: $color-error;
+}
+
+.wizard-progress__step--incomplete .wizard-progress__number {
+  color: #fff;
+  background: $color-error;
+  border-color: $color-error-soft;
+  box-shadow: 0 6rpx 14rpx rgb(213 73 65 / 24%);
+}
+
+.wizard-progress__step--incomplete .wizard-progress__connector {
+  background: $color-error;
 }
 
 .wizard-progress__label {

@@ -2,6 +2,7 @@ import type { RouteQuery } from './query'
 import type { AppRoutePath } from './types'
 
 import { useRouter } from 'wevu/router'
+import { scrollPageToTop } from '@/platform/page-scroll'
 import { encodeQuery } from './query'
 
 export interface NavigationAdapter {
@@ -37,15 +38,18 @@ export function configureNavigationAdapter(adapter: NavigationAdapter | undefine
 export async function navigate(path: AppRoutePath, query?: RouteQuery): Promise<void> {
   const queryString = encodeQuery(query)
   await getNavigationAdapter().push(`${path}${queryString}`)
+  scrollPageToTop()
 }
 
 export async function replace(path: AppRoutePath, query?: RouteQuery): Promise<void> {
   const queryString = encodeQuery(query)
   await getNavigationAdapter().replace(`${path}${queryString}`)
+  scrollPageToTop()
 }
 
 export async function replaceUrl(url: string): Promise<void> {
   await getNavigationAdapter().replace(url)
+  scrollPageToTop()
 }
 
 export function buildLoginRedirect(returnTo: string): string {

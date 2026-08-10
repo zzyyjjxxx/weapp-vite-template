@@ -2,14 +2,28 @@
 import type { FieldError, LandDemandForm } from '../models'
 
 import { onMounted, ref, watch } from 'wevu'
+import SinglePicker from '@/components/ui/single-picker/index.vue'
 import { readStringDetail } from '@/platform/event-detail'
 import { getDirections, INDUSTRY_TRACK_DIRECTIONS } from '../dictionaries/industry-tracks'
 import { getIndustryDisplay, NATIONAL_INDUSTRY_OPTIONS } from '../industry-selector'
+import { useInvalidFieldScroll } from '../invalid-field-scroll'
 
 const props = defineProps<{ form: LandDemandForm, errors: readonly FieldError[] }>()
 const emit = defineEmits<{ change: [patch: Partial<LandDemandForm>] }>()
 
 defineComponentJson({ component: true, styleIsolation: 'apply-shared' })
+
+useInvalidFieldScroll(() => props.errors, {
+  investment: 'investment-field',
+  project_hydm: 'project-hydm-field',
+  keyindustry: 'keyindustry-field',
+  futureindustry: 'futureindustry-field',
+  pred_ys: 'pred-ys-field',
+  pred_tax: 'pred-tax-field',
+  pred_rdex: 'pred-rdex-field',
+  pred_unitenergy: 'pred-unitenergy-field',
+  projectdata: 'projectdata-field',
+}, 'project-info-step')
 
 const trackOptions = ref(Object.keys(INDUSTRY_TRACK_DIRECTIONS))
 const industryOptions = ref([...NATIONAL_INDUSTRY_OPTIONS])
@@ -55,8 +69,8 @@ function changeIndustry(detail: unknown): void {
     <text class="step-card__title">投资项目</text>
     <text class="step-card__description">请按项目实际情况填写投资、行业、产出和建设内容等核心指标。</text>
 
-    <view class="field field--control">
-      <text class="field__label"><text class="field__required">*</text>固定资产投资额（万元）</text>
+    <view id="investment-field" data-testid="investment-field" class="field field--control">
+      <view class="field__label"><text>固定资产投资额（万元）</text><text class="field__required">*</text></view>
       <t-input
         data-testid="investment"
         label=""
@@ -69,11 +83,13 @@ function changeIndustry(detail: unknown): void {
       <text v-if="fieldError('investment')" class="field__error">{{ fieldError('investment') }}</text>
     </view>
 
-    <view v-if="optionsReady" class="field field--selector">
+    <view v-if="optionsReady" id="project-hydm-field" data-testid="project-hydm-field" class="field field--selector">
       <t-cell
         data-testid="project-hydm"
         title="国民经济行业"
         :note="industryNote"
+        t-class-center="field-selector__center"
+        t-class-note="field-selector__note"
         required
         arrow
         @tap="openIndustrySelector"
@@ -93,29 +109,33 @@ function changeIndustry(detail: unknown): void {
       />
     </view>
 
-    <view v-if="optionsReady" class="field">
-      <text class="field__label"><text class="field__required">*</text>重点产业赛道</text>
-      <t-radio-group
+    <view v-if="optionsReady" id="keyindustry-field" data-testid="keyindustry-field" class="field field--selector">
+      <SinglePicker
         data-testid="keyindustry"
-        :value="props.form.keyindustry"
+        title="重点产业赛道"
+        :value="props.form.keyindustry || ''"
         :options="trackOptions"
+        placeholder="请选择赛道"
+        required
         @change="changeText('keyindustry', $event)"
       />
       <text v-if="fieldError('keyindustry')" class="field__error">{{ fieldError('keyindustry') }}</text>
     </view>
-    <view v-if="optionsReady" class="field">
-      <text class="field__label"><text class="field__required">*</text>细分方向</text>
-      <t-radio-group
+    <view v-if="optionsReady" id="futureindustry-field" data-testid="futureindustry-field" class="field field--selector">
+      <SinglePicker
         data-testid="futureindustry"
-        :value="props.form.futureindustry"
+        title="细分方向"
+        :value="props.form.futureindustry || ''"
         :options="directionOptions"
+        placeholder="请选择方向"
+        required
         @change="changeText('futureindustry', $event)"
       />
       <text v-if="fieldError('futureindustry')" class="field__error">{{ fieldError('futureindustry') }}</text>
     </view>
 
-    <view class="field field--control">
-      <text class="field__label"><text class="field__required">*</text>预计年营业收入（万元）</text>
+    <view id="pred-ys-field" data-testid="pred-ys-field" class="field field--control">
+      <view class="field__label"><text>预计年营业收入（万元）</text><text class="field__required">*</text></view>
       <t-input
         data-testid="pred-ys"
         label=""
@@ -127,8 +147,8 @@ function changeIndustry(detail: unknown): void {
       />
       <text v-if="fieldError('pred_ys')" class="field__error">{{ fieldError('pred_ys') }}</text>
     </view>
-    <view class="field field--control">
-      <text class="field__label"><text class="field__required">*</text>预计年税收（万元）</text>
+    <view id="pred-tax-field" data-testid="pred-tax-field" class="field field--control">
+      <view class="field__label"><text>预计年税收（万元）</text><text class="field__required">*</text></view>
       <t-input
         data-testid="pred-tax"
         label=""
@@ -140,8 +160,8 @@ function changeIndustry(detail: unknown): void {
       />
       <text v-if="fieldError('pred_tax')" class="field__error">{{ fieldError('pred_tax') }}</text>
     </view>
-    <view class="field field--control">
-      <text class="field__label"><text class="field__required">*</text>预计研发投入（万元）</text>
+    <view id="pred-rdex-field" data-testid="pred-rdex-field" class="field field--control">
+      <view class="field__label"><text>预计研发投入（万元）</text><text class="field__required">*</text></view>
       <t-input
         data-testid="pred-rdex"
         label=""
@@ -153,8 +173,8 @@ function changeIndustry(detail: unknown): void {
       />
       <text v-if="fieldError('pred_rdex')" class="field__error">{{ fieldError('pred_rdex') }}</text>
     </view>
-    <view class="field field--control">
-      <text class="field__label"><text class="field__required">*</text>项目单位能耗增加值（万元/吨标煤）</text>
+    <view id="pred-unitenergy-field" data-testid="pred-unitenergy-field" class="field field--control">
+      <view class="field__label"><text>项目单位能耗增加值（万元/吨标煤）</text><text class="field__required">*</text></view>
       <t-input
         data-testid="pred-unitenergy"
         label=""
@@ -166,8 +186,8 @@ function changeIndustry(detail: unknown): void {
       />
       <text v-if="fieldError('pred_unitenergy')" class="field__error">{{ fieldError('pred_unitenergy') }}</text>
     </view>
-    <view class="field field--control">
-      <text class="field__label"><text class="field__required">*</text>项目建设内容</text>
+    <view id="projectdata-field" data-testid="projectdata-field" class="field field--control">
+      <view class="field__label"><text>项目建设内容</text><text class="field__required">*</text></view>
       <t-textarea
         data-testid="projectdata"
         label=""

@@ -53,7 +53,6 @@
   --td-input-bg-color: transparent;
   --td-input-border-color: #{$color-border-soft};
   --td-input-placeholder-text-color: #{$color-text-placeholder};
-  --td-radio-checked-color: #{$color-primary};
   --td-checkbox-checked-color: #{$color-primary};
 
   padding: $space-4;
@@ -103,38 +102,65 @@
 
 .field {
   padding: $space-2 0;
-  border-bottom: 1rpx solid $color-border-soft;
+}
+
+.field--selector {
+  padding: 0;
+}
+
+.field--multi {
+  padding: 0;
 }
 
 .field--control {
-  --td-input-vertical-padding: 20rpx;
+  --td-input-vertical-padding: 16rpx 32rpx;
+  --td-input-default-text-color: #{$color-text};
 
-  padding-top: $space-2;
+  padding: 0;
 }
 
-.field__label,
 .field__selection,
 .field__error {
   display: block;
 }
 
 .field__label {
-  margin-bottom: $space-1;
-  font-size: 26rpx;
-  font-weight: 500;
+  display: flex;
+  align-items: center;
+  min-height: 48rpx;
+  font-size: 32rpx;
+  font-weight: 400;
+  line-height: 48rpx;
   color: $color-text;
 }
 
+.field__label > text:first-child {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.field--control > .field__label {
+  padding: 32rpx 32rpx 0;
+}
+
+.field--multi > .field__label {
+  padding: 32rpx 32rpx 0;
+}
+
 .field__required {
-  margin-right: 4rpx;
+  display: block;
+  flex: 0 0 auto;
+  margin-left: 4rpx;
+  font-size: 32rpx;
+  line-height: 48rpx;
   color: $color-error;
 }
 
 .field__selection {
-  padding: $space-2;
-  margin-top: $space-2;
+  padding: 12rpx 16rpx;
+  margin: 16rpx 32rpx 0;
   font-size: 24rpx;
-  line-height: 1.5;
+  line-height: 40rpx;
   color: $color-primary;
   background: $color-primary-faint;
   border-radius: $radius-sm;
@@ -145,4 +171,16 @@
   font-size: 24rpx;
   line-height: 1.5;
   color: $color-error;
+}
+
+.field-selector__center {
+  flex: 0 0 210rpx;
+  min-width: 210rpx;
+}
+
+.field-selector__note {
+  min-width: 0;
+  max-width: 100%;
+  word-break: break-all;
+  white-space: normal;
 }

@@ -4,14 +4,28 @@ import type { LandDemandStep } from '../step-controller'
 const props = withDefaults(defineProps<{
   currentStep: LandDemandStep
   saving?: boolean
+  transitioning?: boolean
 }>(), {
   saving: false,
+  transitioning: false,
 })
 const emit = defineEmits<{
   previous: []
   save: []
   next: []
 }>()
+
+function handlePrevious(): void {
+  emit('previous')
+}
+
+function handleSave(): void {
+  emit('save')
+}
+
+function handleNext(): void {
+  emit('next')
+}
 
 defineComponentJson({ component: true })
 </script>
@@ -24,7 +38,9 @@ defineComponentJson({ component: true })
       class="wizard-actions__button"
       theme="default"
       variant="outline"
-      @tap="emit('previous')"
+      block
+      :disabled="props.saving || props.transitioning"
+      @tap="handlePrevious"
     >
       上一步
     </t-button>
@@ -32,9 +48,9 @@ defineComponentJson({ component: true })
       data-testid="save-draft"
       class="wizard-actions__button"
       theme="default"
-      :loading="props.saving"
-      :disabled="props.saving"
-      @tap="emit('save')"
+      block
+      :disabled="props.saving || props.transitioning"
+      @tap="handleSave"
     >
       暂存
     </t-button>
@@ -43,8 +59,9 @@ defineComponentJson({ component: true })
       data-testid="next-step"
       class="wizard-actions__button"
       theme="primary"
-      :disabled="props.saving"
-      @tap="emit('next')"
+      block
+      :disabled="props.saving || props.transitioning"
+      @tap="handleNext"
     >
       下一步
     </t-button>
@@ -71,6 +88,7 @@ defineComponentJson({ component: true })
 
 .wizard-actions__button {
   flex: 1;
+  min-width: 0;
   overflow: hidden;
   border-radius: $radius-md;
 }

@@ -94,7 +94,7 @@ test.describe.serial('企业用地需求填报', () => {
     await miniProgram.screenshot('.tmp/e2e-review.png')
     await miniProgram.getByTestId('review-accept').tap()
     await miniProgram.getByTestId('review-submit').tap()
-    await expect.poll(() => miniProgram.getByTestId('mock-code').text()).toContain('123456')
+    await miniProgram.getByTestId('verification-resend').expectVisible()
     await miniProgram.getByTestId('verification-code').fill('123456')
     await miniProgram.getByTestId('verification-submit').tap()
     await miniProgram.expectPath('/pages/land-demand/success')
