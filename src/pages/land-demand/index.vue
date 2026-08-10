@@ -7,10 +7,11 @@ import type {
 } from '@/features/land-demand/models'
 import type { LandDemandStep } from '@/router/query'
 
-import { computed, onLoad, ref, watchEffect } from 'wevu'
+import { computed, nextTick, onLoad, ref, watchEffect } from 'wevu'
 import AppError from '@/components/ui/app-error/index.vue'
 import AppLoading from '@/components/ui/app-loading/index.vue'
 import PageShell from '@/components/ui/page-shell/index.vue'
+import PageTransitionLoading from '@/components/ui/page-transition-loading/index.vue'
 import BasicInfoStep from '@/features/land-demand/components/basic-info-step.vue'
 import FinanceContactStep from '@/features/land-demand/components/finance-contact-step.vue'
 import LandInfoStep from '@/features/land-demand/components/land-info-step.vue'
@@ -32,7 +33,10 @@ import {
   resolveSubmissionTarget,
 } from '@/features/land-demand/step-controller'
 import { createSubmitController } from '@/features/land-demand/submit'
-import { validateDraft, validateStep } from '@/features/land-demand/validation'
+import {
+  validateDraft,
+  validateStep,
+} from '@/features/land-demand/validation'
 import {
   applyFinancingChoice,
   applySpecialUseChoice,
@@ -40,6 +44,8 @@ import {
   selectDeployPark,
 } from '@/features/land-demand/visibility'
 import { readPatchDetail } from '@/platform/event-detail'
+import { scrollPageToTop } from '@/platform/page-scroll'
+import { usePageTransitionLoading } from '@/platform/page-transition'
 import { replace } from '@/router/navigation'
 import { runProtectedAction, useProtectedPage } from '@/router/protected-page'
 import { parseLandDemandMode, parseLandDemandStep } from '@/router/query'
@@ -68,15 +74,24 @@ const verifyCodeMutation = useVerifyVerificationCodeMutation()
 const store = useLandDemandStore()
 const form = store.form
 const currentStep = store.currentStep
+const progressStep = store.progressStep
 const errors = ref<FieldError[]>([])
 const ready = ref(false)
 const pendingClear = ref<PendingClear | null>(null)
 const feedback = ref('')
+const saveNotice = ref('')
+const saveErrorNotice = ref('')
+const returningToHome = ref(false)
+const requiredReturnDialogVisible = ref(false)
+const { pending: transitioning, run: runTransition } = usePageTransitionLoading()
+const submitted = computed(() => query.data.value?.landusedemand === '1')
+const unchangedSubmittedRecord = computed(() => submitted.value && !store.isDirty.value)
 const accepted = ref(false)
 const acceptanceError = ref('')
 const challenge = ref<NonNullable<typeof sendCodeMutation.data.value>>()
 const verificationCode = ref('')
 const verificationError = ref('')
+const verificationSubmitting = ref(false)
 const mode = ref<'edit' | 'view'>('edit')
 const requestedStep = ref<LandDemandStep | undefined>(undefined)
 const routeReady = ref(false)
@@ -92,9 +107,8 @@ const mutationError = computed(() => (
   saveMutation.error.value?.message ?? updateMutation.error.value?.message ?? ''
 ))
 const queryErrorMessage = computed(() => query.error.value?.message ?? '请稍后重试')
-const enterpriseName = computed(() => enterprise.value?.businessname ?? '')
 const clearDialogVisible = computed(() => pendingClear.value !== null)
-const verificationVisible = computed(() => challenge.value !== undefined)
+const verificationVisible = ref(false)
 const viewOnly = computed(() => mode.value === 'view')
 const clearDialogContent = computed(() => {
   switch (pendingClear.value?.kind) {
@@ -110,7 +124,17 @@ const clearDialogContent = computed(() => {
       return ''
   }
 })
+const wizardSteps: readonly LandDemandStep[] = [1, 2, 3, 4, 5]
+const incompleteSteps = computed<LandDemandStep[]>(() => {
+  if (!ready.value) {
+    return []
+  }
 
+  return wizardSteps.filter(step => validateStep(form.value, step).length > 0)
+})
+const progressIncompleteSteps = computed<LandDemandStep[]>(() => {
+  return incompleteSteps.value
+})
 onLoad((query) => {
   mode.value = parseLandDemandMode(query?.mode)
   requestedStep.value = parseLandDemandStep(query?.step)
@@ -125,7 +149,7 @@ watchEffect(() => {
 
   if (viewOnly.value && !query.data.value) {
     initialized = true
-    void replace('/pages/home/index')
+    void runTransition(() => replace('/pages/home/index'))
     return
   }
 
@@ -148,6 +172,7 @@ function patchStore(patch: Partial<LandDemandForm>): void {
   const fields = new Set(Object.keys(patch) as (keyof LandDemandForm)[])
   errors.value = errors.value.filter(error => !fields.has(error.field))
   feedback.value = ''
+  saveErrorNotice.value = ''
 }
 
 function setAccepted(value: boolean): void {
@@ -266,13 +291,19 @@ function confirmDestructiveClear(): void {
   }
 }
 
-function goToStep(step: 1 | 2 | 3 | 4 | 5): void {
-  store.goToStep(step)
-  store.saveLocalDraft()
+async function goToStep(step: 1 | 2 | 3 | 4 | 5): Promise<void> {
+  await runTransition(async () => {
+    saveNotice.value = ''
+    store.goToStep(step)
+    store.saveLocalDraft()
+    await nextTick()
+    await new Promise<void>(resolve => setTimeout(resolve, 0))
+    scrollPageToTop()
+  })
 }
 
 function goPrevious(): void {
-  goToStep(previousStep(currentStep.value))
+  void goToStep(previousStep(currentStep.value))
 }
 
 function goNext(): void {
@@ -280,16 +311,17 @@ function goNext(): void {
   errors.value = errors.value
     .filter(error => error.step !== currentStep.value)
     .concat(stepErrors)
+  feedback.value = ''
   if (stepErrors.length > 0) {
-    feedback.value = `请先完成第 ${currentStep.value} 步的必填项`
     return
   }
-  feedback.value = ''
-  goToStep(nextStep(currentStep.value))
+  void goToStep(nextStep(currentStep.value))
 }
 
-async function saveDraftAuthorized(): Promise<void> {
+async function saveDraftAuthorized(showNotice = true): Promise<boolean> {
   feedback.value = ''
+  saveNotice.value = ''
+  saveErrorNotice.value = ''
   saveMutation.reset()
   updateMutation.reset()
   const draftErrors = validateDraft(form.value)
@@ -297,7 +329,10 @@ async function saveDraftAuthorized(): Promise<void> {
   const target = resolveSubmissionTarget(draftErrors)
   if (target) {
     goToStep(target)
-    return
+    return false
+  }
+  if (unchangedSubmittedRecord.value) {
+    return true
   }
 
   try {
@@ -311,19 +346,27 @@ async function saveDraftAuthorized(): Promise<void> {
       ? await updateMutation.mutateAsync({ ...variables, original })
       : await saveMutation.mutateAsync(variables)
     store.markPersisted(record)
-    feedback.value = '已暂存'
+    if (showNotice) {
+      saveNotice.value = '暂存成功'
+    }
+    return true
   }
   catch {
     // The mutation exposes its sanitized error through mutationError.
+    return false
   }
 }
 
-async function saveDraft(): Promise<void> {
-  await runProtectedAction(
+async function saveDraftWithNotice(showNotice: boolean): Promise<boolean> {
+  return await runProtectedAction(
     auth,
     '/pages/land-demand/index',
-    saveDraftAuthorized,
-  )
+    () => saveDraftAuthorized(showNotice),
+  ) ?? false
+}
+
+async function saveDraft(): Promise<boolean> {
+  return await saveDraftWithNotice(true)
 }
 
 async function persistSubmissionAuthorized(status: '1'): Promise<Awaited<ReturnType<typeof saveMutation.mutateAsync>>> {
@@ -356,17 +399,20 @@ const submitController = createSubmitController({
   persist: persistSubmission,
 })
 
-async function requestVerificationAuthorized(): Promise<void> {
-  feedback.value = '正在发送验证码，请稍候…'
+async function requestVerificationAuthorized(forceResend = false): Promise<void> {
+  feedback.value = forceResend ? '正在重新发送验证码，请稍候…' : '正在发送验证码，请稍候…'
   acceptanceError.value = ''
   sendCodeMutation.reset()
   try {
-    const result = await submitController.requestCode(form.value, accepted.value)
+    const result = await submitController.requestCode(form.value, accepted.value, {
+      existingChallenge: challenge.value,
+      forceResend,
+    })
     errors.value = result.errors
     acceptanceError.value = result.acceptanceError ?? ''
     const target = resolveSubmissionTarget(result.errors)
     if (target) {
-      feedback.value = `请先完成第 ${target} 步的必填项`
+      feedback.value = ''
       goToStep(target)
       return
     }
@@ -375,9 +421,10 @@ async function requestVerificationAuthorized(): Promise<void> {
       return
     }
     challenge.value = result.challenge
+    verificationVisible.value = true
     verificationCode.value = ''
     verificationError.value = ''
-    feedback.value = '验证码已发送，请在弹窗中完成验证'
+    feedback.value = ''
   }
   catch {
     feedback.value = sendCodeMutation.error.value?.message ?? '验证码发送失败，请稍后重试'
@@ -388,15 +435,23 @@ async function requestVerification(): Promise<void> {
   await runProtectedAction(
     auth,
     '/pages/land-demand/index',
-    requestVerificationAuthorized,
+    () => requestVerificationAuthorized(false),
+  )
+}
+
+async function resendVerification(): Promise<void> {
+  await runProtectedAction(
+    auth,
+    '/pages/land-demand/index',
+    () => requestVerificationAuthorized(true),
   )
 }
 
 function closeVerification(): void {
-  if (submitting.value) {
+  if (submitting.value || verificationSubmitting.value) {
     return
   }
-  challenge.value = undefined
+  verificationVisible.value = false
   verificationCode.value = ''
   verificationError.value = ''
 }
@@ -406,17 +461,25 @@ async function submitVerificationCodeAuthorized(): Promise<void> {
   if (!currentChallenge || submitting.value) {
     return
   }
+  if (!/^\d{6}$/.test(verificationCode.value)) {
+    verificationError.value = '请输入6位验证码'
+    return
+  }
+  verificationSubmitting.value = true
   verificationError.value = ''
   feedback.value = '正在核验并提交，请稍候…'
   verifyCodeMutation.reset()
   saveMutation.reset()
   updateMutation.reset()
   try {
+    await nextTick()
+    await new Promise<void>(resolve => setTimeout(resolve, 0))
     const record = await submitController.submitCode(
       currentChallenge.phone,
       verificationCode.value,
     )
     store.markPersisted(record)
+    verificationVisible.value = false
     challenge.value = undefined
     feedback.value = ''
     await replace('/pages/land-demand/success')
@@ -426,6 +489,9 @@ async function submitVerificationCodeAuthorized(): Promise<void> {
     verificationError.value = error instanceof Error
       ? error.message
       : '提交失败，请稍后重试'
+  }
+  finally {
+    verificationSubmitting.value = false
   }
 }
 
@@ -438,11 +504,71 @@ async function submitVerificationCode(): Promise<void> {
 }
 
 async function backToHome(): Promise<void> {
-  await replace('/pages/home/index')
+  await runTransition(() => replace('/pages/home/index'))
+}
+
+async function completeReturnToHome(): Promise<void> {
+  if (saving.value || returningToHome.value) {
+    return
+  }
+
+  returningToHome.value = true
+  const shouldPersist = !unchangedSubmittedRecord.value
+  try {
+    // Yield once so the TDesign loading state is rendered before the fast Mock mutation finishes.
+    await nextTick()
+    await new Promise<void>(resolve => setTimeout(resolve, 0))
+    if (shouldPersist) {
+      const saved = await saveDraftWithNotice(false)
+      if (!saved) {
+        returningToHome.value = false
+        if (errors.value.length > 0) {
+          saveErrorNotice.value = '当前填报内容存在问题，请先修正后再返回工作台'
+        }
+        return
+      }
+    }
+    await replace('/pages/home/index', shouldPersist ? { notice: 'saved' } : undefined)
+  }
+  catch {
+    returningToHome.value = false
+    feedback.value = '返回工作台失败，请稍后重试'
+  }
+}
+
+async function saveAndBackToHome(): Promise<void> {
+  if (saving.value || returningToHome.value) {
+    return
+  }
+
+  saveErrorNotice.value = ''
+  const currentStepErrors = validateStep(form.value, currentStep.value)
+  errors.value = errors.value
+    .filter(error => error.step !== currentStep.value)
+    .concat(currentStepErrors)
+  if (currentStepErrors.some(error => error.message === '此项必填')) {
+    requiredReturnDialogVisible.value = true
+    return
+  }
+
+  await completeReturnToHome()
+}
+
+async function handleReturnToHome(): Promise<void> {
+  await saveAndBackToHome()
+}
+
+function cancelRequiredReturn(): void {
+  requiredReturnDialogVisible.value = false
+}
+
+async function confirmRequiredReturn(): Promise<void> {
+  requiredReturnDialogVisible.value = false
+  await completeReturnToHome()
 }
 
 async function editDetail(): Promise<void> {
-  await replace('/pages/land-demand/index', { mode: 'edit' })
+  await runTransition(() => replace('/pages/land-demand/index', { mode: 'edit' }))
 }
 </script>
 
@@ -450,19 +576,63 @@ async function editDetail(): Promise<void> {
   <PageShell
     v-if="authorized"
     :title="viewOnly ? '填报详情' : '用地需求填报'"
-    :subtitle="viewOnly ? `${enterpriseName} · 已提交信息` : `${enterpriseName} · 请按实际情况填写`"
     icon="list-check"
     compact
   >
+    <template #actions>
+      <t-button
+        v-if="!viewOnly"
+        t-class="land-demand-page__back-home-button"
+        data-testid="land-demand-back-home"
+        theme="default"
+        variant="outline"
+        size="extra-small"
+        shape="round"
+        :disabled="saving || returningToHome"
+        @tap="handleReturnToHome"
+      >
+        返回工作台
+      </t-button>
+    </template>
+
     <view class="land-demand-page__content">
+      <t-message
+        v-if="saveNotice"
+        data-testid="save-success-message"
+        theme="success"
+        :content="saveNotice"
+        :visible="true"
+        :duration="2000"
+        :offset="[16, 16]"
+        single
+        @duration-end="saveNotice = ''"
+        @close-btn-click="saveNotice = ''"
+      />
+      <t-message
+        v-if="saveErrorNotice"
+        data-testid="return-save-error-message"
+        theme="error"
+        :content="saveErrorNotice"
+        :visible="true"
+        :duration="4000"
+        :offset="[16, 16]"
+        single
+        @duration-end="saveErrorNotice = ''"
+        @close-btn-click="saveErrorNotice = ''"
+      />
       <AppLoading v-if="query.isPending || !ready" />
       <AppError
         v-else-if="query.isError"
         title="填报信息加载失败"
         :message="queryErrorMessage"
       />
-      <view v-else class="land-demand-page">
-        <WizardProgress v-if="!viewOnly" :current-step="currentStep || 1" />
+      <view v-else class="land-demand-page" :class="{ 'land-demand-page--view': viewOnly }">
+        <WizardProgress
+          v-if="!viewOnly"
+          :current-step="currentStep || 1"
+          :progress-step="progressStep || 1"
+          :incomplete-steps="progressIncompleteSteps"
+        />
         <view v-if="!viewOnly" class="land-demand-page__guide">
           <view class="land-demand-page__guide-dot" />
           <text>当前第 {{ currentStep }} 步，共 5 步；切换步骤时会保留本地编辑内容</text>
@@ -513,6 +683,7 @@ async function editDetail(): Promise<void> {
               data-testid="detail-back-home"
               theme="default"
               block
+              :disabled="transitioning"
               @tap="backToHome"
             >
               返回首页
@@ -521,6 +692,7 @@ async function editDetail(): Promise<void> {
               data-testid="detail-edit"
               theme="primary"
               block
+              :disabled="transitioning"
               @tap="editDetail"
             >
               修改填报
@@ -535,6 +707,7 @@ async function editDetail(): Promise<void> {
           id="wizard-actions"
           :current-step="currentStep || 1"
           :saving="saving"
+          :transitioning="transitioning"
           @previous="goPrevious"
           @save="saveDraft"
           @next="goNext"
@@ -546,44 +719,64 @@ async function editDetail(): Promise<void> {
         :visible="clearDialogVisible"
         title="确认清空已有内容"
         :content="clearDialogContent || ''"
-        :cancel-btn="false"
-        :confirm-btn="false"
+        cancel-btn="取消"
+        confirm-btn="继续"
+        button-layout="horizontal"
         :close-on-overlay-click="false"
         @cancel="cancelDestructiveClear"
         @close="cancelDestructiveClear"
-      >
-        <template #cancel-btn>
-          <t-button
-            data-testid="destructive-clear-cancel"
-            class="land-demand-dialog__button"
-            theme="default"
-            variant="text"
-            @tap="cancelDestructiveClear"
-          >
-            取消
-          </t-button>
-        </template>
-        <template #confirm-btn>
-          <t-button
-            data-testid="destructive-clear-confirm"
-            class="land-demand-dialog__button"
-            theme="primary"
-            @tap="confirmDestructiveClear"
-          >
-            继续
-          </t-button>
-        </template>
-      </t-dialog>
+        @confirm="confirmDestructiveClear"
+      />
+      <t-dialog
+        data-testid="required-return-dialog"
+        :visible="requiredReturnDialogVisible"
+        title="确认返回工作台"
+        content="当前还有必填项未填写，是否确认返回？"
+        cancel-btn="继续填写"
+        confirm-btn="确认返回"
+        button-layout="horizontal"
+        :close-on-overlay-click="false"
+        @cancel="cancelRequiredReturn"
+        @close="cancelRequiredReturn"
+        @confirm="confirmRequiredReturn"
+      />
       <VerificationDialog
         id="verification-dialog"
         :visible="verificationVisible"
         :challenge="challenge"
         :code="verificationCode || ''"
-        :loading="submitting"
+        :loading="submitting || verificationSubmitting"
         :error="verificationError || ''"
         @change="verificationCode = $event"
         @close="closeVerification"
+        @resend="resendVerification"
         @submit="submitVerificationCode"
+      />
+      <t-loading
+        v-if="verificationSubmitting"
+        data-testid="verification-submit-loading"
+        fullscreen
+        size="56rpx"
+        text="正在提交"
+      />
+      <t-loading
+        v-if="returningToHome"
+        data-testid="return-home-loading"
+        fullscreen
+        size="56rpx"
+        text="正在返回工作台"
+      />
+      <PageTransitionLoading
+        :visible="transitioning"
+        text="正在加载"
+      />
+      <PageTransitionLoading
+        :visible="saving && !returningToHome && !verificationSubmitting"
+        text="正在暂存"
+      />
+      <PageTransitionLoading
+        :visible="sendCodeMutation.isPending && !returningToHome && !verificationSubmitting"
+        text="正在发送验证码"
       />
     </view>
   </PageShell>
@@ -609,8 +802,28 @@ async function editDetail(): Promise<void> {
   padding-bottom: 0;
 }
 
+.land-demand-page__back-home-button {
+  box-sizing: border-box;
+  width: 220rpx;
+  min-width: 0;
+  max-width: 220rpx;
+  padding-right: 20rpx;
+  padding-left: 20rpx;
+
+  --td-button-border-radius: 999rpx;
+  --td-button-default-outline-border-color: rgb(158 190 235 / 82%);
+  --td-button-default-outline-active-bg-color: rgb(235 243 255 / 92%);
+  --td-button-default-outline-active-border-color: rgb(74 126 224 / 72%);
+
+  box-shadow: 0 6rpx 16rpx rgb(65 116 193 / 12%);
+}
+
 .land-demand-page {
-  padding-bottom: 220rpx;
+  padding-bottom: calc(128rpx + env(safe-area-inset-bottom));
+}
+
+.land-demand-page--view {
+  padding-bottom: 0;
 }
 
 .land-demand-page__guide-dot {
@@ -654,12 +867,5 @@ async function editDetail(): Promise<void> {
 .land-demand-page__error {
   color: $color-error;
   background: $color-error-soft;
-}
-
-.land-demand-dialog__button {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  border-radius: $radius-md;
 }
 </style>

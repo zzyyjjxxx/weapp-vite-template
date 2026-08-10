@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { scrollPageToTop } from '@/platform/page-scroll'
 import {
   buildLoginRedirect,
   configureNavigationAdapter,
@@ -7,9 +8,14 @@ import {
   replace,
 } from '@/router/navigation'
 
+vi.mock('@/platform/page-scroll', () => ({
+  scrollPageToTop: vi.fn(),
+}))
+
 describe('typed navigation', () => {
   afterEach(() => {
     configureNavigationAdapter(undefined)
+    vi.clearAllMocks()
   })
 
   it('uses ordinary push and replace navigation because the app has no tab bar', async () => {
@@ -26,6 +32,7 @@ describe('typed navigation', () => {
       'push:/pages/home/index',
       'replace:/pages/home/index?source=login',
     ])
+    expect(vi.mocked(scrollPageToTop)).toHaveBeenCalledTimes(2)
   })
 
   it('encodes login returnTo once and avoids a login loop', () => {

@@ -3,7 +3,10 @@ import { computed, ref, watchEffect } from 'wevu'
 import AppError from '@/components/ui/app-error/index.vue'
 import AppLoading from '@/components/ui/app-loading/index.vue'
 import PageShell from '@/components/ui/page-shell/index.vue'
+import PageTransitionLoading from '@/components/ui/page-transition-loading/index.vue'
 import { useLandDemandQuery } from '@/features/land-demand/queries'
+import { formatDateTime } from '@/platform/date-time'
+import { usePageTransitionLoading } from '@/platform/page-transition'
 import { replace } from '@/router/navigation'
 import { useProtectedPage } from '@/router/protected-page'
 import { useAuthStore } from '@/stores/auth'
@@ -18,26 +21,27 @@ const enterprise = auth.enterprise
 const creditcode = enterprise.value?.creditcode ?? ''
 const query = useLandDemandQuery(creditcode)
 const record = query.data
+const { pending: transitioning, run: runTransition } = usePageTransitionLoading()
 const redirected = ref(false)
 const submitted = computed(() => record.value?.landusedemand === '1')
 const queryErrorMessage = computed(() => query.error.value?.message ?? '请返回首页后重试')
 const recordBusinessName = computed(() => record.value?.businessname ?? '--')
-const recordUpdateTime = computed(() => record.value?.updatetime ?? '--')
+const recordUpdateTime = computed(() => formatDateTime(record.value?.updatetime))
 
 watchEffect(() => {
   if (!authorized.value || query.isPending.value || query.isError.value || submitted.value || redirected.value) {
     return
   }
   redirected.value = true
-  void replace('/pages/home/index')
+  void runTransition(() => replace('/pages/home/index'))
 })
 
 async function backHome(): Promise<void> {
-  await replace('/pages/home/index')
+  await runTransition(() => replace('/pages/home/index'))
 }
 
 async function viewDetail(): Promise<void> {
-  await replace('/pages/land-demand/index', { mode: 'view' })
+  await runTransition(() => replace('/pages/land-demand/index', { mode: 'view' }))
 }
 </script>
 
@@ -45,7 +49,7 @@ async function viewDetail(): Promise<void> {
   <PageShell
     v-if="authorized"
     title="填报完成"
-    :subtitle="submitted ? '用地需求已提交' : '正在核验提交结果'"
+    :subtitle="submitted ? '用地需求已提交' : '正在提交'"
     icon="list-check"
   >
     <view class="land-demand-success">
@@ -78,24 +82,31 @@ async function viewDetail(): Promise<void> {
         <view class="land-demand-success__actions">
           <view data-testid="success-back-home" class="land-demand-success__action">
             <t-button
+              t-class="land-demand-success__button"
               data-testid="back-home"
               theme="default"
               block
+              :disabled="transitioning"
               @tap="backHome"
             >
               返回首页
             </t-button>
           </view>
-          <t-button
-            data-testid="success-view-detail"
-            theme="primary"
-            block
-            @tap="viewDetail"
-          >
-            查看填报信息
-          </t-button>
+          <view class="land-demand-success__action">
+            <t-button
+              t-class="land-demand-success__button"
+              data-testid="success-view-detail"
+              theme="primary"
+              block
+              :disabled="transitioning"
+              @tap="viewDetail"
+            >
+              查看填报信息
+            </t-button>
+          </view>
         </view>
       </view>
+      <PageTransitionLoading :visible="transitioning" text="正在加载" />
     </view>
   </PageShell>
 </template>
@@ -204,11 +215,24 @@ async function viewDetail(): Promise<void> {
 
 .land-demand-success__actions {
   display: flex;
-  gap: $space-2;
   margin-top: $space-4;
 }
 
 .land-demand-success__action {
-  flex: 1;
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+}
+
+.land-demand-success__action + .land-demand-success__action {
+  margin-left: $space-2;
+}
+
+.land-demand-success__button {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 </style>

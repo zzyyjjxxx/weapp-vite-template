@@ -3,8 +3,8 @@ import type {
   MiniProgramLike,
 } from 'weapp-ide-cli'
 
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { mkdirSync, readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
 import process from 'node:process'
 import {
   isAutomatorProtocolTimeoutError,
@@ -61,10 +61,15 @@ const COMPONENT_TREE_SELECTORS = [
   'ReviewStep',
   'WizardActions',
   'VerificationDialog',
+  'SinglePicker',
+  'MultiPicker',
+  't-cell',
   't-button',
   't-cascader',
   't-checkbox',
   't-input',
+  't-picker',
+  't-picker-item',
   't-radio-group',
   't-textarea',
   ...resolveGeneratedScopedSlotSelectors(),
@@ -83,6 +88,16 @@ const CHANGE_EVENT_TEST_IDS = new Set([
 // bridge for the runtime contract so tests can set a month without depending
 // on picker column coordinates.
 const DATE_FIELD_TEST_IDS = new Set(['expect-time', 'financing-time'])
+const PICKER_FIELD_TEST_IDS = new Set([
+  'expect-park',
+  'is-deploy',
+  'deploy-park',
+  'is-specialuse',
+  'deploy-landtype',
+  'keyindustry',
+  'futureindustry',
+  'is-financing',
+])
 
 const NAVIGATION_TAP_TEST_IDS = new Set([
   'back-home',
@@ -127,6 +142,7 @@ const COMPONENT_FIELD_BRIDGES: Record<string, ComponentFieldBridge> = {
   'deploy-park-selection': { selector: '#land-info-step', field: 'deploy_park' },
   'deploy-height': { selector: '#land-info-step', field: 'deploy_height' },
   'deploy-weight': { selector: '#land-info-step', field: 'deploy_weight' },
+  'is-specialuse': { selector: '#land-info-step', field: 'is_specialuse' },
   'deploy-landtype': { selector: '#land-info-step', field: 'deploy_landtype' },
   'investment': { selector: '#project-info-step', field: 'investment' },
   'project-hydm': { selector: '#project-info-step', field: 'project_hydm' },
@@ -138,13 +154,13 @@ const COMPONENT_FIELD_BRIDGES: Record<string, ComponentFieldBridge> = {
   'pred-rdex': { selector: '#project-info-step', field: 'pred_rdex' },
   'pred-unitenergy': { selector: '#project-info-step', field: 'pred_unitenergy' },
   'projectdata': { selector: '#project-info-step', field: 'projectdata' },
+  'is-financing': { selector: '#finance-contact-step', field: 'is_financing' },
   'financing-money': { selector: '#finance-contact-step', field: 'financing_money' },
   'financing-time': { selector: '#finance-contact-step', field: 'financing_time' },
   'contact': { selector: '#finance-contact-step', field: 'contact' },
   'office': { selector: '#finance-contact-step', field: 'office' },
   'phone': { selector: '#finance-contact-step', field: 'phone' },
   'verification-code': { selector: '#verification-dialog', field: 'code' },
-  'mock-code': { selector: '#verification-dialog', field: 'challenge.mockCode' },
 }
 
 const COMPONENT_ACTION_BRIDGES: Record<string, ComponentActionBridge> = {
@@ -163,6 +179,7 @@ const COMPONENT_ACTION_BRIDGES: Record<string, ComponentActionBridge> = {
   },
   'review-accept': { selector: '#review-step', event: 'accept', detail: true },
   'review-submit': { selector: '#review-step', event: 'submit' },
+  'verification-resend': { selector: '#verification-dialog', event: 'resend' },
   'verification-submit': { selector: '#verification-dialog', event: 'submit' },
 }
 
@@ -541,7 +558,7 @@ class AutomatorLocator implements MiniProgramLocator {
 
   async fill(value: string): Promise<void> {
     const bridge = COMPONENT_FIELD_BRIDGES[this.id]
-    if (DATE_FIELD_TEST_IDS.has(this.id) && bridge) {
+    if ((DATE_FIELD_TEST_IDS.has(this.id) || PICKER_FIELD_TEST_IDS.has(this.id)) && bridge) {
       await waitFor(
         async () => await this.changeComponent(bridge, parseControlValue(value))
           ? true
@@ -585,7 +602,7 @@ class AutomatorLocator implements MiniProgramLocator {
   async text(): Promise<string> {
     const direct = await this.findElementOnce()
     const bridge = COMPONENT_FIELD_BRIDGES[this.id]
-    if (!direct && bridge) {
+    if ((PICKER_FIELD_TEST_IDS.has(this.id) || !direct) && bridge) {
       const result = await waitFor(async () => {
         const candidate = await this.readComponentField(bridge)
         return candidate.found ? candidate : undefined
@@ -698,6 +715,7 @@ export function createMiniProgramDriver(
       await waitForPath(path)
     },
     async screenshot(path) {
+      mkdirSync(dirname(path), { recursive: true })
       await activeMiniProgram.screenshot({ path })
     },
     async clearStorage() {

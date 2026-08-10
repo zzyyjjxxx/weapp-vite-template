@@ -65,6 +65,7 @@ describe('land demand store', () => {
     expect(store.currentStep.value).toBe(3)
     expect(store.progressStep.value).toBe(3)
     expect(store.hasRecord.value).toBe(false)
+    expect(store.hasLocalDraft.value).toBe(true)
     expect(store.isDirty.value).toBe(false)
     store.patch({ area: '31' })
     expect(store.form.value.area).toBe('31')
@@ -83,6 +84,52 @@ describe('land demand store', () => {
     store.goToStep(3)
     expect(store.currentStep.value).toBe(3)
     expect(store.progressStep.value).toBe(5)
+  })
+
+  it('keeps later steps active when editing a submitted record', async () => {
+    const store = useLandDemandStore()
+    const submittedEnterprise = {
+      ...enterprise,
+      creditcode: '91330200MA2DEMO002',
+    }
+    const record = await repository.save({
+      ...form,
+      creditcode: submittedEnterprise.creditcode,
+      deploy_park: '330203',
+      landusedemand: '1',
+    })
+
+    store.initialize(submittedEnterprise, record)
+    expect(store.currentStep.value).toBe(5)
+    expect(store.progressStep.value).toBe(5)
+
+    store.goToStep(1)
+    expect(store.currentStep.value).toBe(1)
+    expect(store.progressStep.value).toBe(5)
+  })
+
+  it('compares edits with the submitted snapshot after saving step metadata locally', async () => {
+    const store = useLandDemandStore()
+    const submittedEnterprise = {
+      ...enterprise,
+      creditcode: '91330200MA2DEMO003',
+    }
+    const record = await repository.save({
+      ...form,
+      creditcode: submittedEnterprise.creditcode,
+      deploy_park: '330203',
+      landusedemand: '1',
+    })
+
+    store.initialize(submittedEnterprise, record)
+    store.patch({ area: '31' })
+    expect(store.isDirty.value).toBe(true)
+    store.goToStep(3)
+    store.saveLocalDraft()
+    expect(store.isDirty.value).toBe(true)
+
+    store.patch({ area: form.area })
+    expect(store.isDirty.value).toBe(false)
   })
 
   it('reasserts authenticated identity over a tampered local draft', () => {
@@ -155,18 +202,29 @@ describe('land demand store', () => {
       progressStep: 2,
     })
     expect(store.isDirty.value).toBe(false)
+    expect(store.hasLocalDraft.value).toBe(true)
     store.discardLocalDraft()
     expect(repository.getDraft(enterprise.creditcode)).toBeUndefined()
+    expect(store.hasLocalDraft.value).toBe(false)
   })
 
   it('marks persistence without retaining a server record object', async () => {
     const store = useLandDemandStore()
     store.initialize(enterprise)
     store.patch({ area: '31' })
+    store.goToStep(5)
+    store.goToStep(3)
     const record = await repository.save({ ...form, deploy_park: '330203', landusedemand: '2' })
 
     store.markPersisted(record)
     expect(store.hasRecord.value).toBe(true)
+    expect(store.hasLocalDraft.value).toBe(true)
+    expect(store.currentStep.value).toBe(3)
+    expect(store.progressStep.value).toBe(5)
+    expect(repository.getDraft(enterprise.creditcode)).toMatchObject({
+      currentStep: 3,
+      progressStep: 5,
+    })
     expect(store.isDirty.value).toBe(false)
     expect(store).not.toHaveProperty('record')
     expect(store.form.value.area).toBe('30')

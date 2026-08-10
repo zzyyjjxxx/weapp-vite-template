@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import type { LandDemandStep } from '@/router/query'
 
-import { computed, ref, watchEffect } from 'wevu'
-import PageShell from '@/components/ui/page-shell/index.vue'
+import { computed, onLoad, ref, watchEffect } from 'wevu'
+import AppError from '@/components/ui/app-error/index.vue'
+import AppIcon from '@/components/ui/app-icon/index.vue'
+import AppLoading from '@/components/ui/app-loading/index.vue'
+import PageTransitionLoading from '@/components/ui/page-transition-loading/index.vue'
 import { useLandDemandQuery } from '@/features/land-demand/queries'
+import { validateStep } from '@/features/land-demand/validation'
+import { formatDateTime } from '@/platform/date-time'
+import { usePageTransitionLoading } from '@/platform/page-transition'
 import { navigate, replace } from '@/router/navigation'
 import { useProtectedPage } from '@/router/protected-page'
 import { useAuthStore } from '@/stores/auth'
@@ -19,16 +25,39 @@ const enterprise = auth.enterprise
 const creditcode = enterprise.value?.creditcode ?? ''
 const landDemandQuery = useLandDemandQuery(creditcode)
 const landDemandStore = useLandDemandStore()
+const { pending: transitioning, run: runTransition } = usePageTransitionLoading()
 const record = landDemandQuery.data
 const submitted = computed(() => record.value?.landusedemand === '1')
 const stepNumbers = [1, 2, 3, 4, 5] as const
 const selectedStep = ref<LandDemandStep | undefined>(undefined)
+const saveNotice = ref('')
+const draftReady = computed(() => Boolean(
+  record.value
+  || landDemandStore.hasLocalDraft.value
+  || landDemandStore.form.value.creditcode,
+))
 const currentProgressStep = computed(() => submitted.value
   ? 5
   : Math.min(5, Math.max(1, landDemandStore.progressStep.value)))
+const queryErrorMessage = computed(() => landDemandQuery.error.value?.message ?? '请稍后重试')
+const incompleteSteps = computed<LandDemandStep[]>(() => {
+  if (!draftReady.value) {
+    return []
+  }
+
+  return stepNumbers.filter(step => validateStep(landDemandStore.form.value, step).length > 0)
+})
+const progressIncompleteSteps = computed<LandDemandStep[]>(() => {
+  return incompleteSteps.value
+})
+const resumeStep = computed<LandDemandStep>(() => (
+  progressIncompleteSteps.value.find(step => step <= currentProgressStep.value)
+  ?? currentProgressStep.value as LandDemandStep
+))
+const resumeStepIncomplete = computed(() => progressIncompleteSteps.value.includes(resumeStep.value))
 const progressLabel = computed(() => submitted.value
   ? '已完成全部填报'
-  : `已填写至第 ${currentProgressStep.value} 步 / 共 5 步`)
+  : `已填写至第 ${resumeStep.value} 步 / 共 5 步`)
 let draftInitialized = false
 
 watchEffect(() => {
@@ -41,15 +70,6 @@ watchEffect(() => {
 })
 const enterpriseName = computed(() => enterprise.value?.businessname ?? '企业信息加载中')
 const enterpriseCreditcode = computed(() => enterprise.value?.creditcode ?? '--')
-const fillingDateRange = computed(() => {
-  const timestamp = record.value?.updatetime
-  const base = timestamp ? new Date(timestamp) : new Date()
-  const start = new Date(base.getFullYear(), base.getMonth(), 1)
-  const end = new Date(base.getFullYear(), base.getMonth() + 1, 0)
-  const twoDigits = (value: number) => value < 10 ? `0${value}` : String(value)
-  const format = (date: Date) => `${date.getFullYear()}.${twoDigits(date.getMonth() + 1)}.${twoDigits(date.getDate())}`
-  return `${format(start)} — ${format(end)}`
-})
 const primaryLabel = computed(() => {
   if (!record.value) {
     return '开始填报'
@@ -57,7 +77,7 @@ const primaryLabel = computed(() => {
   if (record.value.landusedemand === '1') {
     return '查看填报'
   }
-  return selectedStep.value ? `进入第 ${selectedStep.value} 步` : '继续填写'
+  return selectedStep.value ? `进入第 ${selectedStep.value} 步` : `进入第 ${resumeStep.value} 步`
 })
 const statusLabel = computed(() => {
   if (!record.value) {
@@ -65,178 +85,303 @@ const statusLabel = computed(() => {
   }
   return record.value.landusedemand === '1' ? '已提交' : '草稿待完善'
 })
+const lastSubmittedAt = computed(() => {
+  const currentRecord = record.value
+  if (!currentRecord) {
+    return ''
+  }
+  const submittedAt = currentRecord.lastSubmittedAt
+    ?? (currentRecord.landusedemand === '1' ? currentRecord.updatetime : undefined)
+  return submittedAt ? formatDateTime(submittedAt) : ''
+})
+
+onLoad((query) => {
+  saveNotice.value = query?.notice === 'saved' ? '暂存成功' : ''
+})
 
 async function openLandDemand(): Promise<void> {
-  await navigate('/pages/land-demand/index', {
-    step: selectedStep.value ?? (record.value ? currentProgressStep.value : undefined),
-  })
+  await runTransition(() => navigate('/pages/land-demand/index', {
+    step: selectedStep.value ?? (record.value ? resumeStep.value : undefined),
+  }))
 }
 
 async function viewLandDemand(): Promise<void> {
-  await replace('/pages/land-demand/index', { mode: 'view' })
+  await runTransition(() => replace('/pages/land-demand/index', { mode: 'view' }))
 }
 
 async function editLandDemand(): Promise<void> {
-  await replace('/pages/land-demand/index', {
+  await runTransition(() => replace('/pages/land-demand/index', {
     mode: 'edit',
     step: selectedStep.value ?? 5,
-  })
+  }))
 }
 
 function selectStep(step: LandDemandStep): void {
-  if (step <= currentProgressStep.value) {
+  if (step <= currentProgressStep.value && !transitioning.value) {
     selectedStep.value = step
   }
 }
 
 async function logout(): Promise<void> {
-  auth.clearSession()
-  await replace('/pages/login/index')
+  await runTransition(async () => {
+    auth.clearSession()
+    await replace('/pages/login/index')
+  })
 }
 </script>
 
 <template>
-  <PageShell
+  <view
     v-if="authorized"
-    title="企业服务工作台"
-    icon="home"
+    class="page-shell"
   >
-    <template #actions>
-      <view
-        data-testid="logout"
-        class="home__logout"
-        @tap="logout"
-      >
-        退出登录
-      </view>
-    </template>
-
-    <view class="home__hero">
-      <view class="home__hero-content">
-        <text class="home__hero-kicker">企业用地需求服务</text>
-        <text class="home__hero-title">让项目需求更清晰</text>
-      </view>
-    </view>
-
-    <view class="home__enterprise u-card">
-      <view class="home__enterprise-mark">
-        <text>企</text>
-      </view>
-      <view class="home__enterprise-copy">
-        <text class="home__enterprise-label">当前登录企业</text>
-        <text class="home__enterprise-name">
-          {{ enterpriseName }}
-        </text>
-        <text class="home__enterprise-creditcode">
-          统一社会信用代码：{{ enterpriseCreditcode }}
-        </text>
-      </view>
-    </view>
-
-    <view class="home__section-heading">
-      <text class="u-section-heading">用地需求填报</text>
-      <text class="home__section-caption">LAND DEMAND</text>
-    </view>
-
-    <view class="home__product u-card">
-      <view class="home__product-heading">
-        <view>
-          <text class="home__product-title">企业项目用地需求</text>
-          <text class="home__product-caption">五步完成信息填报</text>
-          <text class="home__date-range">填报时间：{{ fillingDateRange }}</text>
+    <view class="page-shell__glow page-shell__glow--left" />
+    <view class="page-shell__glow page-shell__glow--right" />
+    <view class="page-shell__content">
+      <view class="page-shell__header">
+        <view class="page-shell__heading">
+          <view class="page-shell__icon-wrap">
+            <AppIcon
+              class="page-shell__icon"
+              name="home"
+              :size="40"
+              weight="Filled"
+            />
+          </view>
+          <view class="page-shell__heading-copy">
+            <text class="page-shell__eyebrow">企业用地需求服务</text>
+            <text class="page-shell__title">企业服务工作台</text>
+          </view>
         </view>
-        <text data-testid="land-demand-status" class="home__product-status">
-          {{ statusLabel }}
-        </text>
-      </view>
-      <view class="home__steps">
-        <view
-          v-for="number in stepNumbers"
-          :key="number"
-          :data-testid="`home-step-${number}`"
-          class="home__step"
-          :class="{
-            'home__step--active': number <= currentProgressStep,
-            'home__step--completed': number < currentProgressStep,
-            'home__step--current': number === currentProgressStep,
-            'home__step--selected': number === (selectedStep || currentProgressStep),
-            'home__step--pending': number > currentProgressStep,
-          }"
-          @tap="selectStep(number)"
-        >
-          <text class="home__step-number">{{ number }}</text>
+        <view class="page-shell__actions">
+          <view
+            data-testid="logout"
+            class="home__logout"
+            @tap="logout"
+          >
+            退出登录
+          </view>
         </view>
       </view>
-      <text class="home__steps-progress">{{ progressLabel }}</text>
-      <view v-if="submitted" class="home__product-actions">
-        <t-button
-          data-testid="land-demand-view"
-          theme="default"
-          block
-          :loading="landDemandQuery.isPending"
-          @tap="viewLandDemand"
-        >
-          查看详情
-        </t-button>
-        <t-button
-          data-testid="land-demand-edit"
-          theme="primary"
-          block
-          :loading="landDemandQuery.isPending"
-          @tap="editLandDemand"
-        >
-          修改填报
-        </t-button>
+
+      <view class="page-shell__body">
+        <view class="home__page-content">
+          <AppLoading v-if="landDemandQuery.isPending" />
+          <AppError
+            v-else-if="landDemandQuery.isError"
+            title="工作台信息加载失败"
+            :message="queryErrorMessage"
+          />
+          <view v-else>
+            <t-message
+              v-if="saveNotice"
+              data-testid="home-save-success-message"
+              theme="success"
+              :content="saveNotice"
+              :visible="true"
+              :duration="2000"
+              :offset="[16, 16]"
+              single
+              @duration-end="saveNotice = ''"
+              @close-btn-click="saveNotice = ''"
+            />
+
+            <view class="home__enterprise u-card">
+              <view class="home__enterprise-mark">
+                <text>企</text>
+              </view>
+              <view class="home__enterprise-copy">
+                <text class="home__enterprise-name">
+                  {{ enterpriseName }}
+                </text>
+                <text class="home__enterprise-creditcode">
+                  统一社会信用代码：{{ enterpriseCreditcode }}
+                </text>
+              </view>
+            </view>
+
+            <view class="home__section-heading">
+              <text class="u-section-heading">用地需求填报</text>
+            </view>
+
+            <view class="home__product u-card">
+              <view class="home__product-heading">
+                <view>
+                  <text class="home__product-title">企业项目用地需求</text>
+                </view>
+                <text data-testid="land-demand-status" class="home__product-status">
+                  {{ statusLabel }}
+                </text>
+              </view>
+              <view class="home__steps">
+                <view
+                  v-for="number in stepNumbers"
+                  :key="number"
+                  :data-testid="`home-step-${number}`"
+                  class="home__step"
+                  :class="{
+                    'home__step--active': number <= currentProgressStep,
+                    'home__step--completed': number < currentProgressStep,
+                    'home__step--current': number === resumeStep,
+                    'home__step--complete': number === resumeStep && !resumeStepIncomplete,
+                    'home__step--incomplete': progressIncompleteSteps.includes(number),
+                    'home__step--selected': number === (selectedStep || resumeStep),
+                    'home__step--pending': number > currentProgressStep,
+                  }"
+                  @tap="selectStep(number)"
+                >
+                  <text class="home__step-number">{{ number }}</text>
+                </view>
+              </view>
+              <text class="home__steps-progress">{{ progressLabel }}</text>
+              <text
+                v-if="lastSubmittedAt"
+                data-testid="land-demand-last-submitted-at"
+                class="home__submitted-at"
+              >
+                上次提交：{{ lastSubmittedAt }}
+              </text>
+              <view v-if="submitted" class="home__product-actions">
+                <t-button
+                  data-testid="land-demand-view"
+                  theme="default"
+                  block
+                  :disabled="landDemandQuery.isPending || transitioning"
+                  @tap="viewLandDemand"
+                >
+                  查看详情
+                </t-button>
+                <t-button
+                  data-testid="land-demand-edit"
+                  theme="primary"
+                  block
+                  :disabled="landDemandQuery.isPending || transitioning"
+                  @tap="editLandDemand"
+                >
+                  修改填报
+                </t-button>
+              </view>
+              <t-button
+                v-else
+                data-testid="land-demand-primary"
+                class="home__product-action"
+                theme="primary"
+                block
+                :disabled="landDemandQuery.isPending || transitioning"
+                @tap="openLandDemand"
+              >
+                {{ primaryLabel }}
+              </t-button>
+            </view>
+          </view>
+        </view>
+        <PageTransitionLoading :visible="transitioning" text="正在加载" />
       </view>
-      <t-button
-        v-else
-        data-testid="land-demand-primary"
-        class="home__product-action"
-        theme="primary"
-        block
-        :loading="landDemandQuery.isPending"
-        @tap="openLandDemand"
-      >
-        {{ primaryLabel }}
-      </t-button>
     </view>
-  </PageShell>
+  </view>
 </template>
 
 <style lang="scss">
 @use '@/styles/tokens' as *;
 
-.home__enterprise,
-.home__product {
-  padding: $space-4;
-}
-
-.home__hero {
+.page-shell {
   position: relative;
-  box-sizing: border-box;
-  min-height: 190rpx;
+  min-height: 100vh;
   overflow: hidden;
-  background: linear-gradient(135deg, #edf6ff 0%, #f8fbff 100%);
-  border: 1rpx solid rgb(211 226 248 / 78%);
-  border-radius: $radius-lg;
-  box-shadow: $shadow-card;
+  background: $gradient-page;
 }
 
-.home__hero::after {
-  position: absolute;
-  top: -100rpx;
-  right: -80rpx;
-  width: 280rpx;
-  height: 280rpx;
-  content: '';
-  background: rgb(95 153 241 / 10%);
-  border-radius: 50%;
-}
-
-.home__hero-content {
+.page-shell__content {
   position: relative;
   z-index: 1;
-  width: 100%;
+  padding: $space-4 $space-4 $space-6;
+}
+
+.page-shell__glow {
+  position: absolute;
+  width: 420rpx;
+  height: 420rpx;
+  pointer-events: none;
+  background: rgb(96 159 255 / 14%);
+  border-radius: 50%;
+  filter: blur(12rpx);
+}
+
+.page-shell__glow--left {
+  top: -240rpx;
+  left: -230rpx;
+}
+
+.page-shell__glow--right {
+  top: 170rpx;
+  right: -300rpx;
+}
+
+.page-shell__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: $space-2 0 $space-4;
+}
+
+.page-shell__heading {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+}
+
+.page-shell__actions {
+  flex: 0 0 auto;
+  margin-left: $space-2;
+}
+
+.page-shell__icon {
+  filter: brightness(0) invert(1);
+}
+
+.page-shell__icon-wrap {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 72rpx;
+  height: 72rpx;
+  margin-right: $space-2;
+  background: $gradient-primary;
+  border: 6rpx solid rgb(255 255 255 / 72%);
+  border-radius: 22rpx;
+  box-shadow: $shadow-button;
+}
+
+.page-shell__heading-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.page-shell__eyebrow {
+  display: block;
+  margin-bottom: 4rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+  color: $color-primary;
+  letter-spacing: 2rpx;
+}
+
+.page-shell__title {
+  display: block;
+  font-size: 40rpx;
+  font-weight: 700;
+  line-height: 1.25;
+  color: $color-text;
+}
+
+.page-shell__body {
+  min-height: 480rpx;
+}
+
+.home__enterprise,
+.home__product {
   padding: $space-4;
 }
 
@@ -253,45 +398,6 @@ async function logout(): Promise<void> {
   background: $color-card;
   border: 1rpx solid $color-border;
   border-radius: 999rpx;
-}
-
-.home__hero-kicker,
-.home__hero-title,
-.home__hero-copy,
-.home__date-range,
-.home__enterprise-label,
-.home__product-caption,
-.home__section-caption {
-  display: block;
-}
-
-.home__hero-kicker {
-  font-size: 21rpx;
-  font-weight: 700;
-  color: $color-primary;
-}
-
-.home__hero-title {
-  display: block;
-  margin-top: $space-2;
-  font-size: 38rpx;
-  font-weight: 800;
-  line-height: 1.3;
-  color: #173a77;
-}
-
-.home__hero-copy {
-  margin-top: $space-2;
-  font-size: 23rpx;
-  line-height: 1.6;
-  color: $color-text-secondary;
-}
-
-.home__date-range {
-  margin-top: 6rpx;
-  font-size: 20rpx;
-  line-height: 1.45;
-  color: $color-text-placeholder;
 }
 
 .home__enterprise {
@@ -321,12 +427,6 @@ async function logout(): Promise<void> {
   min-width: 0;
 }
 
-.home__enterprise-label {
-  margin-bottom: 4rpx;
-  font-size: 20rpx;
-  color: $color-text-placeholder;
-}
-
 .home__product {
   margin-top: $space-3;
 }
@@ -335,7 +435,8 @@ async function logout(): Promise<void> {
 .home__enterprise-creditcode,
 .home__product-title,
 .home__product-status,
-.home__product-copy {
+.home__product-copy,
+.home__submitted-at {
   display: block;
 }
 
@@ -361,12 +462,6 @@ async function logout(): Promise<void> {
   margin-top: $space-5;
 }
 
-.home__section-caption {
-  font-size: 18rpx;
-  color: $color-text-placeholder;
-  letter-spacing: 2rpx;
-}
-
 .home__product-heading {
   display: flex;
   align-items: center;
@@ -379,12 +474,6 @@ async function logout(): Promise<void> {
   color: $color-primary;
   background: $color-primary-soft;
   border-radius: 999rpx;
-}
-
-.home__product-caption {
-  margin-top: 4rpx;
-  font-size: 21rpx;
-  color: $color-text-placeholder;
 }
 
 .home__steps {
@@ -446,6 +535,20 @@ async function logout(): Promise<void> {
   box-shadow: 0 0 0 5rpx rgb(56 113 224 / 14%);
 }
 
+.home__step--complete .home__step-number {
+  color: #fff;
+  background: $color-success;
+  border-color: $color-success-soft;
+  box-shadow: 0 6rpx 14rpx rgb(10 168 117 / 24%);
+}
+
+.home__step--incomplete .home__step-number {
+  color: #fff;
+  background: $color-error;
+  border-color: $color-error-soft;
+  box-shadow: 0 6rpx 14rpx rgb(213 73 65 / 24%);
+}
+
 .home__step--pending {
   opacity: 0.5;
 }
@@ -454,9 +557,24 @@ async function logout(): Promise<void> {
   background: #83affb;
 }
 
+.home__step--complete:not(:last-child)::after {
+  background: $color-success;
+}
+
+.home__step--incomplete:not(:last-child)::after {
+  background: $color-error;
+}
+
 .home__steps-progress {
   display: block;
   margin-top: 8rpx;
+  font-size: 20rpx;
+  color: $color-text-secondary;
+  text-align: center;
+}
+
+.home__submitted-at {
+  margin-top: 6rpx;
   font-size: 20rpx;
   color: $color-text-secondary;
   text-align: center;

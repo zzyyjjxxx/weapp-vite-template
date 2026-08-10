@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   readBooleanDetail,
   readPatchDetail,
+  readPickerValueDetail,
   readStringArrayDetail,
   readStringDetail,
 } from '@/platform/event-detail'
@@ -12,6 +13,8 @@ describe('Wevu event detail helpers', () => {
     expect(readStringDetail({ value: '30' })).toBe('30')
     expect(readStringArrayDetail({ value: ['330203', 42, '330205'] }))
       .toEqual(['330203', '330205'])
+    expect(readPickerValueDetail({ value: ['330203'], label: ['海曙区'] }))
+      .toBe('330203')
   })
 
   it('reads checkbox values without expecting a native event wrapper', () => {

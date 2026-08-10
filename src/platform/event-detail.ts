@@ -28,6 +28,18 @@ export function readStringArrayDetail(detail: unknown): string[] {
     : []
 }
 
+export function readPickerValueDetail(detail: unknown): string {
+  if (!isObject(detail)) {
+    return ''
+  }
+  const value = (detail as DetailValue).value
+  if (Array.isArray(value)) {
+    const first = value[0]
+    return typeof first === 'string' ? first : ''
+  }
+  return typeof value === 'string' ? value : ''
+}
+
 export function readBooleanDetail(detail: unknown): boolean {
   if (!isObject(detail)) {
     return typeof detail === 'boolean' ? detail : false
