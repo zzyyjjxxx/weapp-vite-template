@@ -5,14 +5,14 @@ name = "weapp-vite-template"
 [setup]
 script = '''
 cd "$CODEX_WORKTREE_PATH"
-npx skills experimental_install
+node scripts/sync-codex-project-skills.mjs
 pnpm install --frozen-lockfile --config.confirmModulesPurge=false
 '''
 
 [[actions]]
-name = "还原 skills"
+name = "刷新并同步项目 skills"
 icon = "tool"
-command = "npx skills experimental_install"
+command = "node scripts/sync-codex-project-skills.mjs"
 
 [[actions]]
 name = "安装项目依赖"

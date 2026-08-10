@@ -47,9 +47,17 @@ reports/*
 
 # local AI and planning support files
 .agents/
+/.agents/skills/
+/.codex/skills/
+/.claude/skills/
 docs/superpowers/
 .superpowers/
 .worktrees/
+
+# IDE project and user settings
+.idea/
+.vs/
+*.sln.DotSettings.user
 
 # local screenshot and visual regression output
 !.screenshots/
