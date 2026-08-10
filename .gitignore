@@ -54,6 +54,11 @@ docs/superpowers/
 .superpowers/
 .worktrees/
 
+# IDE project and user settings
+.idea/
+.vs/
+*.sln.DotSettings.user
+
 # local screenshot and visual regression output
 !.screenshots/
 .screenshots/*
