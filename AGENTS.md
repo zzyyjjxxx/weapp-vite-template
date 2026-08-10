@@ -36,6 +36,8 @@ The five steps are 基本信息、用地需求、投资项目、融资及联系�
 - Use `pnpm test:e2e` for the serialized Playwright/Automator suite.
 - Use `wv screenshot` for runtime screenshots and `wv compare` for visual diffs; prefer workspace `.tmp/` outputs.
 - A build does not prove runtime behavior. Report `re-login` or unavailable service ports as blockers, never as passes. Hosted Linux CI cannot run WeChat DevTools E2E.
+- If DevTools reports `./pages/login/index.wxml not found`, import/open the repository root containing `project.config.json` and keep `miniprogramRoot` pointed at `dist/`; do not open an old worktree or import `dist/` as a separate project. Run `pnpm build` first and verify `dist/pages/login/index.wxml` exists before compiling. `pnpm dev` clears `dist/` at startup and emits generated pages asynchronously, so compiling during that window can produce a transient missing-file error; close/reopen the current project and compile again after generation completes.
+- For login troubleshooting, the runtime is configured with the HTTP auth adapter in `src/app.vue`. The `demo` credentials belong only to the Mock repository/tests; a successful demo login usually indicates that DevTools loaded an old Mock worktree. Verify the real flow as `POST /customapi/enterpriseapi/login` followed by `GET /customapi/enterpriseapi/getinfo`, and do not record real credentials in repository guidance.
 
 ## Source-of-truth docs
 
