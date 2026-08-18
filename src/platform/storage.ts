@@ -4,12 +4,14 @@ export interface StorageAdapter {
   get: <T>(key: string) => T | undefined
   set: <T>(key: string, value: T) => void
   remove: (key: string) => void
+  keys?: () => string[]
 }
 
 export interface WpiStorageApi {
   getStorageSync: (key: string) => unknown
   setStorageSync: (key: string, value: unknown) => unknown
   removeStorageSync: (key: string) => unknown
+  getStorageInfoSync?: () => { keys?: unknown }
 }
 
 export function createWpiStorageAdapter(
@@ -24,6 +26,12 @@ export function createWpiStorageAdapter(
     },
     remove(key) {
       storageApi.removeStorageSync(key)
+    },
+    keys() {
+      const keys = storageApi.getStorageInfoSync?.()?.keys
+      return Array.isArray(keys)
+        ? keys.filter((key): key is string => typeof key === 'string')
+        : []
     },
   }
 }

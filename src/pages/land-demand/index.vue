@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type {
   FieldError,
-  FinancingChoice,
   LandDemandForm,
   YesNo,
 } from '@/features/land-demand/models'
@@ -38,7 +37,6 @@ import {
   validateStep,
 } from '@/features/land-demand/validation'
 import {
-  applyFinancingChoice,
   applySpecialUseChoice,
   applyTrackChoice,
   selectDeployPark,
@@ -60,22 +58,25 @@ type PendingClear
   = | { kind: 'deploy', value: YesNo }
     | { kind: 'special', value: YesNo }
     | { kind: 'track', value: string }
-    | { kind: 'financing', value: FinancingChoice }
 
 const auth = useAuthStore()
 const { authorized } = useProtectedPage('/pages/land-demand/index')
 const enterprise = auth.enterprise
-const creditcode = enterprise.value?.creditcode ?? ''
+const creditcode = () => enterprise.value?.creditcode ?? ''
 const query = useLandDemandQuery(creditcode)
+const queryPending = query.isPending
+const queryFailed = query.isError
 const saveMutation = useSaveLandDemandMutation()
 const updateMutation = useUpdateLandDemandMutation()
 const sendCodeMutation = useSendVerificationCodeMutation()
+const sendCodePending = sendCodeMutation.isPending
 const verifyCodeMutation = useVerifyVerificationCodeMutation()
 const store = useLandDemandStore()
 const form = store.form
 const currentStep = store.currentStep
 const progressStep = store.progressStep
 const errors = ref<FieldError[]>([])
+const scrollRequest = ref(0)
 const ready = ref(false)
 const pendingClear = ref<PendingClear | null>(null)
 const feedback = ref('')
@@ -95,11 +96,14 @@ const verificationSubmitting = ref(false)
 const mode = ref<'edit' | 'view'>('edit')
 const requestedStep = ref<LandDemandStep | undefined>(undefined)
 const routeReady = ref(false)
-let initialized = false
+const refreshFromServer = ref(false)
+let initializedCreditcode = ''
+let initializedSource: 'local' | 'server' | undefined
 
 const saving = computed(() => saveMutation.isPending.value || updateMutation.isPending.value)
 const submitting = computed(() => (
-  sendCodeMutation.isPending.value
+  verificationSubmitting.value
+  || sendCodeMutation.isPending.value
   || verifyCodeMutation.isPending.value
   || saving.value
 ))
@@ -118,8 +122,6 @@ const clearDialogContent = computed(() => {
       return '选择“否”将清空特殊用地类型，是否继续？'
     case 'track':
       return '切换重点产业赛道将清空已选的细分方向，是否继续？'
-    case 'financing':
-      return '选择“没有”将清空融资金额和融资时间，是否继续？'
     default:
       return ''
   }
@@ -133,22 +135,35 @@ const incompleteSteps = computed<LandDemandStep[]>(() => {
   return wizardSteps.filter(step => validateStep(form.value, step).length > 0)
 })
 const progressIncompleteSteps = computed<LandDemandStep[]>(() => {
-  return incompleteSteps.value
+  return incompleteSteps.value.filter(step => step <= progressStep.value)
 })
 onLoad((query) => {
   mode.value = parseLandDemandMode(query?.mode)
   requestedStep.value = parseLandDemandStep(query?.step)
+  refreshFromServer.value = query?.freshLogin === '1'
   routeReady.value = true
 })
 
 watchEffect(() => {
   const profile = enterprise.value
-  if (initialized || !routeReady.value || !profile || query.isPending.value) {
+  if (!profile) {
+    initializedCreditcode = ''
+    initializedSource = undefined
+    ready.value = false
+    return
+  }
+  const source = refreshFromServer.value ? 'server' : 'local'
+  if (
+    (initializedCreditcode === profile.creditcode && initializedSource === source)
+    || !routeReady.value
+    || queryPending.value
+    || queryFailed.value
+  ) {
     return
   }
 
   if (viewOnly.value && !query.data.value) {
-    initialized = true
+    initializedCreditcode = profile.creditcode
     void runTransition(() => replace('/pages/home/index'))
     return
   }
@@ -158,12 +173,15 @@ watchEffect(() => {
     store.goToStep(5)
   }
   else {
-    store.initializeFromLocalDraft(profile, query.data.value ?? undefined)
+    store.initializeFromLocalDraft(profile, query.data.value ?? undefined, {
+      refreshFromServer: refreshFromServer.value,
+    })
     if (requestedStep.value) {
       store.goToStep(requestedStep.value)
     }
   }
-  initialized = true
+  initializedCreditcode = profile.creditcode
+  initializedSource = source
   ready.value = true
 })
 
@@ -210,15 +228,6 @@ function applyTrack(value: string): void {
   })
 }
 
-function applyFinancing(value: FinancingChoice): void {
-  const next = applyFinancingChoice(form.value, value)
-  patchStore({
-    is_financing: next.is_financing,
-    financing_money: next.financing_money,
-    financing_time: next.financing_time,
-  })
-}
-
 function changeForm(detail: unknown): void {
   const patch = readPatchDetail<LandDemandForm>(detail)
 
@@ -250,17 +259,6 @@ function changeForm(detail: unknown): void {
     applyTrack(patch.keyindustry)
     return
   }
-  if (patch.is_financing) {
-    if (patch.is_financing === '没有' && Boolean(
-      form.value.financing_money || form.value.financing_time,
-    )) {
-      pendingClear.value = { kind: 'financing', value: patch.is_financing }
-      return
-    }
-    applyFinancing(patch.is_financing)
-    return
-  }
-
   patchStore(patch)
 }
 
@@ -284,9 +282,6 @@ function confirmDestructiveClear(): void {
       break
     case 'track':
       applyTrack(pending.value)
-      break
-    case 'financing':
-      applyFinancing(pending.value)
       break
   }
 }
@@ -313,6 +308,7 @@ function goNext(): void {
     .concat(stepErrors)
   feedback.value = ''
   if (stepErrors.length > 0) {
+    scrollRequest.value += 1
     return
   }
   void goToStep(nextStep(currentStep.value))
@@ -427,7 +423,10 @@ async function requestVerificationAuthorized(forceResend = false): Promise<void>
     feedback.value = ''
   }
   catch {
-    feedback.value = sendCodeMutation.error.value?.message ?? '验证码发送失败，请稍后重试'
+    verificationVisible.value = true
+    verificationCode.value = ''
+    verificationError.value = sendCodeMutation.error.value?.message ?? '验证码发送失败，请稍后重试'
+    feedback.value = ''
   }
 }
 
@@ -440,6 +439,9 @@ async function requestVerification(): Promise<void> {
 }
 
 async function resendVerification(): Promise<void> {
+  if (verificationSubmitting.value) {
+    return
+  }
   await runProtectedAction(
     auth,
     '/pages/land-demand/index',
@@ -448,7 +450,7 @@ async function resendVerification(): Promise<void> {
 }
 
 function closeVerification(): void {
-  if (submitting.value || verificationSubmitting.value) {
+  if (verificationSubmitting.value) {
     return
   }
   verificationVisible.value = false
@@ -458,7 +460,7 @@ function closeVerification(): void {
 
 async function submitVerificationCodeAuthorized(): Promise<void> {
   const currentChallenge = challenge.value
-  if (!currentChallenge || submitting.value) {
+  if (!currentChallenge || verificationSubmitting.value) {
     return
   }
   if (!/^\d{6}$/.test(verificationCode.value)) {
@@ -467,13 +469,11 @@ async function submitVerificationCodeAuthorized(): Promise<void> {
   }
   verificationSubmitting.value = true
   verificationError.value = ''
-  feedback.value = '正在核验并提交，请稍候…'
   verifyCodeMutation.reset()
   saveMutation.reset()
   updateMutation.reset()
   try {
     await nextTick()
-    await new Promise<void>(resolve => setTimeout(resolve, 0))
     const record = await submitController.submitCode(
       currentChallenge.phone,
       verificationCode.value,
@@ -620,9 +620,9 @@ async function editDetail(): Promise<void> {
         @duration-end="saveErrorNotice = ''"
         @close-btn-click="saveErrorNotice = ''"
       />
-      <AppLoading v-if="query.isPending || !ready" />
+      <AppLoading v-if="queryPending || !ready" />
       <AppError
-        v-else-if="query.isError"
+        v-else-if="queryFailed"
         title="填报信息加载失败"
         :message="queryErrorMessage"
       />
@@ -638,46 +638,59 @@ async function editDetail(): Promise<void> {
           <text>当前第 {{ currentStep }} 步，共 5 步；切换步骤时会保留本地编辑内容</text>
         </view>
         <view class="land-demand-page__form">
-          <BasicInfoStep
-            v-if="currentStep === 1"
-            id="basic-info-step"
-            :form="form"
-            :errors="errors"
-            @change="changeForm"
-          />
-          <LandInfoStep
-            v-else-if="currentStep === 2"
-            id="land-info-step"
-            :form="form"
-            :errors="errors"
-            @change="changeForm"
-          />
-          <ProjectInfoStep
-            v-else-if="currentStep === 3"
-            id="project-info-step"
-            :form="form"
-            :errors="errors"
-            @change="changeForm"
-          />
-          <FinanceContactStep
-            v-else-if="currentStep === 4"
-            id="finance-contact-step"
-            :form="form"
-            :errors="errors"
-            @change="changeForm"
-          />
-          <ReviewStep
-            v-else
-            id="review-step"
-            :form="form"
-            :accepted="accepted"
-            :acceptance-error="acceptanceError || ''"
-            :submitting="submitting"
-            :readonly="viewOnly"
-            @edit="goToStep"
-            @accept="setAccepted"
-            @submit="requestVerification"
-          />
+          <view :hidden="viewOnly || currentStep !== 1">
+            <BasicInfoStep
+              id="basic-info-step"
+              :form="form"
+              :errors="errors"
+              :scroll-request="scrollRequest"
+              :active="!viewOnly && currentStep === 1"
+              @change="changeForm"
+            />
+          </view>
+          <view :hidden="viewOnly || currentStep !== 2">
+            <LandInfoStep
+              id="land-info-step"
+              :form="form"
+              :errors="errors"
+              :scroll-request="scrollRequest"
+              :active="!viewOnly && currentStep === 2"
+              @change="changeForm"
+            />
+          </view>
+          <view :hidden="viewOnly || currentStep !== 3">
+            <ProjectInfoStep
+              id="project-info-step"
+              :form="form"
+              :errors="errors"
+              :scroll-request="scrollRequest"
+              :active="!viewOnly && currentStep === 3"
+              @change="changeForm"
+            />
+          </view>
+          <view :hidden="viewOnly || currentStep !== 4">
+            <FinanceContactStep
+              id="finance-contact-step"
+              :form="form"
+              :errors="errors"
+              :scroll-request="scrollRequest"
+              :active="!viewOnly && currentStep === 4"
+              @change="changeForm"
+            />
+          </view>
+          <view :hidden="!viewOnly && currentStep !== 5">
+            <ReviewStep
+              id="review-step"
+              :form="form"
+              :accepted="accepted"
+              :acceptance-error="acceptanceError || ''"
+              :submitting="submitting"
+              :readonly="viewOnly"
+              @edit="goToStep"
+              @accept="setAccepted"
+              @submit="requestVerification"
+            />
+          </view>
           <view v-if="viewOnly" class="land-demand-page__detail-actions">
             <t-button
               data-testid="detail-back-home"
@@ -745,19 +758,12 @@ async function editDetail(): Promise<void> {
         :visible="verificationVisible"
         :challenge="challenge"
         :code="verificationCode || ''"
-        :loading="submitting || verificationSubmitting"
+        :loading="verificationSubmitting"
         :error="verificationError || ''"
         @change="verificationCode = $event"
         @close="closeVerification"
         @resend="resendVerification"
         @submit="submitVerificationCode"
-      />
-      <t-loading
-        v-if="verificationSubmitting"
-        data-testid="verification-submit-loading"
-        fullscreen
-        size="56rpx"
-        text="正在提交"
       />
       <t-loading
         v-if="returningToHome"
@@ -775,8 +781,12 @@ async function editDetail(): Promise<void> {
         text="正在暂存"
       />
       <PageTransitionLoading
-        :visible="sendCodeMutation.isPending && !returningToHome && !verificationSubmitting"
+        :visible="sendCodePending && !returningToHome && !verificationSubmitting"
         text="正在发送验证码"
+      />
+      <PageTransitionLoading
+        :visible="verificationSubmitting"
+        text="正在提交"
       />
     </view>
   </PageShell>

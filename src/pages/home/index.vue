@@ -6,11 +6,12 @@ import AppError from '@/components/ui/app-error/index.vue'
 import AppIcon from '@/components/ui/app-icon/index.vue'
 import AppLoading from '@/components/ui/app-loading/index.vue'
 import PageTransitionLoading from '@/components/ui/page-transition-loading/index.vue'
+import { createLandDemandForm } from '@/features/land-demand/defaults'
 import { useLandDemandQuery } from '@/features/land-demand/queries'
-import { validateStep } from '@/features/land-demand/validation'
+import { resolveProgressStep, validateStep } from '@/features/land-demand/validation'
 import { formatDateTime } from '@/platform/date-time'
 import { usePageTransitionLoading } from '@/platform/page-transition'
-import { navigate, replace } from '@/router/navigation'
+import { replace } from '@/router/navigation'
 import { useProtectedPage } from '@/router/protected-page'
 import { useAuthStore } from '@/stores/auth'
 import { useLandDemandStore } from '@/stores/land-demand'
@@ -22,15 +23,26 @@ definePageJson({
 const auth = useAuthStore()
 const { authorized } = useProtectedPage('/pages/home/index')
 const enterprise = auth.enterprise
-const creditcode = enterprise.value?.creditcode ?? ''
+const creditcode = () => enterprise.value?.creditcode ?? ''
 const landDemandQuery = useLandDemandQuery(creditcode)
+const queryPending = landDemandQuery.isPending
+const queryFailed = landDemandQuery.isError
 const landDemandStore = useLandDemandStore()
 const { pending: transitioning, run: runTransition } = usePageTransitionLoading()
 const record = landDemandQuery.data
 const submitted = computed(() => record.value?.landusedemand === '1')
+const unsubmittedLegacyRecord = computed(() => record.value?.landusedemand === '0')
 const stepNumbers = [1, 2, 3, 4, 5] as const
 const selectedStep = ref<LandDemandStep | undefined>(undefined)
 const saveNotice = ref('')
+const refreshFromServer = ref(false)
+const validationForm = computed(() => {
+  const profile = enterprise.value
+  const currentRecord = record.value
+  return profile && currentRecord
+    ? createLandDemandForm(profile, currentRecord)
+    : landDemandStore.form.value
+})
 const draftReady = computed(() => Boolean(
   record.value
   || landDemandStore.hasLocalDraft.value
@@ -38,40 +50,66 @@ const draftReady = computed(() => Boolean(
 ))
 const currentProgressStep = computed(() => submitted.value
   ? 5
-  : Math.min(5, Math.max(1, landDemandStore.progressStep.value)))
+  : Math.min(
+      5,
+      Math.max(
+        landDemandStore.progressStep.value,
+        resolveProgressStep(validationForm.value),
+      ),
+    ))
 const queryErrorMessage = computed(() => landDemandQuery.error.value?.message ?? '请稍后重试')
 const incompleteSteps = computed<LandDemandStep[]>(() => {
   if (!draftReady.value) {
     return []
   }
 
-  return stepNumbers.filter(step => validateStep(landDemandStore.form.value, step).length > 0)
+  return stepNumbers.filter(step => validateStep(validationForm.value, step).length > 0)
 })
-const progressIncompleteSteps = computed<LandDemandStep[]>(() => {
-  return incompleteSteps.value
-})
+const progressIncompleteSteps = computed<LandDemandStep[]>(() => (
+  incompleteSteps.value.filter(step => step <= currentProgressStep.value)
+))
 const resumeStep = computed<LandDemandStep>(() => (
   progressIncompleteSteps.value.find(step => step <= currentProgressStep.value)
   ?? currentProgressStep.value as LandDemandStep
 ))
-const resumeStepIncomplete = computed(() => progressIncompleteSteps.value.includes(resumeStep.value))
+const completedSteps = computed<LandDemandStep[]>(() => (
+  submitted.value
+    ? []
+    : resumeStep.value > 1 && !progressIncompleteSteps.value.includes(resumeStep.value)
+      ? [resumeStep.value]
+      : []
+))
 const progressLabel = computed(() => submitted.value
   ? '已完成全部填报'
   : `已填写至第 ${resumeStep.value} 步 / 共 5 步`)
-let draftInitialized = false
+let initializedCreditcode = ''
+let initializedSource: 'local' | 'server' | undefined
 
 watchEffect(() => {
   const profile = enterprise.value
-  if (draftInitialized || !profile || landDemandQuery.isPending.value) {
+  if (!profile) {
+    initializedCreditcode = ''
+    initializedSource = undefined
     return
   }
-  landDemandStore.initializeFromLocalDraft(profile, record.value ?? undefined)
-  draftInitialized = true
+  const source = refreshFromServer.value ? 'server' : 'local'
+  if (
+    (initializedCreditcode === profile.creditcode && initializedSource === source)
+    || queryPending.value
+    || queryFailed.value
+  ) {
+    return
+  }
+  landDemandStore.initializeFromLocalDraft(profile, record.value ?? undefined, {
+    refreshFromServer: refreshFromServer.value,
+  })
+  initializedCreditcode = profile.creditcode
+  initializedSource = source
 })
 const enterpriseName = computed(() => enterprise.value?.businessname ?? '企业信息加载中')
 const enterpriseCreditcode = computed(() => enterprise.value?.creditcode ?? '--')
 const primaryLabel = computed(() => {
-  if (!record.value) {
+  if (!record.value || unsubmittedLegacyRecord.value) {
     return '开始填报'
   }
   if (record.value.landusedemand === '1') {
@@ -80,27 +118,22 @@ const primaryLabel = computed(() => {
   return selectedStep.value ? `进入第 ${selectedStep.value} 步` : `进入第 ${resumeStep.value} 步`
 })
 const statusLabel = computed(() => {
-  if (!record.value) {
+  if (!record.value || unsubmittedLegacyRecord.value) {
     return '尚未填报'
   }
   return record.value.landusedemand === '1' ? '已提交' : '草稿待完善'
 })
-const lastSubmittedAt = computed(() => {
-  const currentRecord = record.value
-  if (!currentRecord) {
-    return ''
-  }
-  const submittedAt = currentRecord.lastSubmittedAt
-    ?? (currentRecord.landusedemand === '1' ? currentRecord.updatetime : undefined)
-  return submittedAt ? formatDateTime(submittedAt) : ''
-})
+const lastUpdatedAt = computed(() => (
+  record.value ? formatDateTime(record.value.updatetime) : ''
+))
 
 onLoad((query) => {
   saveNotice.value = query?.notice === 'saved' ? '暂存成功' : ''
+  refreshFromServer.value = query?.freshLogin === '1'
 })
 
 async function openLandDemand(): Promise<void> {
-  await runTransition(() => navigate('/pages/land-demand/index', {
+  await runTransition(() => replace('/pages/land-demand/index', {
     step: selectedStep.value ?? (record.value ? resumeStep.value : undefined),
   }))
 }
@@ -112,7 +145,7 @@ async function viewLandDemand(): Promise<void> {
 async function editLandDemand(): Promise<void> {
   await runTransition(() => replace('/pages/land-demand/index', {
     mode: 'edit',
-    step: selectedStep.value ?? 5,
+    step: selectedStep.value ?? resumeStep.value,
   }))
 }
 
@@ -124,6 +157,7 @@ function selectStep(step: LandDemandStep): void {
 
 async function logout(): Promise<void> {
   await runTransition(async () => {
+    landDemandStore.clearForLogout(auth.enterprise.value?.creditcode)
     auth.clearSession()
     await replace('/pages/login/index')
   })
@@ -166,9 +200,9 @@ async function logout(): Promise<void> {
 
       <view class="page-shell__body">
         <view class="home__page-content">
-          <AppLoading v-if="landDemandQuery.isPending" />
+          <AppLoading v-if="queryPending" />
           <AppError
-            v-else-if="landDemandQuery.isError"
+            v-else-if="queryFailed"
             title="工作台信息加载失败"
             :message="queryErrorMessage"
           />
@@ -204,7 +238,10 @@ async function logout(): Promise<void> {
               <text class="u-section-heading">用地需求填报</text>
             </view>
 
-            <view class="home__product u-card">
+            <view
+              class="home__product u-card"
+              :class="{ 'home__product--submitted': submitted }"
+            >
               <view class="home__product-heading">
                 <view>
                   <text class="home__product-title">企业项目用地需求</text>
@@ -221,9 +258,9 @@ async function logout(): Promise<void> {
                   class="home__step"
                   :class="{
                     'home__step--active': number <= currentProgressStep,
-                    'home__step--completed': number < currentProgressStep,
+                    'home__step--completed': !submitted && number < currentProgressStep,
                     'home__step--current': number === resumeStep,
-                    'home__step--complete': number === resumeStep && !resumeStepIncomplete,
+                    'home__step--complete': !submitted && completedSteps.includes(number),
                     'home__step--incomplete': progressIncompleteSteps.includes(number),
                     'home__step--selected': number === (selectedStep || resumeStep),
                     'home__step--pending': number > currentProgressStep,
@@ -235,18 +272,18 @@ async function logout(): Promise<void> {
               </view>
               <text class="home__steps-progress">{{ progressLabel }}</text>
               <text
-                v-if="lastSubmittedAt"
-                data-testid="land-demand-last-submitted-at"
+                v-if="lastUpdatedAt"
+                data-testid="land-demand-last-updated-at"
                 class="home__submitted-at"
               >
-                上次提交：{{ lastSubmittedAt }}
+                上次更新时间：{{ lastUpdatedAt }}
               </text>
               <view v-if="submitted" class="home__product-actions">
                 <t-button
                   data-testid="land-demand-view"
                   theme="default"
                   block
-                  :disabled="landDemandQuery.isPending || transitioning"
+                  :disabled="queryPending || transitioning"
                   @tap="viewLandDemand"
                 >
                   查看详情
@@ -255,7 +292,7 @@ async function logout(): Promise<void> {
                   data-testid="land-demand-edit"
                   theme="primary"
                   block
-                  :disabled="landDemandQuery.isPending || transitioning"
+                  :disabled="queryPending || transitioning"
                   @tap="editLandDemand"
                 >
                   修改填报
@@ -267,7 +304,7 @@ async function logout(): Promise<void> {
                 class="home__product-action"
                 theme="primary"
                 block
-                :disabled="landDemandQuery.isPending || transitioning"
+                :disabled="queryPending || transitioning"
                 @tap="openLandDemand"
               >
                 {{ primaryLabel }}
@@ -553,6 +590,13 @@ async function logout(): Promise<void> {
   opacity: 0.5;
 }
 
+.home__step--pending .home__step-number {
+  color: $color-text-placeholder;
+  background: #edf1f7;
+  border-color: #f8fafc;
+  box-shadow: none;
+}
+
 .home__step--active:not(:last-child)::after {
   background: #83affb;
 }
@@ -562,6 +606,32 @@ async function logout(): Promise<void> {
 }
 
 .home__step--incomplete:not(:last-child)::after {
+  background: $color-error;
+}
+
+.home__step--pending:not(:last-child)::after {
+  background: #d7e0ed;
+}
+
+.home__product--submitted .home__step--active .home__step-number {
+  color: #fff;
+  background: $gradient-primary;
+  border-color: #dceaff;
+  box-shadow: $shadow-button;
+}
+
+.home__product--submitted .home__step--active:not(:last-child)::after {
+  background: #83affb;
+}
+
+.home__product--submitted .home__step--incomplete .home__step-number {
+  color: #fff;
+  background: $color-error;
+  border-color: $color-error-soft;
+  box-shadow: 0 6rpx 14rpx rgb(213 73 65 / 24%);
+}
+
+.home__product--submitted .home__step--incomplete:not(:last-child)::after {
   background: $color-error;
 }
 

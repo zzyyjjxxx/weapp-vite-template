@@ -24,7 +24,15 @@
     "skylineRenderEnable": false,
     "packNpmManually": true,
     "es6": true,
-    "minifyWXML": true
+    "minifyWXML": true,
+    "compileWorklet": false,
+    "uglifyFileName": false,
+    "uploadWithSourceMap": true,
+    "minifyWXSS": true,
+    "localPlugins": false,
+    "disableUseStrict": false,
+    "useCompilerPlugins": false,
+    "condition": false
   },
   "simulatorType": "wechat",
   "simulatorPluginLibVersion": {},
@@ -39,8 +47,8 @@
     "ignore": [],
     "include": [
       {
-        "type": "file",
-        "value": "assets/land-planning-hero.png"
+        "value": "assets/land-planning-hero.png",
+        "type": "file"
       }
     ]
   },

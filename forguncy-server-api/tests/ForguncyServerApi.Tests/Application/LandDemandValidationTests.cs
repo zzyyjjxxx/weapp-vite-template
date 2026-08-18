@@ -28,12 +28,9 @@ public sealed class LandDemandValidationTests
                 "DeployWeight",
                 "ExpectPark",
                 "ExpectTime",
-                "FinancingMoney",
-                "FinancingTime",
                 "Futureindustry",
                 "Investment",
                 "IsDeploy",
-                "IsFinancing",
                 "IsSpecialuse",
                 "Keyindustry",
                 "Landusedemand",
@@ -81,15 +78,29 @@ public sealed class LandDemandValidationTests
         var request = new LandDemandWriteRequest
         {
             Landusedemand = "2",
-            FinancingMoney = -1m,
             ExpectTime = "2026-13"
         };
 
         var errors = LandDemandValidation.Validate(request);
 
         Assert.DoesNotContain(errors, error => error.Field == "area");
-        Assert.Contains(errors, error => error.Field == "financing_money");
         Assert.Contains(errors, error => error.Field == "expect_time");
+    }
+
+    [Fact]
+    public void Validate_draft_accepts_excel_serial_and_missing_conditional_fields()
+    {
+        var request = new LandDemandWriteRequest
+        {
+            Landusedemand = "2",
+            ExpectTime = "45992",
+            IsDeploy = "1",
+            IsSpecialuse = "1"
+        };
+
+        var errors = LandDemandValidation.Validate(request);
+
+        Assert.Empty(errors);
     }
 
     [Fact]
@@ -118,41 +129,8 @@ public sealed class LandDemandValidationTests
         Assert.Contains("pred_rdex", fields);
         Assert.Contains("pred_unitenergy", fields);
         Assert.Contains("projectdata", fields);
-        Assert.Contains("is_financing", fields);
         Assert.Contains("contact", fields);
         Assert.Contains("phone", fields);
-    }
-
-    [Fact]
-    public void Validate_submission_requires_financing_fields_when_financing_is_one()
-    {
-        var request = ValidSubmittedRequest() with
-        {
-            IsFinancing = "1",
-            FinancingMoney = null,
-            FinancingTime = null
-        };
-
-        var errors = LandDemandValidation.Validate(request);
-
-        Assert.Contains("financing_money", errors.Select(error => error.Field));
-        Assert.Contains("financing_time", errors.Select(error => error.Field));
-    }
-
-    [Fact]
-    public void Validate_submission_requires_financing_fields_when_financing_is_affirmative_you()
-    {
-        var request = ValidSubmittedRequest() with
-        {
-            IsFinancing = " 有 ",
-            FinancingMoney = null,
-            FinancingTime = null
-        };
-
-        var errors = LandDemandValidation.Validate(request);
-
-        Assert.Contains("financing_money", errors.Select(error => error.Field));
-        Assert.Contains("financing_time", errors.Select(error => error.Field));
     }
 
     [Fact]
@@ -189,14 +167,12 @@ public sealed class LandDemandValidationTests
         var request = ValidSubmittedRequest() with
         {
             BuildingArea = -1m,
-            FinancingMoney = 100000000000000m,
             PredYs = 100000000000000m
         };
 
         var errors = LandDemandValidation.Validate(request);
 
         Assert.Contains(errors, error => error.Field == "building_area");
-        Assert.Contains(errors, error => error.Field == "financing_money");
         Assert.Contains(errors, error => error.Field == "pred_ys");
     }
 
@@ -208,32 +184,17 @@ public sealed class LandDemandValidationTests
             BuildingArea = 99999999.99m,
             DeployHeight = 99999999.99m,
             DeployWeight = 99999999.99m,
-            FinancingMoney = decimal.Parse("99999999999999.999999", CultureInfo.InvariantCulture),
             Investment = decimal.Parse("99999999999999.999999", CultureInfo.InvariantCulture),
             PredTax = decimal.Parse("99999999999999.999999", CultureInfo.InvariantCulture),
             PredRdex = decimal.Parse("99999999999999.999999", CultureInfo.InvariantCulture),
             PredYs = decimal.Parse("99999999999999.999999", CultureInfo.InvariantCulture),
             PredUnitenergy = decimal.Parse("99999999999999.999999", CultureInfo.InvariantCulture),
-            ExpectTime = "2026-08",
-            FinancingTime = "2027-12"
+            ExpectTime = "2026-08"
         };
 
         var errors = LandDemandValidation.Validate(request);
 
         Assert.Empty(errors);
-    }
-
-    [Fact]
-    public void Validate_rejects_financing_money_that_exceeds_decimal_20_6_precision()
-    {
-        var request = ValidSubmittedRequest() with
-        {
-            FinancingMoney = decimal.Parse("99999999999999.9999999", CultureInfo.InvariantCulture)
-        };
-
-        var errors = LandDemandValidation.Validate(request);
-
-        Assert.Contains(errors, error => error.Field == "financing_money");
     }
 
     private static LandDemandWriteRequest ValidSubmittedRequest() =>
@@ -258,9 +219,6 @@ public sealed class LandDemandValidationTests
             PredRdex = 300m,
             PredUnitenergy = 15m,
             Projectdata = "Build a new production line.",
-            IsFinancing = "0",
-            FinancingMoney = null,
-            FinancingTime = null,
             Contact = "Alice",
             Office = "General Manager",
             Phone = "13800000000",

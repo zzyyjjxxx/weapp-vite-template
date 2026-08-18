@@ -120,6 +120,10 @@ export function createPersistencePlugin(storage: StorageAdapter) {
         return
       }
       sessionClearRevision = nextSessionClearRevision
+      if (!session) {
+        storage.remove(AUTH_STORAGE_KEY)
+        return
+      }
       storage.set<PersistedAuthStateV1>(AUTH_STORAGE_KEY, {
         version: 1,
         session,

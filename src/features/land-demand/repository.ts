@@ -18,6 +18,7 @@ export interface LandDemandRepository {
   getDraft: (creditcode: string) => LandDemandDraft | undefined
   setDraft: (creditcode: string, draft: LandDemandDraft) => void
   removeDraft: (creditcode: string) => void
+  clearDrafts: (currentCreditcode?: string) => void
   sendCode: (phone: string) => Promise<VerificationChallenge>
   verifyCode: (phone: string, code: string) => Promise<void>
 }
@@ -42,6 +43,8 @@ function recordKey(creditcode: string): string {
 function draftKey(creditcode: string): string {
   return `draft:land-demand:${creditcode}`
 }
+
+const DRAFT_KEY_PREFIX = 'draft:land-demand:'
 
 function verificationKey(phone: string): string {
   return `mock:verification:${phone}`
@@ -162,6 +165,18 @@ export function createMockLandDemandRepository(options: {
 
     removeDraft(creditcode) {
       storage.remove(draftKey(creditcode))
+    },
+
+    clearDrafts(currentCreditcode) {
+      if (currentCreditcode) {
+        storage.remove(draftKey(currentCreditcode))
+      }
+
+      for (const key of storage.keys?.() ?? []) {
+        if (key.startsWith(DRAFT_KEY_PREFIX)) {
+          storage.remove(key)
+        }
+      }
     },
 
     async sendCode(phone) {

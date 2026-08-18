@@ -101,6 +101,31 @@ public sealed class SqlSugarPersistenceTests
     }
 
     [Fact]
+    public void Enterprise_phone_lookup_targets_landusedemand_info_and_phone()
+    {
+        using var client = AuthSqlSugarClientFactory.Create("Server=localhost;Database=synthetic;User=root;Password=synthetic;");
+
+        var buildPhoneLookupQuery = typeof(EnterpriseRepository).GetMethod(
+            "BuildPhoneLookupQuery",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(buildPhoneLookupQuery);
+
+        var query = buildPhoneLookupQuery!.Invoke(null, new object[] { client, "91330200SYNTHETIC" });
+        Assert.NotNull(query);
+        var toSql = query!.GetType().GetMethod("ToSql", Type.EmptyTypes);
+        Assert.NotNull(toSql);
+        var sqlResult = toSql!.Invoke(query, null);
+        Assert.NotNull(sqlResult);
+        var keyProperty = sqlResult!.GetType().GetProperty("Key");
+        Assert.NotNull(keyProperty);
+        var sql = Assert.IsType<string>(keyProperty!.GetValue(sqlResult));
+
+        Assert.Contains("landusedemand_info", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("phone", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("creditcode", sql, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void LandDemand_record_maps_to_the_real_landusedemand_info_columns()
     {
         var table = typeof(LandDemandRecord).GetCustomAttribute<SugarTable>();
@@ -189,9 +214,6 @@ public sealed class SqlSugarPersistenceTests
             PredRdex = 300m,
             PredUnitenergy = 15m,
             Projectdata = "Build a new production line.",
-            IsFinancing = "0",
-            FinancingMoney = null,
-            FinancingTime = null,
             Contact = "Alice",
             Office = "General Manager",
             Phone = "13800000000",
@@ -201,7 +223,7 @@ public sealed class SqlSugarPersistenceTests
         var buildUpdateCommand = typeof(LandDemandRepository).GetMethod("BuildUpdateCommand", BindingFlags.NonPublic | BindingFlags.Static);
         Assert.NotNull(buildUpdateCommand);
 
-        var command = buildUpdateCommand!.Invoke(null, new object[] { client, "91330200SYNTHETIC", request, "2026-08-06 10:20:30", "91330200SYNTHETIC" });
+        var command = buildUpdateCommand!.Invoke(null, new object[] { client, "91330200SYNTHETIC", request, "46240.4309027778", "91330200SYNTHETIC" });
         Assert.NotNull(command);
         var toSql = command!.GetType().GetMethod("ToSql", Type.EmptyTypes);
         Assert.NotNull(toSql);

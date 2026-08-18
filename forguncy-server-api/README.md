@@ -82,14 +82,16 @@ parsing as an oracle.
 
 The getinfo route resolves the enterprise profile from `m_preliminary_list`
 and joins the county name through `m_preliminary_list.county` to
-`yj_regioninfo.id`. It returns exactly these four fields and nothing else:
+`yj_regioninfo.id`. It also reads the saved enterprise phone from
+`landusedemand_info.phone`. It returns these five fields:
 
 ```json
 {
   "businessname": "<enterprise-name>",
   "creditcode": "<credit-code>",
   "county": "<county-name>",
-  "region": "<township-or-region>"
+  "region": "<township-or-region>",
+  "phone": "<saved-phone-or-empty-string>"
 }
 ```
 
@@ -101,7 +103,7 @@ never updates internal columns.
 
 The three land-demand routes operate on the enterprise's filing record in
 `landusedemand_info`, scoped by the access token identity. The write JSON
-accepts exactly the 26 approved writable fields; identity, audit, and internal
+accepts exactly the 23 approved writable fields; identity, audit, and internal
 property names (for example `id`, `updatetime`, `updateuser`,
 `region_remark`, `county_isrecommend`, `reviewstatus`, and
 `review_opinion`) are rejected with `400 invalid_request` before any
@@ -113,8 +115,15 @@ enforces the conditional rules, decimal precision, and units (万元 for
 `investment`, `pred_ys`, `pred_tax`, `pred_rdex`; 万元/吨标煤 for
 `pred_unitenergy`) when a record is submitted.
 
-The query and both write routes return the saved filing with exactly the 31
-fields below, including `updatetime` formatted as `yyyy-MM-dd HH:mm:ss`.
+For backward compatibility, an existing query record may still contain
+`landusedemand=0`. The mini-program treats that legacy value as unsubmitted,
+keeps the existing row for editing, and sends `1` or `2` on its first write;
+new write requests continue to accept only `1` or `2`.
+
+The query and both write routes return the saved filing with exactly the 28
+fields below. `updatetime` is generated for every add, draft save, update, and
+submission, and is stored and returned as a string containing an Excel/OLE
+Automation date serial.
 
 ### Land-demand response JSON
 
@@ -132,12 +141,9 @@ fields below, including `updatetime` formatted as `yyyy-MM-dd HH:mm:ss`.
   "deploy_weight": 56.78,
   "expect_park": "Synthetic Park",
   "expect_time": "2026-12",
-  "financing_money": 100,
-  "financing_time": "2026-12",
   "futureindustry": "Synthetic Direction",
   "investment": 12345678901234.123456,
   "is_deploy": "1",
-  "is_financing": "0",
   "is_specialuse": "1",
   "keyindustry": "Synthetic Track",
   "landusedemand": "1",
@@ -150,7 +156,7 @@ fields below, including `updatetime` formatted as `yyyy-MM-dd HH:mm:ss`.
   "project_hydm": "C3990",
   "projectdata": "Synthetic project",
   "region": "330212000000",
-  "updatetime": "2026-08-06 12:34:56"
+  "updatetime": "46240.5242592593"
 }
 ```
 
@@ -167,12 +173,9 @@ fields below, including `updatetime` formatted as `yyyy-MM-dd HH:mm:ss`.
   "deploy_weight": 56.78,
   "expect_park": "Synthetic Park",
   "expect_time": "2026-12",
-  "financing_money": 100,
-  "financing_time": "2026-12",
   "futureindustry": "Synthetic Direction",
   "investment": 12345678901234.123456,
   "is_deploy": "1",
-  "is_financing": "0",
   "is_specialuse": "1",
   "keyindustry": "Synthetic Track",
   "landusedemand": "1",

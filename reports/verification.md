@@ -1989,3 +1989,1280 @@ valid enterprise test account and a logged-in Developer Tools service port.
 - The only merge conflict was `reports/verification.md`; local Mini Program verification records and the main-branch Forguncy API verification records were both preserved. No conflict markers or unmerged paths remain.
 - The pre-existing local UI changes were restored after the merge and remain uncommitted in the same five files; no local source change was overwritten.
 - Post-merge checks passed: `pnpm test` (39 files, 186 tests), `pnpm typecheck`, `pnpm lint`, `pnpm stylelint`, `pnpm verify:generated-runtime`, `pnpm build` (785 KB main package), and `git diff --check`.
+
+## Latest main sync and UI/API compatibility verification (2026-08-10, actual results)
+
+- Fetched the latest `origin/main` (`359aa2e`) and merged it into
+  `codex/enterprise-api-integration` with merge commit `5a150de`. The only
+  merge conflict was this verification report; both histories were retained.
+- Preserved the user-configured AppID and DevTools project settings. The
+  effective mini-program root is `dist/`.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| `pnpm install --frozen-lockfile` | 0 | Lockfile up to date; install and prepare completed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm test` | 0 | 42 files, 194 tests passed |
+| `pnpm test:coverage` | 0 | 42 files, 194 tests; 75.71% statements, 70.00% branches, 77.77% functions, 76.26% lines |
+| `pnpm build` | 0 | WeChat build passed; main package 801 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| Focused HTTP adapter tests | 0 | 3 files, 8 tests passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+## Live DevTools verification of workbench progress (2026-08-13, actual results)
+
+- Connected to the current `e50c` checkout through WeChat DevTools automation, using AppID `wx491b28d7d178edbe`, page `pages/home/index`, SDK `3.17.0`, and the iPhone 12/13 Pro simulator.
+- Before clearing the DevTools compile cache, the runtime page data showed `progressLabel=已填写至第 1 步 / 共 5 步`, step 1 active, and steps 2-5 pending even though the loaded form contained step 1 and step 2 values plus `investment=8000` and `project_hydm=2110`.
+- Cleared only the target project's DevTools `compile` cache, closed and reopened only `C:\Users\hp\.codex\worktrees\e50c\weapp-vite-template`, then started one automation session on port `10107`.
+- After the reload, the live runtime showed `progressLabel=已填写至第 3 步 / 共 5 步`, step 1 and step 2 `home__step--completed`, step 3 `home__step--current home__step--incomplete`, steps 4-5 `home__step--pending`, and the button label `进入第 3 步`.
+- This confirms the remaining gray-step report was caused by a stale WeChat DevTools compile cache, not by the API record or progress derivation source. Live screenshot: `.tmp/devtools-home-progress.png`.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| `cli.bat cache --clean compile --project <e50c>` | 0 | Target project compile cache cleared; Storage was not cleared |
+| `cli.bat close/open --project <e50c>` | 0 | Only the target project was closed and reopened |
+| `cli.bat auto --project <e50c> --auto-port 10107` | 0 | Automation session started with AppID `wx491b28d7d178edbe` |
+| Direct Automator live page read | 0 | Home runtime classes and progress label matched expected step-3 state |
+| Direct Automator screenshot | 0 | `.tmp/devtools-home-progress.png` created |
+
+## Restore step five from a complete server draft after logout (2026-08-12, actual results)
+
+- The logout flow intentionally clears local drafts. After a fresh login, a server-side draft (`landusedemand=2`) therefore has no local `currentStep` metadata and previously defaulted to step 1 even when all submission fields were already saved.
+- The land-demand Store now derives step 5 from a complete server draft using the existing `validateSubmission` source of truth. Submitted records continue to open at step 5, and incomplete drafts retain the existing step-1 fallback unless local metadata is available.
+- The local API record for the user-provided test account was inspected without recording credentials or tokens: status was `2` and all submission-required fields were present, matching the reported failure mode.
+- The generated Mini Program build is ready for manual DevTools compile. Live click-through was not claimed.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused Store/service tests | 0 | 2 files, 24 tests passed |
+| `pnpm test` | 0 | 43 files, 214 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 801 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+## Allow incomplete draft return to workbench (2026-08-13, actual results)
+
+- Returning to the workbench saves with `landusedemand=2`. The server now permits missing required and conditional fields for draft saves; final submission still validates them.
+- The frontend sends `expect_time` as an Excel/OLE serial, so server validation now accepts both the UI form `YYYY-MM` and the serialized date value. The database storage format remains unchanged.
+- Focused server validation tests: 15 passed; focused frontend tests: 40 passed.
+- `dotnet test .\ForguncyServerApi.sln --configuration Release --no-restore`: 245 tests passed.
+- `pnpm test`: 43 files passed, 216 tests passed.
+- `pnpm typecheck`, `pnpm lint`, `pnpm stylelint`, `pnpm build`, `pnpm verify:generated-runtime`, and `git diff --check`: passed. The last command emitted only expected LF-to-CRLF warnings.
+- Server DLL built at `forguncy-server-api/bin/Release/net472/ForguncyServerApi.dll`; no deployment or CustomApi restart was performed.
+- Live WeChat Developer Tools click-through was not run in this check.
+
+## Derive workbench progress from entered values (2026-08-13, actual results)
+
+- The workbench previously treated stale local `progressStep=1` as authoritative, so later steps remained gray even when their fields were already populated.
+- Added `resolveProgressStep` to derive reached progress from the actual form values; a complete form reaches step 5, and partial values advance to their corresponding step.
+- Workbench progress now considers the canonical server record when one exists, while the Store continues to preserve explicit navigation progress and red validation states.
+- Enterprise profile defaults for contact/phone do not alone mark step 4 as reached; explicit navigation or a complete form still does.
+- Focused validation/store/navigation tests: 3 files, 27 tests passed.
+- `pnpm test`: 43 files passed, 219 tests passed.
+- `pnpm typecheck`, `pnpm lint`, `pnpm stylelint`, `pnpm build`, `pnpm verify:generated-runtime`, and `git diff --check`: passed. The last command emitted only expected LF-to-CRLF warnings.
+- Live WeChat Developer Tools click-through was not run in this check.
+
+## Derive draft progress from a complete form (2026-08-13, actual results)
+
+- A complete draft could retain stale local `currentStep/progressStep=1`, so the workbench displayed only step 1 even though all fields were valid.
+- The Store now promotes `progressStep` to 5 when the persisted or restored draft passes the full submission validation; the currently viewed step is preserved.
+- Drafts with missing or invalid fields continue to use their saved progress metadata and keep the existing red-step validation behavior.
+- Focused Store/navigation tests: 2 files, 18 tests passed.
+- `pnpm test`: 43 files passed, 218 tests passed.
+- `pnpm typecheck`, `pnpm lint`, `pnpm stylelint`, `pnpm build`, `pnpm verify:generated-runtime`, and `git diff --check`: passed. The last command emitted only expected LF-to-CRLF warnings.
+- Live WeChat Developer Tools click-through was not run in this check.
+
+## Normalize generic field validation text (2026-08-11, actual results)
+
+- A generic runtime message of `error` is now normalized to `此项必填` before
+  it is rendered by any of the four editable land-demand steps.
+- Numeric-format and other specific validation messages remain unchanged.
+- The rebuilt vendor bundle contains the normalization helper and the required
+  field message; DevTools must compile the rebuilt current-root `dist/` before
+  the change is visible.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused validation/wizard tests | 0 | 2 files, 37 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 808 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| Developer Tools compile-cache clean/open | 0 | Current `e50c` project reopened with AppID `wxf24f20c5412e64f7` |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+### Local HTTP API compatibility
+
+The local service at `http://localhost:17163/` was reachable. Read-only
+authenticated compatibility checks passed for the supplied local test account:
+
+| Request | Result |
+| --- | --- |
+| `POST /customapi/enterpriseapi/login` | HTTP 200; access and refresh token fields returned |
+| `GET /customapi/enterpriseapi/getinfo` | HTTP 200; enterprise information returned |
+| `POST /customapi/enterpriseapi/refresh` | HTTP 200; refreshed token fields returned |
+| `GET /customapi/landdemandapi/getlanddemand` | HTTP 200; land-demand record fields returned |
+| Unauthenticated `GET /customapi/enterpriseapi/getinfo` | HTTP 401 with `invalid_token`, confirming protection |
+
+No add/update land-demand request, SMS request, or production write was made.
+Captcha send/verify remains on the deterministic local Mock as required.
+
+### WeChat Developer Tools runtime compatibility
+
+- Official DevTools CLI login status was true and the project was opened with
+  the configured AppID and `dist/` root.
+- Direct runtime inspection connected successfully. The live flow reached
+  `pages/login/index` → `pages/home/index` and then
+  `pages/land-demand/index` after authenticated login.
+- Runtime nodes for the login form, wizard actions, and verification dialog
+  were found. Generated WXML included the three TDesign dialog native action
+  props (`cancel-btn` and `confirm-btn`); no missing `index.wxml` or AppID
+  error appeared in the current runtime session.
+- `.tmp/e2e-login.png` was generated by the current E2E run and visually
+  inspected as a rendered login page with the form and login button visible.
+- Runtime console output contained no error-level entries. Remaining warnings
+  were the deprecated `wx.getSystemInfoSync` notice and an iOS date-format
+  compatibility warning.
+
+The full `pnpm test:e2e` suite is not green yet: it started 9 tests, the first
+failed after 16.9 seconds waiting for `/pages/home/index`, and the remaining
+8 were not run. `e2e/land-demand.spec.ts` still uses the old `demo` /
+`demo123` fixture while the application is configured for the local HTTP
+authentication adapter. The real authenticated read-only flow passed through
+the DevTools runtime, but the stale fixture must be replaced with a dedicated
+non-production test account before write-path E2E tests can run safely.
+
+The shared-launch helper could not run because the repository has no `tsx`
+package, `wv ide info` timed out, and the separate `wv screenshot` command
+timed out while connecting to its automator WebSocket. Official CLI plus the
+direct runtime connection did succeed, so these are tooling-path limitations,
+not a claim that the full E2E suite passed.
+
+## Continue-filling navigation runtime fix (2026-08-10, actual results)
+
+- Reproduced the reported flow in the current WeChat Developer Tools project:
+  authenticated login succeeded, the home page query finished, and the
+  `land-demand-primary` node was not disabled, but tapping it left the app on
+  `pages/home/index`.
+- The generated WXML and event dispatcher were present. A differential runtime
+  check showed that the target page could be opened with native `navigateTo`,
+  while the home page's typed `navigate`/router `push` path did not complete in
+  this DevTools runtime session.
+- Changed only `src/pages/home/index.vue`: the primary “继续填写” action now
+  uses the existing typed `replace` navigation (native `redirectTo` path),
+  preserving the existing query parameter and transition guard.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused navigation and transition tests | 0 | 3 files, 8 tests passed |
+| `pnpm build` | 0 | WeChat build passed; main package 801 KB |
+| `pnpm typecheck` | 0 | App and E2E checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm test` | 0 | 42 files, 194 tests passed |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+
+After the rebuild and DevTools refresh, the same authenticated account flow
+reached `pages/land-demand/index?step=1` by tapping the real TDesign button.
+The filling page reported `ready=true`, `currentStep=1`, and a successful
+read-only land-demand query. No add/update, SMS, or other write request was
+made during this fix verification. The runtime screenshot was saved at
+`.tmp/continue-filling-fixed.png` and visually confirmed the first-step form,
+enterprise fields, and `下一步` action.
+
+The prior full E2E limitation remains unchanged: `e2e/land-demand.spec.ts`
+still contains the old `demo` / `demo123` credentials, so it must be given a
+dedicated non-production test account before the write-path suite can be
+accepted as fully green.
+
+## Remove login prefill and input/button coverage audit (2026-08-10, actual results)
+
+- Removed the login page's prefilled username and password. Both reactive
+  values now initialize to empty strings in `src/pages/login/index.vue`.
+- Kept `demo` / `demo123` only inside the Mock Repository and legacy E2E
+  fixture for offline tests; they are no longer displayed or submitted by the
+  login page on initial render.
+- Added source-contract assertions preventing either login field from
+  regressing to the old defaults.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused product-navigation test | 0 | 1 file, 4 tests passed |
+| `pnpm typecheck` | 0 | App and E2E checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm test` | 0 | 42 files, 194 tests passed |
+| `pnpm build` | 0 | WeChat build passed; main package 801 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+
+The generated `dist/pages/login/index.js` was checked and contains empty
+initial values. The current DevTools App Service still reported the old
+`demo` values after `reLaunch`; closing/reopening/auto-connecting the IDE did
+not refresh that in-memory session, and the explicit cache-clean compile
+command timed out. Therefore no live DevTools claim is made for the blank
+initial state until the user clicks “编译”/refreshes the current project.
+
+Coverage boundary: the source contains 96 stable `data-testid` hooks and the
+E2E suite references 41 locators. Unit/static tests cover field contracts,
+validation, conditional visibility, event forwarding, wizard navigation,
+dialogs, and the main button actions. Real DevTools checks previously verified
+the username/password input controls, login button, authenticated home query,
+“继续填写” button, and first-step rendering. The full E2E suite has not
+completed with the HTTP account because its fixture still uses the old demo
+credentials and later cases perform writes; consequently every input and
+button has not been individually accepted through a live DevTools click.
+
+## Authenticated entry redirect and session refresh-path fix (2026-08-10, actual results)
+
+- The application entry remains `pages/login/index`, so a cold app start or
+  Developer Tools refresh can initially resolve to the login route even when
+  `land-demand.auth` contains a valid session. The login page now checks
+  `ensureActiveSession()` during both `onLoad` and `onShow`, then replaces the
+  route with the validated `returnTo` target (default `/pages/home/index`).
+- The global router guard now also redirects an already authenticated request
+  for `/pages/login/index` to `/pages/home/index`. The page-level check remains
+  as a fallback for direct native page launches that bypass the router guard.
+- Expired sessions are still cleared by `ensureActiveSession()` and are not
+  treated as authenticated. The existing refresh repository remains available
+  for the separate token-refresh flow; this change addresses the reported
+  entry-route redirect and does not claim automatic refresh-token renewal.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused auth/navigation tests | 0 | 4 files, 16 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm test` | 0 | 42 files, 194 tests passed |
+| `pnpm build` | 0 | WeChat build passed; main package 801 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| Generated artifact scan | 0 | `dist/pages/login/index.js` contains the page redirect; `dist/app.js` contains the login-route guard |
+
+The initial automated `weapp_devtools_connect` attempt for this worktree
+timed out after 30 seconds. The user subsequently confirmed that the compiled
+runtime now works. No additional live DevTools claim is made beyond that user
+confirmation; the generated artifacts and automated checks above are recorded
+as independently verified evidence.
+
+## Clear land-demand draft on logout and re-query after re-login (2026-08-10, actual results)
+
+- Logout now calls `LandDemandStore.clearForLogout()` before clearing the auth
+  session. It removes local `draft:land-demand:*` entries and resets the
+  in-memory form, step, progress, record and dirty flags.
+- `useLandDemandQuery` now accepts a string or a credit-code resolver. The home,
+  wizard and success pages resolve the current authenticated enterprise code at
+  query-option time, so clearing the session disables the old private query
+  instead of refetching it with a stale code; a later login creates the new
+  account-scoped query and fetches again.
+- Server-side saved records are not deleted on logout. A record already saved as
+  a server draft or submitted record can still be returned by the next login;
+  only the local editable draft cache is cleared.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused store/query/navigation tests | 0 | 3 files, 24 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm test` | 0 | 42 files, 196 tests passed |
+| `pnpm build` | 0 | WeChat build passed; main package 802 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+## Raise the WeChat preview source-size limit (2026-08-11, actual results)
+
+- The reported `80051` error was caused by WeChat Developer Tools enforcing the
+  2MB preview/real-device-debug source limit: the current preview reported
+  `2071KB`.
+- Set `setting.bigPackageSizeSupport` to `true` in
+  `project.private.config.json`. This enables the Developer Tools 4MB preview
+  limit without changing application runtime code or the generated package.
+- The current build still reports an 810KB main package. The 2MB error is the
+  Developer Tools preview source check, not a missing-page or API error.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Private config JSON parse | 0 | `bigPackageSizeSupport=true`, `libVersion=3.17.0` |
+| `pnpm build` | 0 | WeChat build passed; main package 810 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget check passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+| `pnpm exec wv preview --project . --qr-format terminal` | blocked | Timed out after 64 seconds without a QR/result; live preview remains unverified |
+
+After reopening or refreshing the current repository root in Developer Tools,
+compile once and preview again. The corresponding UI option is “详情 → 本地
+设置 → 预览及真机调试时主包、分包体积上限调整为 4M”.
+
+## Expand verification resend button width (2026-08-11, actual results)
+
+- Increased the verification input's reserved right space from `96rpx` to
+  `136rpx`.
+- Increased the resend button wrapper from `88rpx` to `128rpx`, so the four
+  Chinese characters in `重新发送` render completely without covering the
+  verification input.
+- The generated WXSS contains both updated dimensions.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused review component test | 0 | 1 file, 5 tests passed |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 810 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+
+## Remove verification-error popup flash (2026-08-11, actual results)
+
+- The send-code and verify-code failures are handled by the existing
+  verification dialog. Their expected errors no longer reach the global Query
+  mutation error logger as `console.error`, so an invalid or expired code does
+  not create a second runtime-error surface.
+- The verification dialog now disables TDesign popup and overlay transitions
+  (`--td-popup-transition: none` and
+  `--td-overlay-transition-duration: 0ms`). Updating the error text therefore
+  keeps one dialog mounted instead of showing a short entering/leaving dialog.
+- The generated component WXML contains the fixed transition styles and the
+  page still contains one `VerificationDialog` instance. `dist/pages/login/index.wxml`
+  and `dist/pages/land-demand/index.wxml` both exist after the build.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused verification/query tests | 0 | 3 files, 37 tests passed |
+| `pnpm test` | 0 | 43 files, 208 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 810 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+| Current-root WeChat DevTools automator connect | blocked | Timed out after 15 seconds; live interaction remains unverified |
+
+## Stabilize the verification dialog error state (2026-08-11, actual results)
+
+- Short-code validation, incorrect-code responses, and expired-code responses
+  now update the dialog error state without passing the transient
+  `verificationSubmitting` value into the dialog input.
+- The error message node is always rendered with a fixed one-line height and
+  only toggles visibility/color. This prevents the TDesign center popup from
+  recalculating its size and position when the error state changes.
+- The page still guards duplicate verification/resend actions in script, so
+  removing the visual loading binding does not allow concurrent submissions.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused verification/review/wizard tests | 0 | 2 files, 35 tests passed |
+| `pnpm test` | 0 | 43 files, 207 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 810 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+| `mcp__weapp_vite__weapp_devtools_connect` | blocked | Timed out after 15 seconds; live click-through not verified |
+
+## Open the verification dialog when sending the code fails (2026-08-11, actual results)
+
+- The `mutation.failed` event in this path comes from the send-verification-code
+  mutation. Its previous catch branch only wrote page feedback, so no dialog
+  was opened when the Mock send-code operation rejected.
+- The failure branch now opens `VerificationDialog` as well as the success
+  branch, clears the stale code, and displays the mutation error inside the
+  dialog. The local verification-code Mock boundary is unchanged.
+- The generated page bundle contains `verificationVisible.value = true` in the
+  send-code failure branch and still binds `VerificationDialog` to the page.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused verification/review/wizard tests | 0 | 3 files, 44 tests passed |
+| `pnpm test` | 0 | 43 files, 207 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 809 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+| `mcp__weapp_vite__weapp_devtools_connect` | blocked | Timed out after 15 seconds; live click-through not verified |
+
+## Remove the verification-code error flash (2026-08-11, actual results)
+
+- The verification submit path no longer mounts a full-screen `t-loading`
+  overlay. That overlay was visible for the short time between setting
+  `verificationSubmitting` and receiving an incorrect-code response, which
+  caused the page to flash.
+- The extra `nextTick()`/`setTimeout(0)` render yield before verification was
+  removed. The dialog remains open on an incorrect code, keeps its error
+  message, and only disables the input/resend controls while the request is
+  pending.
+- The generated WXML contains the verification dialog loading binding but no
+  `verification-submit-loading` full-screen node.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused verification/review/wizard tests | 0 | 3 files, 43 tests passed |
+| `pnpm test` | 0 | 43 files, 206 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 809 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+Live WeChat Developer Tools click-through was not verified in this run; the
+current generated `dist/` must be compiled in the Developer Tools project
+bound to this repository root.
+
+## Show the short-code validation message on submit (2026-08-11, actual results)
+
+- The verification dialog no longer suppresses its submit event based on code
+  length or unrelated page mutation state. The page owns the submitting lock
+  and displays `请输入6位验证码` for short input.
+- The six-digit guard remains in the page and submit controller, so an invalid
+  code still never calls the verification API or persists the record.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused review/submit/wizard tests | 0 | 3 files, 43 tests passed |
+| `pnpm test` | 0 | 43 files, 206 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 809 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+## Put selector validation feedback inside its control (2026-08-10, actual results)
+
+- Input controls keep one external error node between the field label and the input, with `tips=""` so TDesign cannot render a second message below the input divider.
+- Selector and date controls now render their error through the `t-cell` description slot. The message is therefore below that control's title and above the control's own bottom divider, rather than between two adjacent controls.
+- Updated `SinglePicker` with an `error` prop and applied the same cell-description placement to park, transfer, special-use, financing, date, and industry selectors. Financing amount also now uses a dynamic error status.
+- The latest generated WXML was audited: `SinglePicker` errors are inside its description slot, direct `t-cell` errors use `field__error--inside-cell`, and the deploy-park checkbox has no accidental error prop.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused selector/source-contract tests | 0 | 2 files, 34 tests passed |
+| `pnpm test` | 0 | 42 files, 205 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 809 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+## Scroll only after failed Next validation (2026-08-11, actual results)
+
+- Conditional required-field validation now follows the visual order of the
+  land-demand step: `deploy_park` is emitted before `is_specialuse` and its
+  dependent `deploy_landtype` field.
+- Invalid-field scrolling is now driven by an explicit `scrollRequest` from
+  `goNext()`. Updating any input, picker, or conditional choice does not
+  trigger scrolling. A missing required field scrolls only after the user
+  clicks “下一步”.
+- Rebuilt `dist/` from the current `e50c` worktree. A fresh connection attempt
+  for this exact project path timed out after 15 seconds, so live Developer
+  Tools click-through remains unavailable; compile/refresh the current
+  repository root before checking the behavior.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused validation/scroll/wizard tests | 0 | 3 files, 36 tests passed |
+| `pnpm test` | 0 | 43 files, 206 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 810 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+The current Developer Tools window title is `weapp-vite-wevu-template`, and its
+file watcher is bound to the current `e50c` worktree. The live automator
+connection still times out; 37 stale `cli.bat auto` wrappers for this same
+worktree were identified and stopped without closing the Developer Tools main
+process. A manual Compile/Refresh is still required for runtime screenshot
+acceptance.
+
+## Place all validation feedback before its control (2026-08-10, actual results)
+
+- Runtime evidence showed that TDesign's dynamic `tips` appears below the
+  input separator. When another required field was also empty, the two
+  `此项必填` messages were adjacent and looked duplicated.
+- Removed dynamic field-level `tips` bindings. Every form error now renders
+  once before its matching input, picker, date picker, checkbox, textarea,
+  verification input, or confirmation checkbox. TDesign `status` remains
+  dynamic for input error styling.
+- The generated land-demand WXML now emits `tips=""` and a conditional
+  `field__error--before-control` block before each affected control.
+- The active `e50c` WXML was rebuilt and audited: the building-area block has
+  one error block before `t-input` and no error block after it. The old
+  `1498` and Desktop generated bundles still contain the previous after-control
+  error nodes and must not be loaded by Developer Tools.
+- A source audit covered all 29 validated form fields across basic information,
+  land demand, investment project, and finance/contact steps. Each field has
+  exactly one conditional error node, all use `field__error--before-control`,
+  and no maintained UI source has a dynamic `tips` binding.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused component tests | 0 | 2 files, 33 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm test` | 0 | 42 files, 204 tests passed |
+| `pnpm build` | 0 | WeChat build passed; main package 811 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+Live WeChat Developer Tools click-through remains unverified because the
+automator connection timed out. Compile/refresh the current worktree to load
+the rebuilt `dist/` output.
+
+## Attach land-demand validation feedback to its control (2026-08-10, actual results)
+
+- The screenshot was from `land-info-step.vue`, which still rendered the
+  validation text after the TDesign input or cell. Its bottom separator made
+  `此项必填` appear to belong to the following field.
+- Required numeric inputs now use TDesign's native `status="error"` and
+  `tips` properties, so the message is rendered inside the matching input
+  before its separator.
+- Picker, date-picker, and checkbox validation text now renders immediately
+  before the matching control with shared spacing. The same placement rule was
+  applied to the basic-information and finance-contact steps.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused component tests | 0 | 2 files, 33 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm test` | 0 | 42 files, 204 tests passed |
+| `pnpm build` | 0 | WeChat build passed; main package 803 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+Live WeChat Developer Tools click-through remains unverified because the
+automator connection timed out. Compile/refresh the current worktree to load
+the rebuilt `dist/` output.
+
+## Attach project validation feedback to its control (2026-08-10, actual results)
+
+- The red `此项必填` text was rendered as a separate node after the TDesign
+  control, so it appeared below the control's bottom separator and could be
+  mistaken for feedback for the next field.
+- Numeric project fields now pass validation feedback through TDesign's native
+  `status="error"` and `tips` properties, keeping the message inside the
+  corresponding input component.
+- Picker and textarea validation feedback now renders immediately before its
+  corresponding control, with shared spacing for the error block.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused project validation tests | 0 | 2 files, 32 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm test` | 0 | 42 files, 203 tests passed |
+| `pnpm build` | 0 | WeChat build passed; main package 803 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+Live WeChat Developer Tools click-through remains unverified because the
+automator connection timed out. Compile/refresh the current worktree to load
+the rebuilt `dist/` output.
+
+Live Developer Tools verification was not repeated in this cycle. The user
+reported that the runtime was usable after the preceding login-entry fix; the
+logout/draft-reset path still needs a manual click-through after compiling the
+current `dist` output.
+
+## Clear all local session cache before re-login (2026-08-10, actual results)
+
+- The logout boundary now removes `land-demand.auth` instead of leaving a
+  `{ session: null }` marker in WeChat Storage.
+- `LandDemandRepository.clearDrafts()` removes the current draft and enumerates
+  all `draft:land-demand:*` keys when the platform exposes storage keys. This
+  covers drafts left by an older account or an older runtime bundle.
+- The HTTP adapter delegates this cleanup to its local-draft adapter. It does
+  not delete `mock:land-demand:*` or server records: the real HTTP GET remains
+  the source of server-side saved data after the next login.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused storage/persistence/store/repository tests | 0 | 4 files, 29 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm test` | 0 | 42 files, 196 tests passed |
+| `pnpm build` | 0 | WeChat build passed; main package 803 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+| Generated artifact scan | 0 | `dist/app.js` contains `clearDrafts`; vendor runtime contains storage-key enumeration and draft cleanup |
+
+The current automated WeChat Developer Tools connection attempt timed out after
+15 seconds, so the logout/login click-through remains a manual acceptance step:
+compile the current repository root after this build, log in, log out, and
+confirm that `land-demand.auth` and every `draft:land-demand:*` key disappear.
+
+## Refresh an existing local draft from the fresh login response (2026-08-10, actual results)
+
+- The login redirect now appends a one-time `freshLogin=1` marker.
+- Home and editable land-demand pages use that marker only for the first query
+  after login. When an existing `draft:land-demand:{creditcode}` is present,
+  `LandDemandStore.initializeFromLocalDraft()` replaces its `form` with the
+  just-fetched `getlanddemand` form and writes the same key back with a new
+  `savedAt`; `currentStep` and `progressStep` are preserved.
+- Ordinary refreshes and normal navigation still restore local drafts, so
+  unsaved edits are not overwritten outside the fresh-login path.
+- The regression fixture reproduces `area: "1"` in Storage and
+  `area: "1fsafsaffa"` from `getlanddemand`; after fresh-login initialization
+  both the Store and Storage contain `area: "1fsafsaffa"`.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused draft/login-navigation/persistence tests | 0 | 3 files, 20 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm test` | 0 | 42 files, 198 tests passed |
+| `pnpm build` | 0 | WeChat build passed; main package 804 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+| Generated artifact scan | 0 | Login marker and server-refresh logic are present in generated page/vendor files |
+
+The automated Developer Tools connection remains unavailable due to its
+connection timeout. Manual acceptance still requires compiling this current
+worktree and confirming the existing draft key changes from the old form value
+to the latest `getlanddemand` response.
+
+## Fix home page stuck loading after login (2026-08-10, actual results)
+
+- The home, editable wizard and success pages no longer bind nested Query
+  `ComputedRef` values directly in templates. Query pending/error flags are
+  exposed as top-level page refs (`queryPending` and `queryFailed`); the
+  verification-code pending flag is exposed as `sendCodePending`.
+- The generated WXML now binds `wx:if` and button/overlay state to those
+  serializable top-level values. This prevents the home `AppLoading` branch
+  from remaining truthy after the `getlanddemand` query has completed.
+- A host-side login followed by the authenticated `getlanddemand` request
+  returned the expected enterprise record, including the current credit code,
+  area and `landusedemand` fields. No access token was written to the report.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused page/source-contract tests | 0 | 2 files, 30 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm test` | 0 | 42 files, 200 tests passed |
+| `pnpm build` | 0 | WeChat build passed; main package 805 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+| Generated WXML scan | 0 | Home uses `queryPending/queryFailed`; wizard uses `queryPending/queryFailed/sendCodePending`; success uses `queryPending/queryFailed` |
+
+The automated WeChat Developer Tools connection still timed out, so live
+click-through confirmation remains unavailable in this environment. Compile
+the current repository root and refresh once to load the rebuilt `dist/`
+output.
+
+## Guard validation during the start-filling transition (2026-08-10, actual results)
+
+- Fixed `hasValue()` so transient `undefined`/`null` fields and malformed
+  array fields are treated as empty values instead of reading `.length` from
+  `undefined`.
+- This covers the short interval where the authenticated land-demand Query
+  has completed but the Store form has not yet been initialized, as well as
+  the cleared form that exists briefly during logout.
+- Added a regression test that runs draft and step validation against an empty
+  transient form and verifies the required step-one fields are returned.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused validation/page tests | 0 | 2 files, 32 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm test` | 0 | 42 files, 201 tests passed |
+| `pnpm build` | 0 | WeChat build passed; main package 805 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+Live WeChat Developer Tools inspection remains unavailable because the
+automator connection and `pnpm open` both timed out. Compile/refresh the
+current worktree so the new `dist` output is loaded.
+
+## Runtime bundle path audit for the login validation error (2026-08-10, actual results)
+
+- The active source and generated bundle in `C:\Users\hp\.codex\worktrees\e50c\weapp-vite-template` contain the guarded implementation:
+  `Array.isArray(value) && value.length > 0`.
+- The old `C:\Users\hp\.codex\worktrees\1498\weapp-vite-template\dist` and the saved Desktop checkout still contain the old implementation that directly evaluates `value.length`.
+- The reported `getmainpackagebundle.js` stack therefore matches a stale or differently bound Developer Tools project, not the rebuilt `e50c` output. The `project.config.json` in the current root points its Mini Program root to `dist/` and uses appid `wxf24f20c5412e64f7`.
+
+| Check | Result |
+| --- | --- |
+| Current generated `hasValue` guard | Present in `dist/weapp-vendors/wevu-watch.js` (2026-08-10 15:38:47) |
+| Old worktree bundle audit | `1498` and Desktop checkout still have direct `value.length` |
+| `mcp__weapp_vite__weapp_devtools_connect` for current root | Timeout after 15 seconds; live binding not verified |
+| DevTools console capture | No active MCP session |
+
+## Empty land-demand record and progress-state colors (2026-08-10, actual results)
+
+- A GET response with HTTP status `404` is now treated as an empty land-demand record even when the response does not include the `land_demand_not_found` error code. This preserves the new-account flow; the network panel can still display the server's 404 status because the backend uses 404 to represent a missing record.
+- Progress state is now scoped to the reached range. Completed steps are green, the current unreached/active step is blue, reached incomplete steps are red, and steps after `progressStep` are gray. A new account starts at step 1, so step 1 is blue and steps 2–5 are gray.
+- The home page and the editable wizard use the same reached-range rule.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused HTTP/progress/navigation tests | 0 | 3 files, 34 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm test` | 0 | 42 files, 202 tests passed |
+| `pnpm build` | 0 | WeChat build passed; main package 803 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| Generated artifact scan | 0 | Status-only 404 handling and reached-range progress bindings are present in `dist/` |
+
+## Keep the read-only first step blue (2026-08-10, actual results)
+
+- Unsubmitted progress no longer treats step 1 as a completed step when later steps have been reached. The first step remains blue because it contains authenticated read-only identity information; only steps 2–4 can become green completed steps before submission.
+- The generated home page and wizard component both contain the `step > 1` completion guard, and the home generated WXSS contains the gray pending-node styling.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused progress/navigation tests | 0 | 2 files, 30 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm test` | 0 | 42 files, 202 tests passed |
+| `pnpm build` | 0 | WeChat build passed; main package 803 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+## Keep only the current complete step green (2026-08-11, actual results)
+
+- The filling-page progress rail no longer marks every step before
+  `progressStep` as green. Reached but non-current steps remain blue.
+- The current step is green only when it has no validation errors; an
+  incomplete current step remains red. Step 1 remains blue because it is the
+  read-only identity step.
+- The workbench progress card uses the same rule for its resume step, while a
+  submitted record continues to show all five steps as complete.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused wizard/progress/store tests | 0 | 3 files, 44 tests passed |
+| `pnpm test` | 0 | 43 files, 206 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 810 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget passed |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+## Guard transient validation props before TDesign rendering (2026-08-11, actual results)
+
+- The Developer Tools warning showed TDesign `input.status` and the custom
+  `SinglePicker.error` receiving `null` during the land-demand step's initial
+  or transition render.
+- The four editable step components now accept a transiently missing/null
+  `errors` prop, use `props.errors ?? []` for invalid-field scrolling, and use
+  `props.errors?.find(...)?.message ?? ''` for all string bindings. This keeps
+  the downstream TDesign and picker properties concrete instead of allowing a
+  failed template expression to become `null`.
+- The rebuilt generated component JavaScript contains both null-safe forms in
+  all four steps. The live DevTools console could not be re-read because the
+  current-root automator connection timed out after 15 seconds.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused wizard component contract | 0 | 1 file, 30 tests passed |
+| `pnpm test` | 0 | 43 files, 208 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 810 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| Generated null-safety scan | 0 | All four step bundles contain `props.errors?.find` and `props.errors ?? []` |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+| Current-root WeChat DevTools automator connect | blocked | Timed out after 15 seconds; live warning recheck remains unverified |
+
+## Keep wizard steps mounted during previous/next transitions (2026-08-11, actual results)
+
+- The latest runtime stack identifies `goPrevious -> goToStep` as the trigger.
+  The page used `v-if / v-else-if` for the five step components, so Wevu
+  destroyed the outgoing step and briefly propagated `null` into its typed
+  `SinglePicker.error` and TDesign `input.status` bindings.
+- All five step components now remain mounted and are hidden with native
+  `hidden` bindings. This removes the destroy/recreate boundary while keeping
+  only the current step visible. The four invalid-field scroll hooks accept an
+  active-step guard, so hidden steps cannot scroll to stale errors.
+- The generated page WXML contains five `hidden` step wrappers and no
+  step-switching `wx:if` boundary. Developer Tools was closed and reopened for
+  the current `e50c` project and compiled the new package at 11:45.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused wizard and invalid-field-scroll tests | 0 | 2 files, 31 tests passed |
+| `pnpm test` | 0 | 43 files, 208 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 811 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+## Refresh the Forguncy CustomApi runtime after invalid-request reports (2026-08-12, actual results)
+
+- The running local service was loading `C:\ProgramData\Forguncy\hp\8543\WebSite\CustomApi\ForguncyServerApi.dll` from 2026-08-07, while the current source had a different Release DLL built on 2026-08-12. This explains why the Mini Program could still receive the old `invalid_request` behavior after the frontend was rebuilt.
+- The old deployed DLL was backed up to `.tmp/ForguncyServerApi.before-update-20260812-154221.dll`, the current Release DLL was copied into the active Forguncy CustomApi directory, and the service was restarted.
+- The restarted service loaded the updated DLL path; the target SHA-256 matched the Release build. An unauthenticated probe returned the expected `401 {"error":"invalid_token"}`. No credentials or tokens were recorded.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| `dotnet test forguncy-server-api/ForguncyServerApi.sln --configuration Release --no-restore -p:ForguncyBin="C:\\Program Files\\Forguncy 8\\Website\\bin"` | 0 | 244 tests passed, 0 failed, 0 skipped |
+| Deployed DLL hash comparison | 0 | Active CustomApi DLL matches `bin\\Release\\net472\\ForguncyServerApi.dll` |
+| `GET http://localhost:17163/customapi/landdemandapi/getlanddemand` without token | 0 | Expected HTTP 401 `invalid_token` |
+| Live WeChat Developer Tools submit click-through | not run | The user must recompile the current project in DevTools and retry the verification dialog |
+| Developer Tools CLI close/open | 0 | Current `e50c` project reopened and compiled |
+| Current-root WeChat DevTools automator connect | blocked | Timed out after 10 seconds; interactive tap recheck remains unavailable |
+
+## Reopen the current DevTools project after compile-cache invalidation (2026-08-11, actual results)
+
+- The exact compile-cache directory for the current `e50c` project was moved
+  to a timestamped `-stale-20260811-1128` backup; no source or user data was
+  deleted. The original cache directory was then recreated by Developer Tools.
+- The current project was reopened through the installed Developer Tools CLI
+  with `open --project C:\Users\hp\.codex\worktrees\e50c\weapp-vite-template`.
+  The current cache was recreated at 11:33 and again at 11:37; its cached
+  `SinglePicker` and parent land-demand bundles contain the nullable error
+  contract and all seven `|| ""` picker error fallbacks.
+- This proves that the Developer Tools cache now contains the latest generated
+  package. An interactive warning recheck still requires the Developer Tools
+  window to compile and exercise the page; the MCP automator connection timed
+  out before it could read the runtime console.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Developer Tools CLI `open --project ...` | 0 | Current `e50c` project opened; main window title `weapp-vite-wevu-template` |
+| Current compile-cache scan | 0 | Recreated cache contains `error: [String, null]`, `errorText`, and seven parent `|| ""` bindings |
+| Current-root WeChat DevTools automator connect | blocked | MCP timed out after 20 seconds; runtime warning recheck remains unverified |
+
+## Force concrete picker error bindings for DevTools incremental builds (2026-08-11, actual results)
+
+- The supplied runtime capture at 11:03 contained both the old
+  `SinglePicker.error` and TDesign `input.status` null warnings. The current
+  source and generated bundle now normalize the four-step `errors` prop, the
+  `SinglePicker.error` prop itself, and all seven parent picker bindings before
+  they reach a child component.
+- Developer Tools logs show the active project path is
+  `C:\Users\hp\.codex\worktrees\e50c\weapp-vite-template` and that it rebuilt
+  the current `dist/` package at 11:11. The runtime console could not be
+  queried through MCP because the automator service timed out after 20 seconds.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused wizard component contract | 0 | 1 file, 30 tests passed |
+| `pnpm test` | 0 | 43 files, 208 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 810 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| Generated parent-binding scan | 0 | 7 picker error bindings normalize `null` to `""`; nullable picker and step-1 progress contracts present |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+| Current-root WeChat DevTools automator connect | blocked | Timed out after 20 seconds; live warning recheck remains unverified |
+
+## Normalize nullable picker errors and mark step 1 complete (2026-08-11, actual results)
+
+- `SinglePicker.error` now accepts the transient `null` value that Wevu can
+  provide during component initialization and normalizes it to an empty string
+  before rendering. This removes the custom component's String/null type
+  mismatch without displaying a duplicate error message.
+- The current step 1 progress node is now green. Later steps retain the
+  existing rule: they become green only when their current validation state is
+  complete; incomplete current steps remain red.
+- When step 1 is active, its incomplete class is suppressed so a transient
+  step-one validation result cannot override the green complete class.
+- The generated `dist` bundle contains `error: { type: [String, null] }`, the
+  `errorText` normalization, and the step-1 completion condition.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused wizard component contract | 0 | 1 file, 30 tests passed |
+| `pnpm test` | 0 | 43 files, 208 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 810 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| Generated artifact scan | 0 | Nullable picker prop/normalization and step-1 completion are present in `dist/` |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+| Current-root WeChat DevTools automator connect | blocked | Timed out after 15 seconds; live warning recheck remains unverified |
+
+## Make typed validation props concrete during first attachment (2026-08-11, actual results)
+
+- The new runtime capture still showed `tdesign-miniprogram/input.status` and
+  `SinglePicker.error` receiving `null` from the initial Wevu attachment path;
+  the previous keep-mounted change alone did not prevent this path.
+- All TDesign input `status` bindings in login, the four editable steps, and
+  the verification dialog are now literal `"default"` strings. Validation
+  messages remain rendered as the existing red text beside each control.
+- Picker validation messages are projected through a named `error` slot inside
+  `SinglePicker`'s cell description. Current parents no longer bind a dynamic
+  `error` prop, so the native custom component receives its default empty
+  string instead of a transient null.
+- The generated WXML contains literal `status="default"` values and slot-based
+  picker errors; the current-root Developer Tools project was closed and
+  reopened after the build. The live automator connection still timed out, so
+  the warning-free runtime result remains pending manual compile/interactions.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused wizard/navigation tests | 0 | 2 files, 34 tests passed |
+| `pnpm test` | 0 | 43 files, 208 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 807 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| Generated typed-prop scan | 0 | Source has no dynamic `status` bindings or picker `error` bindings; generated WXML uses literal status values |
+| Developer Tools CLI close/open | 0 | Current `e50c` project reopened after the rebuild |
+| Current-root WeChat DevTools automator connect | blocked | Timed out after 15 seconds; live warning recheck remains unverified |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+## Remove financing fields from the filing UI and API contract (2026-08-12, actual results)
+
+- Step 4 remains available as 联系人信息; the financing selector, financing
+  amount, and financing time controls are removed from the form model, review
+  groups, validation, progress label, and E2E field bridges.
+- The HTTP repository and payload serializer no longer write or map the three
+  fields. Store/default boundaries remove the same keys from drafts created by
+  older builds before they can re-enter the form or request body.
+- Forguncy request/response DTOs, request whitelist, validation, service
+  mapping, update command, examples, and API contract tests no longer expose
+  the fields. The legacy database-mapped columns remain in `LandDemandRecord`
+  for schema compatibility but are not read or written by the API boundary.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| `pnpm test` | 0 | 43 files, 208 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 800 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `pnpm analyze:budget` | 0 | Package budget check passed |
+| `dotnet restore forguncy-server-api/ForguncyServerApi.sln` | 0 | Both Forguncy projects restored |
+| `dotnet test forguncy-server-api/ForguncyServerApi.sln --no-restore` | 0 | 243 tests passed, 0 failed, 0 skipped |
+
+## Keep office as optional free-form text in step 4 (2026-08-12, actual results)
+
+- `office` is an optional job-title field and is explicitly excluded from numeric validation, even if the numeric field set changes in a future form revision.
+- The generated runtime contains the same guard, and the step-4 office input is not emitted with `type="digit"`.
+- If the old numeric message remains visible, the active WeChat Developer Tools project is using stale generated output or another worktree; rebuild and compile the current repository root, not `dist/`.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused validation and wizard tests | 0 | 2 files, 38 tests passed |
+| `pnpm test` | 0 | 43 files, 209 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 800 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| Generated office-field scan | 0 | Explicit office text guard present; office input has no `type="digit"` |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+## Diagnose invalid land-demand status from the local API (2026-08-12, actual result)
+
+- A local login using the user-provided enterprise account succeeded; no password or token was recorded.
+- `GET /customapi/landdemandapi/getlanddemand` returned HTTP 200, but the top-level `landusedemand` value was the string `"0"`.
+- The current contract accepts only `"2"` for a draft and `"1"` for a formal submission. The error is therefore caused by the existing record's status value, not by a missing record or a network failure.
+
+| Check | Exit | Result |
+| --- | ---: | --- |
+| Local login followed by authenticated get-land-demand request | 0 | HTTP 200; `landusedemand="0"`, rejected by the client status guard |
+
+## Treat legacy land-demand status 0 as unsubmitted (2026-08-12, actual results)
+
+- Read-only responses with `landusedemand="0"` are now accepted as legacy unsubmitted records instead of raising a status error.
+- The home page displays `尚未填报` and `开始填报` for that record. Because the row still exists, the first save or submission uses the update route and writes only the supported status `"2"` or `"1"`.
+- Write payload types remain restricted to `"2"` (draft) and `"1"` (formal submission); invalid write statuses are unchanged.
+- The current-root WeChat build is ready for manual Developer Tools compile. No live Developer Tools click-through was claimed in this verification.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused HTTP repository and navigation tests | 0 | 2 files, 9 tests passed |
+| `pnpm test` | 0 | 43 files, 210 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 800 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| Generated status scan | 0 | `dist/app.js` accepts `landusedemand="0"`; generated home page shows the unsubmitted start state |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+| Live WeChat Developer Tools compile/click-through | not run | Manual runtime confirmation remains pending |
+
+## Open submitted edits at the first invalid step (2026-08-13, actual results)
+
+- The workbench `修改填报` action no longer defaults to step 5. When no step was explicitly selected, it now uses the existing `resumeStep`, which is the first step returned by the submitted-record validation.
+- An explicitly selected progress step remains respected, so intentional step navigation is unchanged.
+- Focused navigation test: 1 file, 4 tests passed.
+- `pnpm test`: 43 files passed, 216 tests passed.
+- `pnpm typecheck`, `pnpm lint`, `pnpm stylelint`, `pnpm build`, `pnpm verify:generated-runtime`, and `git diff --check`: passed. The last command emitted only expected LF-to-CRLF warnings.
+- Live WeChat Developer Tools click-through was not run in this check.
+
+## Store and display last update time as OLE serial (2026-08-13, actual results)
+
+- The workbench label is now `上次更新时间` and reads `landusedemand_info.updatetime` for both draft and submitted records.
+- The CustomApi service generates a new Excel/OLE Automation serial on every add, draft save, edit, and submit operation. Existing legacy timestamp strings remain readable by the frontend adapter.
+- The success page now labels the same field `更新时间`.
+- No database migration or CustomApi restart was performed by this check.
+
+## Keep Excel timestamp conversion inside the HTTP adapter (2026-08-13, actual results)
+
+- The reported runtime error `require_common.readExcelDateTime is not a function` was caused by the generated page depending on a public vendor export that was not available in the runtime vendor loaded by WeChat Developer Tools.
+- Timestamp conversion is now local to `src/features/land-demand/http-repository.ts`; generated `dist/app.js` contains the local converter and no longer references `require_common.readExcelDateTime`.
+- `pnpm test`: 43 files passed, 216 tests passed.
+- `pnpm typecheck`, `pnpm lint`, `pnpm stylelint`, `pnpm build`, `pnpm verify:generated-runtime`, and `git diff --check`: passed. The last command emitted only expected LF-to-CRLF warnings.
+- Live WeChat Developer Tools recompile/click-through was not run in this check.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| `pnpm test` | 0 | 43 files, 216 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 805 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| CustomApi `dotnet test` | 0 | 244 tests passed, 0 failed, 0 skipped |
+| CustomApi `dotnet build` | 0 | Release DLL built with 0 warnings and 0 errors |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+| Live WeChat Developer Tools/API click-through | not run | Manual runtime confirmation remains pending |
+
+## Keep completed workbench progress blue (2026-08-12, actual results)
+
+- The workbench previously mapped a submitted record (`landusedemand="1"`) to all five `completedSteps`, which applied the green success style to every progress number.
+- Submitted records now keep all five steps reached and blue by leaving `completedSteps` empty; submitted records also skip incomplete-step coloring so a valid completed filing cannot be overlaid with red status.
+- Draft and partially completed records retain their existing green/blue/red/gray behavior. This change only affects the submitted-record branch on the workbench.
+- No live WeChat Developer Tools click-through was run; the rebuilt runtime is ready for manual compile from the current repository root.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused wizard component tests | 0 | 1 file, 30 tests passed |
+| `pnpm test` | 0 | 43 files, 214 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 801 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+| Live WeChat Developer Tools compile/click-through | not run | Manual runtime confirmation remains pending |
+
+## Validate database values against current picker options (2026-08-14, actual results)
+
+- Frontend validation now checks every visible dictionary-backed field against
+  the same options used by the UI: intended park, expected month (2020-01
+  through 2040-12), yes/no choices, special land type, national-industry leaf,
+  industry track, and track direction.
+- Multi-select deploy parks reject unknown values and the invalid combination
+  of Ningbo city with a concrete area. Hidden conditional fields are skipped,
+  so stale values under `is_deploy=否` or `is_specialuse=否` do not create an
+  error for controls that are not visible.
+- An old database value such as an unknown `expect_park` now produces a field
+  error and makes step 2 incomplete instead of treating the field as complete.
+- The current worktree built successfully. Live runtime click-through could
+  not be completed: the DevTools CLI auto command succeeded on HTTP port
+  40637, but the MCP/Automator WebSocket connection on port 10107 timed out.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused validation test | 0 | 11 tests passed |
+| `pnpm test` | 0 | 43 files, 221 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 807 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+| WeChat DevTools CLI auto setup | 0 | Current project/AppID accepted on HTTP port 40637 |
+| Live WeChat Developer Tools compile/click-through | not run | Automator connection to port 10107 timed out |
+
+## Convert expected land time Excel serial values (2026-08-13, actual results)
+
+- Forguncy/Excel OLE Automation serial `45992` represents `2025-12-01`; the
+  month picker continues to use the frontend value `2025-12`.
+- The HTTP adapter now sends the serial as the string `"45992"` so it remains
+  compatible with the current CustomApi request reader, while reads accept both
+  numeric and string serial responses and map them back to `YYYY-MM`.
+- No server restart or database migration was performed. Live WeChat Developer
+  Tools and the local API were not connected during this check.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused HTTP repository test | 0 | 1 file, 9 tests passed |
+| `pnpm test` | 0 | 43 files, 215 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm build` | 0 | WeChat build passed; main package 804 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| Generated adapter scan | 0 | `dist/app.js` contains serial read/write conversion |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+## Validate submitted workbench progress from the server record (2026-08-13, actual results)
+
+- The workbench previously derived `incompleteSteps` from `landDemandStore.form`, which may be a retained local draft and not the latest submitted `getlanddemand` record. This could leave all submitted progress numbers blue even when the server record contained a missing or malformed field.
+- Submitted records now construct a validation form from the current authenticated enterprise profile plus the Query record returned by `getlanddemand`; unsubmitted records continue to validate the editable Store form.
+- Submitted error steps remain red through the submitted-card red override. A submitted record with no errors remains blue; unsubmitted complete-current, invalid, and unreached step colors remain unchanged.
+- The generated home runtime contains `validationForm`, the server-record form construction, and the submitted red override. The WeChat DevTools MCP connection timed out twice, so no live compile/click-through result is claimed.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused navigation and wizard tests | 0 | 2 files, 34 tests passed |
+| `pnpm test` | 0 | 43 files, 214 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 803 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| Generated home runtime scan | 0 | Server-record validation form and submitted red selectors present in `dist/pages/home/index.js`/`index.wxss` |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+| WeChat DevTools MCP connect/active-page | blocked | Timed out; live runtime confirmation remains pending |
+
+## Show validation errors for submitted records on the workbench (2026-08-12, actual results)
+
+- Submitted records now continue through the same `validateStep` path on the workbench instead of unconditionally returning an empty incomplete-step list.
+- A submitted record with missing or malformed values keeps the affected step red, including its connector. A submitted record with no validation errors remains blue for all five steps.
+- The draft-only green classes remain guarded by `!submitted`; unsubmitted records therefore keep the existing rule that a complete current step may be green while invalid reached steps are red and unreached steps are gray.
+- The filling page already applies the same step validation to submitted records; no separate validation path was introduced. No live WeChat Developer Tools click-through was run.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused wizard component tests | 0 | 1 file, 30 tests passed |
+| `pnpm test` | 0 | 43 files, 214 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 802 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| Generated home runtime scan | 0 | Submitted records retain incomplete-step classes and red override styles |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+| Live WeChat Developer Tools compile/click-through | not run | Manual runtime confirmation remains pending |
+
+## Keep submitted workbench progress blue without removing draft red/green states (2026-08-12, actual results)
+
+- The previous workbench fix removed the submitted record from `completedSteps`, but the page still exposed a separate `home__step--completed` class for every reached step. The submitted branch now explicitly suppresses all draft-only completed/incomplete classes and adds a submitted-card blue override for both step numbers and connectors.
+- The color rules remain available for unsubmitted records: missing or invalid fields still mark the affected reached step red, and a reached current step with no validation errors can still be green. Unreached steps remain gray.
+- The rebuilt generated runtime contains the submitted blue override and the guarded class expressions. No live WeChat Developer Tools click-through was run.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused wizard component tests | 0 | 1 file, 30 tests passed |
+| `pnpm test` | 0 | 43 files, 214 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 802 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| Generated home runtime scan | 0 | Submitted class guards and blue override present in `dist/pages/home/index.js`/`index.wxss` |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+| Live WeChat Developer Tools compile/click-through | not run | Manual runtime confirmation remains pending |
+
+## Return saved enterprise phone from getinfo (2026-08-12, actual results)
+
+- The previous contract returned only business name, credit code, county, and
+  region from `getinfo`. The frontend therefore initialized `enterprise.phone`
+  as an empty string after a fresh HTTP login.
+- `EnterpriseRepository` now reads the saved phone from
+  `landusedemand_info.phone`; the authenticated `getinfo` response includes a
+  `phone` field and returns an empty string when the enterprise has no filing
+  record yet.
+- The frontend accepts the new field, uses the server value when present, and
+  keeps an unsaved previous value only when the server has no phone. The field
+  remains editable and the existing land-demand save/update payload continues
+  to write `phone` to `landusedemand_info.phone`.
+- No production credentials, phone numbers, or tokens were recorded in this
+  report. Live WeChat Developer Tools interaction was not run.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused HTTP auth repository test | 0 | 2 tests passed |
+| Forguncy API Release tests | 0 | 244 tests passed, 0 failed, 0 skipped |
+| `pnpm test` | 0 | 43 files, 210 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 800 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| Generated phone scan | 0 | `dist/app.js` reads `getinfo.phone` and maps it into the auth profile |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+## Do not parse an empty verification-submit write response as a land-demand record (2026-08-12, actual results)
+
+- The verification dialog is only the final confirmation UI. After the local
+  six-digit Mock verification succeeds, the page intentionally submits the
+  completed filing through `addlanddemand` or `updatelanddemand`.
+- Some deployed Forguncy versions return a successful empty body, success
+  marker, or response envelope from that write route. The old HTTP adapter
+  passed the acknowledgement to the land-demand record mapper, which produced
+  the misleading `用地需求数据格式不正确` error.
+- The adapter now always GETs the canonical record after a successful write and
+  also unwraps `data`, `record`, or `result` response envelopes for GET results.
+  The verification dialog remains open only for actual verification or write
+  failures.
+- No live WeChat Developer Tools interaction was run; the generated runtime
+  contains the fallback GET and envelope handling.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused repository/wizard tests | 0 | 2 files, 38 tests passed |
+| `pnpm test` | 0 | 43 files, 213 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 801 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| Generated fallback scan | 0 | `dist/app.js` GETs the record after an empty write response and unwraps envelopes |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+
+## Show loading state while submitting verification code (2026-08-12, actual results)
+
+- The verification dialog now receives `verificationSubmitting` as its loading state, so the code input and resend action remain locked while the verification and filing request is in flight.
+- A dedicated fullscreen `PageTransitionLoading` layer displays `正在提交` during the submit request. `nextTick()` yields once before starting the request so Wevu can render the loading state first; the overlay is cleared in the existing `finally` path on both success and failure.
+- The submit state is also included in the page-level `submitting` computed value, keeping other submit controls disabled during verification submission.
+- No live WeChat Developer Tools click-through was run; the generated runtime is ready for manual compile from the current repository root.
+
+| Command / check | Exit | Result |
+| --- | ---: | --- |
+| Focused wizard component tests | 0 | 1 file, 30 tests passed |
+| `pnpm test` | 0 | 43 files, 214 tests passed |
+| `pnpm typecheck` | 0 | App and E2E TypeScript checks passed |
+| `pnpm lint` | 0 | Zero warnings |
+| `pnpm stylelint` | 0 | Passed |
+| `pnpm build` | 0 | WeChat build passed; main package 801 KB |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
+| `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
+| Live WeChat Developer Tools compile/click-through | not run | Manual runtime confirmation remains pending |

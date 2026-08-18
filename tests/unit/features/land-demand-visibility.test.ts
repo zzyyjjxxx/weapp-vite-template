@@ -2,7 +2,6 @@ import type { LandDemandForm } from '@/features/land-demand/models'
 
 import { describe, expect, it } from 'vitest'
 import {
-  applyFinancingChoice,
   applySpecialUseChoice,
   applyTrackChoice,
   selectDeployPark,
@@ -32,9 +31,6 @@ const form: LandDemandForm = {
   pred_rdex: '200',
   pred_unitenergy: '3',
   projectdata: '项目建设内容',
-  is_financing: '没有',
-  financing_money: '',
-  financing_time: '',
   contact: '张三',
   office: '总经理',
   phone: '13800138000',
@@ -60,10 +56,5 @@ describe('land demand field visibility transitions', () => {
 
   it('clears the direction when changing an industry track', () => {
     expect(applyTrackChoice({ ...form, futureindustry: '具身大模型（大脑与小脑）' }, '生物医药').futureindustry).toBe('')
-  })
-
-  it('clears financing details when financing is not needed', () => {
-    expect(applyFinancingChoice({ ...form, financing_money: '100', financing_time: '2027-06' }, '没有'))
-      .toMatchObject({ financing_money: '', financing_time: '' })
   })
 })

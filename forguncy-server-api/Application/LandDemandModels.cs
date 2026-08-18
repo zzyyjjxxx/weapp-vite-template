@@ -23,9 +23,6 @@ public sealed record LandDemandWriteRequest
     public decimal? PredRdex { get; init; }
     public decimal? PredUnitenergy { get; init; }
     public string? Projectdata { get; init; }
-    public string? IsFinancing { get; init; }
-    public decimal? FinancingMoney { get; init; }
-    public string? FinancingTime { get; init; }
     public string? Contact { get; init; }
     public string? Office { get; init; }
     public string? Phone { get; init; }
@@ -45,8 +42,6 @@ public sealed record LandDemandWriteRequest
             Keyindustry = Normalize(Keyindustry),
             Futureindustry = Normalize(Futureindustry),
             Projectdata = Normalize(Projectdata),
-            IsFinancing = Normalize(IsFinancing),
-            FinancingTime = Normalize(FinancingTime),
             Contact = Normalize(Contact),
             Office = Normalize(Office),
             Phone = Normalize(Phone),
@@ -127,15 +122,6 @@ public sealed record LandDemandResponse
 
     [JsonProperty("projectdata")]
     public string? Projectdata { get; init; }
-
-    [JsonProperty("is_financing")]
-    public string? IsFinancing { get; init; }
-
-    [JsonProperty("financing_money")]
-    public decimal? FinancingMoney { get; init; }
-
-    [JsonProperty("financing_time")]
-    public string? FinancingTime { get; init; }
 
     [JsonProperty("contact")]
     public string? Contact { get; init; }

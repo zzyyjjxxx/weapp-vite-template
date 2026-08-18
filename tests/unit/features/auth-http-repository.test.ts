@@ -33,6 +33,7 @@ describe('HTTP auth repository', () => {
         creditcode: '91330200EXAMPLE001',
         county: 'County',
         region: 'Town',
+        phone: '13800000000',
       },
     ])
     const repository = createHttpAuthRepository({ client, now: () => 1_000 })
@@ -54,7 +55,7 @@ describe('HTTP auth repository', () => {
         region: 'Town',
         contact: '',
         office: '',
-        phone: '',
+        phone: '13800000000',
       },
     })
     expect(calls).toEqual([

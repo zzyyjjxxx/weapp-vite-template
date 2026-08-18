@@ -34,9 +34,6 @@ describe('land demand wizard component contract', () => {
       'pred-rdex',
       'pred-unitenergy',
       'projectdata',
-      'is-financing',
-      'financing-money',
-      'financing-time',
       'contact',
       'office',
       'phone',
@@ -154,7 +151,8 @@ describe('land demand wizard component contract', () => {
     expect(source).not.toContain(':loading="returningToHome"')
     expect(source).toContain(':disabled="saving || returningToHome"')
     expect(source).toContain('data-testid="return-home-loading"')
-    expect(source).toContain('data-testid="verification-submit-loading"')
+    expect(source).not.toContain('data-testid="verification-submit-loading"')
+    expect(source).not.toContain('feedback.value = \'正在核验并提交，请稍候…\'')
     expect(source).toContain('text="正在暂存"')
     expect(source).toContain('text="正在发送验证码"')
     expect(source).toContain(':transitioning="transitioning"')
@@ -192,7 +190,14 @@ describe('land demand wizard component contract', () => {
     const stepSources = stepFiles.map(file => readFileSync(file, 'utf8')).join('\n')
 
     expect(source).toContain('validateStep(form.value, currentStep.value)')
-    expect(stepSources).toContain('useInvalidFieldScroll(() => props.errors')
+    expect(source).toContain('scrollRequest.value += 1')
+    expect(source).toContain(':hidden="viewOnly || currentStep !== 1"')
+    expect(source).toContain(':hidden="viewOnly || currentStep !== 2"')
+    expect(source).toContain(':hidden="viewOnly || currentStep !== 3"')
+    expect(source).toContain(':hidden="viewOnly || currentStep !== 4"')
+    expect(source).toContain(':hidden="!viewOnly && currentStep !== 5"')
+    expect(source).toContain(':active="!viewOnly && currentStep === 2"')
+    expect(stepSources).toContain('useInvalidFieldScroll(() => props.errors ?? [], () => props.scrollRequest')
     for (const id of ['area-field', 'investment-field', 'phone-field']) {
       expect(stepSources).toContain(`data-testid="${id}"`)
     }
@@ -201,6 +206,9 @@ describe('land demand wizard component contract', () => {
     expect(invalidFieldScroll).toContain('>>> #')
     expect(invalidFieldScroll).toContain('testId')
     expect(invalidFieldScroll).toContain('setTimeout(resolve, 0)')
+    expect(invalidFieldScroll).toContain('watch(scrollRequest')
+    expect(invalidFieldScroll).toContain('if (!active())')
+    expect(invalidFieldScroll).not.toContain('watch(errors')
   })
 
   it('shows save success as a top TDesign message instead of page feedback', () => {
@@ -222,6 +230,13 @@ describe('land demand wizard component contract', () => {
     expect(source).toContain('feedback.value = \'\'')
   })
 
+  it('opens the verification dialog even when sending the code fails', () => {
+    const source = readFileSync('src/pages/land-demand/index.vue', 'utf8')
+
+    expect(source).toMatch(/catch \{[\s\S]*verificationVisible\.value = true/)
+    expect(source).toMatch(/catch \{[\s\S]*verificationError\.value = sendCodeMutation\.error\.value\?\.message/)
+  })
+
   it('never passes transient null values into typed mini-program component properties', () => {
     const page = readFileSync('src/pages/land-demand/index.vue', 'utf8')
     const verificationDialog = readFileSync(`${componentRoot}/verification-dialog.vue`, 'utf8')
@@ -231,6 +246,10 @@ describe('land demand wizard component contract', () => {
     expect(page).toContain(':content="clearDialogContent || \'\'"')
     expect(page).toContain(':code="verificationCode || \'\'"')
     expect(page).toContain(':error="verificationError || \'\'"')
+    expect(page).toContain(':loading="verificationSubmitting"')
+    expect(page).toContain(':visible="verificationSubmitting"')
+    expect(page).toContain('text="正在提交"')
+    expect(page).not.toContain(':loading="submitting || verificationSubmitting"')
     expect(verificationDialog).toContain(':content="description || \'\'"')
   })
 
@@ -241,17 +260,25 @@ describe('land demand wizard component contract', () => {
     const verificationDialog = readFileSync(`${componentRoot}/verification-dialog.vue`, 'utf8')
     const singlePicker = readFileSync('src/components/ui/single-picker/index.vue', 'utf8')
 
-    expect(sources).not.toMatch(/:tips="fieldError\([^)]*\)"/)
-    expect(sources).toContain('const financingOptions')
+    expect(project).toContain('status="default"')
+    expect(project).toContain('tips=""')
+    expect(sources.match(/errors\?: readonly FieldError\[\] \| null/g)).toHaveLength(4)
+    expect(sources.match(/props\.errors\?\.find/g)).toHaveLength(4)
+    expect(sources.match(/props\.errors \?\? \[\]/g)).toHaveLength(4)
     expect(project).toContain('const industryOptions = ref([...NATIONAL_INDUSTRY_OPTIONS])')
     expect(project).toContain('filter-placeholder="搜索行业"')
     expect(project).toContain('const industryNote = ref')
     expect(basic).toContain('status="default"')
     expect(basic).toContain('tips=""')
     expect(verificationDialog).toContain('status="default"')
+    expect(sources).not.toContain(':status=')
+    expect(sources).not.toContain(':error=')
     expect(verificationDialog).toContain('tips=""')
     expect(singlePicker).toContain(':value="pickerValue || []"')
     expect(singlePicker).toContain(':options="pickerOptions || []"')
+    expect(singlePicker).toContain('error?: string | null')
+    expect(singlePicker).toContain('const errorText = computed(() => props.error ?? \'\')')
+    expect(singlePicker).toContain('field__error--inside-cell')
   })
 
   it('uses a compact, viewport-safe progress rail and fixed action bar', () => {
@@ -259,6 +286,7 @@ describe('land demand wizard component contract', () => {
     const actions = readFileSync(`${componentRoot}/wizard-actions.vue`, 'utf8')
     const page = readFileSync('src/pages/land-demand/index.vue', 'utf8')
     const home = readFileSync('src/pages/home/index.vue', 'utf8')
+    const success = readFileSync('src/pages/land-demand/success.vue', 'utf8')
 
     expect(progress).not.toContain('<scroll-view')
     expect(progress).toContain('flex: 1 1 0')
@@ -267,23 +295,54 @@ describe('land demand wizard component contract', () => {
     expect(progress).toContain('wizard-progress__step--incomplete')
     expect(progress).toContain('$color-error')
     expect(progress).toContain('$color-success')
+    expect(progress).toContain('props.currentStep === 1 || !activeIncompleteSteps.value.includes(props.currentStep)')
+    expect(progress).toContain('activeIncompleteSteps.includes(1) && props.currentStep !== 1')
+    expect(progress).not.toContain('step > 1 && step < progressLimit.value')
     expect(progress).not.toContain('v-for="(label, index) in steps"')
     expect(progress).toContain('<text class="wizard-progress__number">1</text>')
     expect(progress).toContain('<text class="wizard-progress__number">5</text>')
     expect(progress).not.toContain('index + 1')
     expect(page).toContain(':incomplete-steps="progressIncompleteSteps"')
     expect(page).toContain(':progress-step="progressStep || 1"')
-    expect(page).toContain('return incompleteSteps.value')
+    expect(page).toContain('incompleteSteps.value.filter(step => step <= progressStep.value)')
     expect(page).not.toContain('currentStep.value === 5 && !accepted.value')
     expect(home).toContain('home__step--complete')
     expect(home).toContain('home__step--incomplete')
+    expect(home).toContain(':class="{ \'home__product--submitted\': submitted }"')
+    expect(home).toContain('\'home__step--completed\': !submitted && number < currentProgressStep')
+    expect(home).toContain('\'home__step--complete\': !submitted && completedSteps.includes(number)')
+    expect(home).toContain('\'home__step--incomplete\': progressIncompleteSteps.includes(number)')
+    expect(home).toContain('.home__product--submitted .home__step--active .home__step-number')
+    expect(home).toContain('const progressIncompleteSteps = computed<LandDemandStep[]>(() => (\n  incompleteSteps.value.filter(step => step <= currentProgressStep.value)\n))')
+    expect(home).toContain('const completedSteps = computed<LandDemandStep[]>(() => (\n  submitted.value\n    ? []')
+    expect(home).toContain('incompleteSteps.value.filter(step => step <= currentProgressStep.value)')
+    expect(home).toContain('const completedSteps = computed')
+    expect(home).toContain('resumeStep.value > 1 && !progressIncompleteSteps.value.includes(resumeStep.value)')
+    expect(home).not.toContain('stepNumbers.filter(step => step > 1 && step < currentProgressStep.value)')
+    expect(home).toContain('\'home__step--complete\': !submitted && completedSteps.includes(number)')
+    expect(home).toContain('.home__product--submitted .home__step--incomplete .home__step-number')
+    expect(home).toContain('.home__product--submitted .home__step--incomplete:not(:last-child)::after')
+    expect(home).toContain('.home__step--pending .home__step-number')
     expect(home).toContain('resumeStep')
     expect(home).toContain('resumeStep.value} 步 / 共 5 步')
     expect(home).toContain('step: selectedStep.value ?? (record.value ? resumeStep.value : undefined)')
     expect(home).toContain('class="home__page-content"')
-    expect(home).toContain('<AppLoading v-if="landDemandQuery.isPending" />')
+    expect(home).toContain('<AppLoading v-if="queryPending" />')
+    expect(home).toContain('const queryPending = landDemandQuery.isPending')
+    expect(home).toContain('const queryFailed = landDemandQuery.isError')
+    expect(home).not.toContain('v-if="landDemandQuery.isPending"')
+    expect(home).not.toContain('v-else-if="landDemandQuery.isError"')
+    expect(page).toContain('const queryPending = query.isPending')
+    expect(page).toContain('const queryFailed = query.isError')
+    expect(page).toContain('const sendCodePending = sendCodeMutation.isPending')
+    expect(page).not.toContain('v-if="query.isPending')
+    expect(page).not.toContain('v-else-if="query.isError"')
+    expect(success).toContain('<AppLoading v-if="queryPending" />')
+    expect(success).toContain('const queryPending = query.isPending')
+    expect(success).not.toContain('v-if="query.isPending"')
+    expect(success).not.toContain('v-else-if="query.isError"')
     expect(home).toContain('title="工作台信息加载失败"')
-    expect(home).toContain('return incompleteSteps.value')
+    expect(home).toContain('incompleteSteps.value.filter(step => step <= currentProgressStep.value)')
     expect(home).not.toContain('currentEditingStep.value === 5 && !steps.includes(5)')
     expect(actions).toContain('position: fixed')
     expect(actions).toContain('function handlePrevious(): void')
@@ -329,8 +388,8 @@ describe('land demand wizard component contract', () => {
       'save-draft',
       'area',
       'deploy-height',
-      'financing-money-error',
-      'financing-time-error',
+      'contact',
+      'phone',
     ]) {
       expect(sources).toContain(`data-testid="${id}"`)
     }
@@ -353,6 +412,49 @@ describe('land demand wizard component contract', () => {
     expect(source).toContain('项目单位能耗增加值（万元/吨标煤）')
     expect(source).not.toContain('项目总投资（万元）')
     expect(source).not.toContain('预计单位能耗')
+  })
+
+  it('keeps project validation feedback attached to its control', () => {
+    const source = readFileSync(`${componentRoot}/project-info-step.vue`, 'utf8')
+
+    expect(source).toContain('status="default"')
+    expect(source).toContain(`v-if="fieldError('investment')" class="field__error field__error--before-control"`)
+    expect(source).toContain('tips=""')
+    expect(source).toContain('field__error--before-control')
+    expect(source).not.toContain(`:tips="fieldError('investment')"`)
+  })
+
+  it('keeps land-demand validation feedback attached to its control', () => {
+    const source = readFileSync(`${componentRoot}/land-info-step.vue`, 'utf8')
+
+    expect(source).toContain('status="default"')
+    expect(source).toContain(`v-if="fieldError('area')" class="field__error field__error--before-control"`)
+    expect(source).toContain('tips=""')
+    expect(source).toContain('field__error--before-control')
+    expect(source).not.toContain(`:tips="fieldError('area')"`)
+  })
+
+  it('keeps selector validation feedback inside the cell before its divider', () => {
+    const land = readFileSync(`${componentRoot}/land-info-step.vue`, 'utf8')
+    const project = readFileSync(`${componentRoot}/project-info-step.vue`, 'utf8')
+    const finance = readFileSync(`${componentRoot}/finance-contact-step.vue`, 'utf8')
+
+    expect(land).toContain('<template #error>')
+    expect(land).toContain(`fieldError('expect_time')`)
+    expect(land).toContain('field__error--inside-cell')
+    expect(project).toContain(`fieldError('project_hydm')`)
+    expect(project).toContain('<template #error>')
+    expect(finance).toContain('data-testid="contact"')
+    expect(finance).toContain('data-testid="office"')
+    expect(finance).toContain('data-testid="phone"')
+    expect(land).not.toContain(':error=')
+    expect(project).not.toContain(':error=')
+    expect(finance).not.toContain(':error=')
+    expect(land).not.toContain(`v-if="fieldError('expect_park')" class="field__error field__error--before-control"`)
+    expect(project).not.toContain(`v-if="fieldError('project_hydm')" class="field__error field__error--before-control"`)
+    expect(finance).not.toContain('is_financing')
+    expect(finance).not.toContain('financing_money')
+    expect(finance).not.toContain('financing_time')
   })
 
   it('loads local drafts through the Store boundary instead of the page repository', () => {

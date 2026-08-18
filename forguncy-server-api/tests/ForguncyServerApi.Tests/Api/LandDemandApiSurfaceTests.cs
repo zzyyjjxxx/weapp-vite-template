@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Reflection;
 using System.Text;
 using ForguncyServerApi.Api;
@@ -21,8 +22,8 @@ public sealed class LandDemandApiSurfaceTests
     {
         "area", "building_area", "businessname", "contact", "county", "creditcode",
         "deploy_height", "deploy_landtype", "deploy_park", "deploy_weight", "expect_park",
-        "expect_time", "financing_money", "financing_time", "futureindustry", "investment",
-        "is_deploy", "is_financing", "is_specialuse", "keyindustry", "landusedemand", "office",
+        "expect_time", "futureindustry", "investment",
+        "is_deploy", "is_specialuse", "keyindustry", "landusedemand", "office",
         "phone", "pred_rdex", "pred_tax", "pred_unitenergy", "pred_ys", "project_hydm",
         "projectdata", "region", "updatetime"
     };
@@ -30,8 +31,8 @@ public sealed class LandDemandApiSurfaceTests
     private static readonly string[] WritableProperties =
     {
         "area", "building_area", "contact", "deploy_height", "deploy_landtype", "deploy_park",
-        "deploy_weight", "expect_park", "expect_time", "financing_money", "financing_time",
-        "futureindustry", "investment", "is_deploy", "is_financing", "is_specialuse",
+        "deploy_weight", "expect_park", "expect_time",
+        "futureindustry", "investment", "is_deploy", "is_specialuse",
         "keyindustry", "landusedemand", "office", "phone", "pred_rdex", "pred_tax",
         "pred_unitenergy", "pred_ys", "project_hydm", "projectdata"
     };
@@ -90,8 +91,8 @@ public sealed class LandDemandApiSurfaceTests
 
         Assert.Equal(ResponseProperties, responseProperties);
         Assert.Equal(WritableProperties, writableProperties);
-        Assert.Equal(31, responseProperties.Length);
-        Assert.Equal(26, writableProperties.Length);
+        Assert.Equal(28, responseProperties.Length);
+        Assert.Equal(23, writableProperties.Length);
         Assert.DoesNotContain(responseProperties, property => property is null);
         foreach (var forbidden in ForbiddenInternalProperties)
         {
@@ -127,7 +128,7 @@ public sealed class LandDemandApiSurfaceTests
         var json = JObject.Parse(response.Body);
         Assert.Equal(ResponseProperties, json.Properties().Select(property => property.Name).OrderBy(name => name));
         Assert.Equal("Synthetic project", json["projectdata"]?.Value<string>());
-        Assert.Equal("2026-08-06 12:34:56", json["updatetime"]?.Value<string>());
+        Assert.Equal(OleDate(2026, 8, 6, 12, 34, 56), json["updatetime"]?.Value<string>());
         Assert.Null(json["id"]);
         Assert.Null(json["updateuser"]);
         Assert.Null(json["region_remark"]);
@@ -191,8 +192,8 @@ public sealed class LandDemandApiSurfaceTests
         var json = JObject.Parse(response.Body);
         Assert.Equal("new filing", json["projectdata"]?.Value<string>());
         Assert.Equal("91330200SYNTHETIC", json["creditcode"]?.Value<string>());
-        Assert.Equal("2026-08-06 00:00:00", json["updatetime"]?.Value<string>());
-        Assert.Equal(31, json.Properties().Count());
+        Assert.Equal(OleDate(2026, 8, 6, 0, 0, 0), json["updatetime"]?.Value<string>());
+        Assert.Equal(28, json.Properties().Count());
     }
 
     [Fact]
@@ -466,9 +467,12 @@ public sealed class LandDemandApiSurfaceTests
             Office = "Synthetic Office",
             Phone = "13800000000",
             Landusedemand = "2",
-            Updatetime = "2026-08-06 12:34:56",
+            Updatetime = OleDate(2026, 8, 6, 12, 34, 56),
             Updateuser = "must-not-leak"
         };
+
+    private static string OleDate(int year, int month, int day, int hour, int minute, int second) =>
+        new DateTime(year, month, day, hour, minute, second).ToOADate().ToString(CultureInfo.InvariantCulture);
 
     private static Assembly? ResolveForguncyServerApi(object? sender, ResolveEventArgs args)
     {

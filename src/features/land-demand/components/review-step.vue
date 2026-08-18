@@ -58,6 +58,9 @@ defineComponentJson({ component: true, styleIsolation: 'apply-shared' })
 
     <view v-if="!props.readonly" class="review-step__promise u-card">
       <text class="review-step__promise-title">真实性承诺</text>
+      <text v-if="props.acceptanceError" class="review-step__error">
+        {{ props.acceptanceError }}
+      </text>
       <t-checkbox
         data-testid="review-accept"
         :checked="props.accepted"
@@ -66,9 +69,6 @@ defineComponentJson({ component: true, styleIsolation: 'apply-shared' })
       >
         本企业承诺所填写的信息真实、准确、完整，并同意相关部门根据项目服务需要使用以上信息。
       </t-checkbox>
-      <text v-if="props.acceptanceError" class="review-step__error">
-        {{ props.acceptanceError }}
-      </text>
       <t-button
         data-testid="review-submit"
         class="review-step__submit"

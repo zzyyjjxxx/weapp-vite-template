@@ -8,9 +8,11 @@ describe('WPI storage adapter', () => {
       getStorageSync: () => undefined,
       setStorageSync: vi.fn(),
       removeStorageSync: vi.fn(),
+      getStorageInfoSync: () => ({ keys: ['one', 2, 'two'] }),
     })
 
     expect(adapter.get('missing')).toBeUndefined()
+    expect(adapter.keys?.()).toEqual(['one', 'two'])
   })
 
   it('propagates genuine storage read failures', () => {

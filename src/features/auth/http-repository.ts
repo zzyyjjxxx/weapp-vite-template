@@ -64,6 +64,7 @@ function readEnterpriseInfo(value: unknown): EnterpriseInfo {
     creditcode: readString(value.creditcode, 'creditcode'),
     county: readString(value.county, 'county'),
     region: readString(value.region, 'region'),
+    phone: typeof value.phone === 'string' ? value.phone : '',
   }
 }
 
@@ -79,11 +80,11 @@ function mapEnterpriseProfile(
     creditcode: info.creditcode,
     county: info.county,
     region: info.region,
-    // getinfo deliberately returns only the authenticated enterprise
-    // identity. Keep editable contact fields when refreshing a session.
+    // getinfo may include the phone saved with the enterprise's land-demand
+    // record. Keep an unsaved local value only when the server has no value.
     contact: previous?.contact ?? '',
     office: previous?.office ?? '',
-    phone: previous?.phone ?? '',
+    phone: info.phone || previous?.phone || '',
   }
 }
 

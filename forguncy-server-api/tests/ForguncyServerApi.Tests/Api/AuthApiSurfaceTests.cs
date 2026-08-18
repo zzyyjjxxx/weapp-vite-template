@@ -618,7 +618,8 @@ public sealed class AuthApiSurfaceTests
                         BusinessName = "Synthetic Enterprise",
                         CreditCode = identity.CreditCode,
                         CountyName = "Yinzhou",
-                        Region = "330212"
+                        Region = "330212",
+                        Phone = "13800000000"
                     }))));
 
             var context = CreateApiContext();
@@ -629,7 +630,7 @@ public sealed class AuthApiSurfaceTests
             await AssertJsonResponseAsync(
                 context,
                 200,
-                "{\"businessname\":\"Synthetic Enterprise\",\"creditcode\":\"91330200SUCCESS\",\"county\":\"Yinzhou\",\"region\":\"330212\"}");
+                "{\"businessname\":\"Synthetic Enterprise\",\"creditcode\":\"91330200SUCCESS\",\"county\":\"Yinzhou\",\"region\":\"330212\",\"phone\":\"13800000000\"}");
         });
     }
 
@@ -861,7 +862,8 @@ public sealed class AuthApiSurfaceTests
                     BusinessName = "Synthetic Enterprise",
                     CreditCode = "91330200SYNTHETIC",
                     CountyName = "Yinzhou",
-                    Region = "330212"
+                    Region = "330212",
+                    Phone = "13800000000"
                 }
             });
 
@@ -872,11 +874,11 @@ public sealed class AuthApiSurfaceTests
             var json = JsonConvert.SerializeObject(payload);
 
             Assert.Equal(
-                "{\"businessname\":\"Synthetic Enterprise\",\"creditcode\":\"91330200SYNTHETIC\",\"county\":\"Yinzhou\",\"region\":\"330212\"}",
+                "{\"businessname\":\"Synthetic Enterprise\",\"creditcode\":\"91330200SYNTHETIC\",\"county\":\"Yinzhou\",\"region\":\"330212\",\"phone\":\"13800000000\"}",
                 json);
 
             var propertyNames = JObject.Parse(json).Properties().Select(property => property.Name).ToArray();
-            Assert.Equal(new[] { "businessname", "creditcode", "county", "region" }, propertyNames);
+            Assert.Equal(new[] { "businessname", "creditcode", "county", "region", "phone" }, propertyNames);
             Assert.DoesNotContain("id", propertyNames);
             Assert.DoesNotContain("updateuser", propertyNames);
             Assert.DoesNotContain("reviewstatus", propertyNames);

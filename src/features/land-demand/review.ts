@@ -63,20 +63,11 @@ export function buildReviewGroups(form: LandDemandForm): ReviewGroup[] {
     { field: 'deploy_weight', label: '期望承重', value: unit(form.deploy_weight, '吨/平方米') },
   )
 
-  const financeItems: ReviewItem[] = [
-    { field: 'is_financing', label: '是否有融资需求', value: form.is_financing },
-  ]
-  if (form.is_financing === '有') {
-    financeItems.push(
-      { field: 'financing_money', label: '融资金额', value: unit(form.financing_money, '万元') },
-      { field: 'financing_time', label: '期望融资时间', value: text(form.financing_time) },
-    )
-  }
-  financeItems.push(
+  const contactItems: ReviewItem[] = [
     { field: 'contact', label: '法人姓名', value: text(form.contact) },
     { field: 'office', label: '联系人职务', value: text(form.office) },
     { field: 'phone', label: '法人手机号', value: text(form.phone) },
-  )
+  ]
 
   return [
     {
@@ -105,6 +96,6 @@ export function buildReviewGroups(form: LandDemandForm): ReviewGroup[] {
         { field: 'projectdata', label: '项目建设内容', value: text(form.projectdata) },
       ],
     },
-    { step: 4, title: '融资及联系人', items: financeItems },
+    { step: 4, title: '联系人信息', items: contactItems },
   ]
 }

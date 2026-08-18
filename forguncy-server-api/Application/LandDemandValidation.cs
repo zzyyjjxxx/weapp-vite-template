@@ -50,45 +50,29 @@ public static class LandDemandValidation
             RequireDecimal(errors, "pred_rdex", request.PredRdex);
             RequireDecimal(errors, "pred_unitenergy", request.PredUnitenergy);
             RequireString(errors, "projectdata", request.Projectdata);
-            RequireString(errors, "is_financing", request.IsFinancing);
             RequireString(errors, "contact", request.Contact);
             RequireString(errors, "phone", request.Phone);
         }
 
         ValidateYearMonth(errors, "expect_time", request.ExpectTime);
-        ValidateYearMonth(errors, "financing_time", request.FinancingTime);
 
         ValidateDecimal(errors, "building_area", request.BuildingArea, 8, 2);
         ValidateDecimal(errors, "deploy_height", request.DeployHeight, 8, 2);
         ValidateDecimal(errors, "deploy_weight", request.DeployWeight, 8, 2);
-        ValidateDecimal(errors, "financing_money", request.FinancingMoney, 14, 6);
         ValidateDecimal(errors, "investment", request.Investment, 14, 6);
         ValidateDecimal(errors, "pred_tax", request.PredTax, 14, 6);
         ValidateDecimal(errors, "pred_rdex", request.PredRdex, 14, 6);
         ValidateDecimal(errors, "pred_ys", request.PredYs, 14, 6);
         ValidateDecimal(errors, "pred_unitenergy", request.PredUnitenergy, 14, 6);
 
-        if (IsAffirmative(request.IsDeploy) && string.IsNullOrWhiteSpace(request.DeployPark))
+        if (isSubmitted && IsAffirmative(request.IsDeploy) && string.IsNullOrWhiteSpace(request.DeployPark))
         {
             errors.Add(new("deploy_park", "deploy_park is required when is_deploy is affirmative."));
         }
 
-        if (IsAffirmative(request.IsSpecialuse) && string.IsNullOrWhiteSpace(request.DeployLandtype))
+        if (isSubmitted && IsAffirmative(request.IsSpecialuse) && string.IsNullOrWhiteSpace(request.DeployLandtype))
         {
             errors.Add(new("deploy_landtype", "deploy_landtype is required when is_specialuse is affirmative."));
-        }
-
-        if (IsFinancingAffirmative(request.IsFinancing))
-        {
-            if (!request.FinancingMoney.HasValue)
-            {
-                errors.Add(new("financing_money", "financing_money is required when is_financing is affirmative."));
-            }
-
-            if (string.IsNullOrWhiteSpace(request.FinancingTime))
-            {
-                errors.Add(new("financing_time", "financing_time is required when is_financing is affirmative."));
-            }
         }
 
         return errors;
@@ -105,17 +89,6 @@ public static class LandDemandValidation
             || string.Equals(value, "是", StringComparison.Ordinal)
             || string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase)
             || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsFinancingAffirmative(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        return string.Equals(value, "1", StringComparison.Ordinal)
-            || string.Equals(value, "有", StringComparison.Ordinal);
     }
 
     private static void RequireString(List<LandDemandValidationError> errors, string field, string? value)
@@ -142,9 +115,27 @@ public static class LandDemandValidation
         }
 
         var trimmedValue = value!.Trim();
-        if (!YearMonthPattern.IsMatch(trimmedValue))
+        if (!YearMonthPattern.IsMatch(trimmedValue) && !IsExcelDateSerial(trimmedValue))
         {
-            errors.Add(new(field, $"{field} must use YYYY-MM format."));
+            errors.Add(new(field, $"{field} must use YYYY-MM or an Excel/OLE date serial."));
+        }
+    }
+
+    private static bool IsExcelDateSerial(string value)
+    {
+        if (!decimal.TryParse(value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var serial))
+        {
+            return false;
+        }
+
+        try
+        {
+            _ = DateTime.FromOADate((double)serial);
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            return false;
         }
     }
 

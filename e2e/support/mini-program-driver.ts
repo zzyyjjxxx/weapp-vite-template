@@ -154,9 +154,6 @@ const COMPONENT_FIELD_BRIDGES: Record<string, ComponentFieldBridge> = {
   'pred-rdex': { selector: '#project-info-step', field: 'pred_rdex' },
   'pred-unitenergy': { selector: '#project-info-step', field: 'pred_unitenergy' },
   'projectdata': { selector: '#project-info-step', field: 'projectdata' },
-  'is-financing': { selector: '#finance-contact-step', field: 'is_financing' },
-  'financing-money': { selector: '#finance-contact-step', field: 'financing_money' },
-  'financing-time': { selector: '#finance-contact-step', field: 'financing_time' },
   'contact': { selector: '#finance-contact-step', field: 'contact' },
   'office': { selector: '#finance-contact-step', field: 'office' },
   'phone': { selector: '#finance-contact-step', field: 'phone' },
@@ -172,27 +169,13 @@ const COMPONENT_ACTION_BRIDGES: Record<string, ComponentActionBridge> = {
     event: 'change',
     detail: { is_specialuse: '否' },
   },
-  'is-financing-yes': {
-    selector: '#finance-contact-step',
-    event: 'change',
-    detail: { is_financing: '有' },
-  },
   'review-accept': { selector: '#review-step', event: 'accept', detail: true },
   'review-submit': { selector: '#review-step', event: 'submit' },
   'verification-resend': { selector: '#verification-dialog', event: 'resend' },
   'verification-submit': { selector: '#verification-dialog', event: 'submit' },
 }
 
-const COMPONENT_ERROR_BRIDGES: Record<string, ComponentFieldBridge> = {
-  'financing-money-error': {
-    selector: '#finance-contact-step',
-    field: 'financing_money',
-  },
-  'financing-time-error': {
-    selector: '#finance-contact-step',
-    field: 'financing_time',
-  },
-}
+const COMPONENT_ERROR_BRIDGES: Record<string, ComponentFieldBridge> = {}
 
 export interface MiniProgramLocator {
   tap: () => Promise<void>

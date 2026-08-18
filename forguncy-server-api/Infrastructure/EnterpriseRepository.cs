@@ -21,7 +21,8 @@ public sealed class EnterpriseRepository : IEnterpriseRepository
 
         cancellationToken.ThrowIfCancellationRequested();
         using var client = _clientFactory();
-        var row = await BuildLookupQuery(client, creditCode)
+        var normalizedCreditCode = creditCode.Trim();
+        var row = await BuildLookupQuery(client, normalizedCreditCode)
             .SingleAsync();
         cancellationToken.ThrowIfCancellationRequested();
         return row is null
@@ -32,9 +33,27 @@ public sealed class EnterpriseRepository : IEnterpriseRepository
                 CreditCode = row.CreditCode,
                 BusinessName = row.BusinessName,
                 CountyName = row.CountyName,
-                Region = row.Region
+                Region = row.Region,
+                Phone = await ReadPhoneAsync(client, normalizedCreditCode, cancellationToken)
             };
     }
+
+    private static async Task<string> ReadPhoneAsync(
+        SqlSugarClient client,
+        string creditCode,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var phone = await BuildPhoneLookupQuery(client, creditCode)
+            .FirstAsync();
+        cancellationToken.ThrowIfCancellationRequested();
+        return phone ?? string.Empty;
+    }
+
+    private static ISugarQueryable<string?> BuildPhoneLookupQuery(SqlSugarClient client, string creditCode) =>
+        client.Queryable<LandDemandRecord>()
+            .Where(record => record.Creditcode == creditCode)
+            .Select(record => record.Phone);
 
     private static ISugarQueryable<EnterpriseLookupRow> BuildLookupQuery(SqlSugarClient client, string creditCode) =>
         client.Queryable<EnterpriseRow>()

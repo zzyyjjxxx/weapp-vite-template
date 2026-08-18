@@ -1,5 +1,6 @@
 import type {
   LandDemandRecord,
+  LandDemandRecordStatus,
   SaveLandDemandPayload,
   UpdateLandDemandPayload,
 } from './models'
@@ -24,13 +25,11 @@ const DECIMAL_FIELDS = [
   'pred_tax',
   'pred_rdex',
   'pred_unitenergy',
-  'financing_money',
 ] as const
 
 const TEXT_FIELDS = [
   'area',
   'expect_park',
-  'expect_time',
   'is_deploy',
   'deploy_park',
   'is_specialuse',
@@ -39,12 +38,14 @@ const TEXT_FIELDS = [
   'keyindustry',
   'futureindustry',
   'projectdata',
-  'is_financing',
-  'financing_time',
   'contact',
   'office',
   'phone',
 ] as const
+
+const EXPECT_TIME_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/
+const EXCEL_DATE_EPOCH_UTC = Date.UTC(1899, 11, 30)
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -65,6 +66,66 @@ function readDecimalString(value: unknown): string {
   return typeof value === 'string' ? value : ''
 }
 
+function readExcelDateTime(value: unknown): string {
+  if (value === undefined || value === null || value === '') {
+    return ''
+  }
+
+  const text = String(value).trim()
+  if (!/^\d+(?:\.\d+)?$/.test(text)) {
+    return text
+  }
+
+  const serial = Number(text)
+  if (!Number.isFinite(serial)) {
+    return text
+  }
+
+  const date = new Date(EXCEL_DATE_EPOCH_UTC + Math.round(serial * MILLISECONDS_PER_DAY))
+  if (Number.isNaN(date.getTime())) {
+    return text
+  }
+
+  const pad = (part: number): string => String(part).padStart(2, '0')
+  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}T${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`
+}
+
+function readExpectTime(value: unknown): string {
+  if (value === undefined || value === null || value === '') {
+    return ''
+  }
+
+  const text = readString(value).trim()
+  const serial = typeof value === 'number'
+    ? value
+    : /^\d+(?:\.\d+)?$/.test(text) ? Number(text) : undefined
+
+  if (serial !== undefined && Number.isFinite(serial)) {
+    const date = new Date(EXCEL_DATE_EPOCH_UTC + Math.trunc(serial * MILLISECONDS_PER_DAY))
+    if (!Number.isNaN(date.getTime())) {
+      return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`
+    }
+  }
+
+  const datePrefix = /^(\d{4})-(0[1-9]|1[0-2])(?:-\d{2})?/.exec(text)
+  return datePrefix ? `${datePrefix[1]}-${datePrefix[2]}` : text
+}
+
+function writeExpectTime(value: unknown): string | undefined {
+  if (value === undefined || value === null || value === '') {
+    return undefined
+  }
+
+  const text = readString(value).trim()
+  const match = EXPECT_TIME_PATTERN.exec(text)
+  if (!match) {
+    throw new TypeError('字段 expect_time 必须是 YYYY-MM 格式')
+  }
+
+  const date = Date.UTC(Number(match[1]), Number(match[2]) - 1, 1)
+  return String(Math.round((date - EXCEL_DATE_EPOCH_UTC) / MILLISECONDS_PER_DAY))
+}
+
 function readYesNo(value: unknown): LandDemandRecord['is_deploy'] {
   const choice = readString(value)
   return choice === '是' || choice === '1'
@@ -74,57 +135,68 @@ function readYesNo(value: unknown): LandDemandRecord['is_deploy'] {
       : ''
 }
 
-function readFinancing(value: unknown): LandDemandRecord['is_financing'] {
-  const choice = readString(value)
-  return choice === '有' || choice === '1' ? '有' : '没有'
-}
-
-function readStatus(value: unknown): LandDemandRecord['landusedemand'] {
+function readStatus(value: unknown): LandDemandRecordStatus {
   const status = readString(value)
+  if (status === '0') {
+    return '0'
+  }
   if (status !== '1' && status !== '2') {
     throw new Error('用地需求接口返回的状态无效')
   }
   return status
 }
 
-function mapRecord(value: unknown): LandDemandRecord {
+function unwrapRecord(value: unknown): unknown {
   if (!isRecord(value)) {
+    return value
+  }
+
+  for (const key of ['data', 'record', 'result'] as const) {
+    const nested = value[key]
+    if (isRecord(nested)) {
+      return nested
+    }
+  }
+
+  return value
+}
+
+function mapRecord(value: unknown): LandDemandRecord {
+  const record = unwrapRecord(value)
+  if (!isRecord(record)) {
     throw new Error('用地需求接口返回数据格式错误')
   }
 
   return {
-    businessname: readString(value.businessname),
-    creditcode: readString(value.creditcode),
-    county: readString(value.county),
-    region: readString(value.region),
-    area: readString(value.area),
-    building_area: readDecimalString(value.building_area),
-    expect_park: readString(value.expect_park),
-    expect_time: readString(value.expect_time),
-    is_deploy: readYesNo(value.is_deploy),
-    deploy_park: readString(value.deploy_park),
-    is_specialuse: readYesNo(value.is_specialuse),
-    deploy_landtype: readString(value.deploy_landtype),
-    deploy_height: readDecimalString(value.deploy_height),
-    deploy_weight: readDecimalString(value.deploy_weight),
-    investment: readDecimalString(value.investment),
-    project_hydm: readString(value.project_hydm),
-    keyindustry: readString(value.keyindustry),
-    futureindustry: readString(value.futureindustry),
-    pred_ys: readDecimalString(value.pred_ys),
-    pred_tax: readDecimalString(value.pred_tax),
-    pred_rdex: readDecimalString(value.pred_rdex),
-    pred_unitenergy: readDecimalString(value.pred_unitenergy),
-    projectdata: readString(value.projectdata),
-    is_financing: readFinancing(value.is_financing),
-    financing_money: readDecimalString(value.financing_money),
-    financing_time: readString(value.financing_time),
-    contact: readString(value.contact),
-    office: readString(value.office),
-    phone: readString(value.phone),
-    landusedemand: readStatus(value.landusedemand),
-    updatetime: readString(value.updatetime),
-    updateuser: readString(value.updateuser),
+    businessname: readString(record.businessname),
+    creditcode: readString(record.creditcode),
+    county: readString(record.county),
+    region: readString(record.region),
+    area: readString(record.area),
+    building_area: readDecimalString(record.building_area),
+    expect_park: readString(record.expect_park),
+    expect_time: readExpectTime(record.expect_time),
+    is_deploy: readYesNo(record.is_deploy),
+    deploy_park: readString(record.deploy_park),
+    is_specialuse: readYesNo(record.is_specialuse),
+    deploy_landtype: readString(record.deploy_landtype),
+    deploy_height: readDecimalString(record.deploy_height),
+    deploy_weight: readDecimalString(record.deploy_weight),
+    investment: readDecimalString(record.investment),
+    project_hydm: readString(record.project_hydm),
+    keyindustry: readString(record.keyindustry),
+    futureindustry: readString(record.futureindustry),
+    pred_ys: readDecimalString(record.pred_ys),
+    pred_tax: readDecimalString(record.pred_tax),
+    pred_rdex: readDecimalString(record.pred_rdex),
+    pred_unitenergy: readDecimalString(record.pred_unitenergy),
+    projectdata: readString(record.projectdata),
+    contact: readString(record.contact),
+    office: readString(record.office),
+    phone: readString(record.phone),
+    landusedemand: readStatus(record.landusedemand),
+    updatetime: readExcelDateTime(record.updatetime),
+    updateuser: readString(record.updateuser),
   }
 }
 
@@ -160,6 +232,11 @@ function toWritePayload(payload: SaveLandDemandPayload | UpdateLandDemandPayload
     if (value !== undefined) {
       body[field] = value
     }
+  }
+
+  const expectTime = writeExpectTime(readRecordValue(payload, 'expect_time'))
+  if (expectTime !== undefined) {
+    body.expect_time = expectTime
   }
 
   body.landusedemand = readString(readRecordValue(payload, 'landusedemand'))
@@ -214,11 +291,19 @@ export function createHttpLandDemandRepository(options: {
     body?: SaveLandDemandPayload | UpdateLandDemandPayload,
   ): Promise<LandDemandRecord> {
     try {
-      const response = await options.client.request<unknown>(method, path, {
+      const token = readToken(options.getAccessToken)
+      await options.client.request<unknown>(method, path, {
         body: body ? toWritePayload(body) : undefined,
-        token: readToken(options.getAccessToken),
+        token,
       })
-      return mapRecord(response)
+
+      // The write route may return an empty body, a success marker, or a
+      // response envelope depending on the deployed Forguncy version. Always
+      // read the canonical record after a successful write so that the
+      // verification dialog never tries to parse the write acknowledgement as
+      // a land-demand record.
+      const refreshed = await options.client.request<unknown>('GET', GET_PATH, { token })
+      return mapRecord(refreshed)
     }
     catch (error) {
       throw mapLandDemandError(error, '用地需求请求失败，请稍后重试')
@@ -234,7 +319,10 @@ export function createHttpLandDemandRepository(options: {
         return mapRecord(response)
       }
       catch (error) {
-        if (error instanceof ApiError && error.code === 'land_demand_not_found') {
+        if (
+          error instanceof ApiError
+          && (error.code === 'land_demand_not_found' || error.statusCode === 404)
+        ) {
           return undefined
         }
         throw mapLandDemandError(error, '查询用地需求失败，请稍后重试')
@@ -247,6 +335,7 @@ export function createHttpLandDemandRepository(options: {
     getDraft: creditcode => localRepository.getDraft(creditcode),
     setDraft: (creditcode, draft) => localRepository.setDraft(creditcode, draft),
     removeDraft: creditcode => localRepository.removeDraft(creditcode),
+    clearDrafts: creditcode => localRepository.clearDrafts(creditcode),
 
     // SMS is intentionally mocked until the local development service is
     // reachable. Persisted drafts remain local for the same reason.

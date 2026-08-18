@@ -1,5 +1,5 @@
 import type { EnterpriseProfile } from '@/features/auth/models'
-import type { LandDemandForm } from '@/features/land-demand/models'
+import type { LandDemandForm, LandDemandRecord } from '@/features/land-demand/models'
 
 import { beforeEach, describe, expect, it } from 'vitest'
 import { configureLandDemandRepository, createMockLandDemandRepository } from '@/features/land-demand/repository'
@@ -42,9 +42,6 @@ const form: LandDemandForm = {
   pred_rdex: '200',
   pred_unitenergy: '3',
   projectdata: '项目建设内容',
-  is_financing: '没有',
-  financing_money: '',
-  financing_time: '',
   contact: enterprise.contact,
   office: enterprise.office,
   phone: enterprise.phone,
@@ -63,7 +60,7 @@ describe('land demand store', () => {
     store.initialize(enterprise, undefined, { form, currentStep: 3, savedAt: 1_000 })
 
     expect(store.currentStep.value).toBe(3)
-    expect(store.progressStep.value).toBe(3)
+    expect(store.progressStep.value).toBe(5)
     expect(store.hasRecord.value).toBe(false)
     expect(store.hasLocalDraft.value).toBe(true)
     expect(store.isDirty.value).toBe(false)
@@ -78,7 +75,7 @@ describe('land demand store', () => {
 
     store.goToStep(2)
     expect(store.currentStep.value).toBe(2)
-    expect(store.progressStep.value).toBe(4)
+    expect(store.progressStep.value).toBe(5)
 
     store.goToStep(5)
     store.goToStep(3)
@@ -189,6 +186,71 @@ describe('land demand store', () => {
     expect(store.currentStep.value).toBe(2)
   })
 
+  it('promotes a complete local draft to the review progress despite stale step metadata', () => {
+    repository.setDraft(enterprise.creditcode, {
+      form,
+      currentStep: 1,
+      progressStep: 1,
+      savedAt: 2_000,
+    })
+
+    const store = useLandDemandStore()
+    store.initializeFromLocalDraft(enterprise)
+
+    expect(store.currentStep.value).toBe(1)
+    expect(store.progressStep.value).toBe(5)
+  })
+
+  it('refreshes an existing local draft from the server after a fresh login', () => {
+    repository.setDraft(enterprise.creditcode, {
+      form: { ...form, area: '1' },
+      currentStep: 5,
+      progressStep: 5,
+      savedAt: 1_000,
+    })
+    const record: LandDemandRecord = {
+      ...form,
+      area: '1fsafsaffa',
+      deploy_park: form.deploy_park.join(','),
+      landusedemand: '2',
+      updatetime: new Date(2_000).toISOString(),
+      updateuser: enterprise.username,
+    }
+
+    const store = useLandDemandStore()
+    store.initializeFromLocalDraft(enterprise, record, { refreshFromServer: true })
+
+    expect(store.form.value.area).toBe('1fsafsaffa')
+    expect(repository.getDraft(enterprise.creditcode)).toMatchObject({
+      form: { area: '1fsafsaffa' },
+      currentStep: 5,
+      progressStep: 5,
+    })
+  })
+
+  it('restores the review step from a complete server draft after logout', async () => {
+    const draftEnterprise = {
+      ...enterprise,
+      creditcode: '91330200MA2DEMO004',
+    }
+    const draftForm = {
+      ...form,
+      creditcode: draftEnterprise.creditcode,
+    }
+    const record = await repository.save({
+      ...draftForm,
+      deploy_park: draftForm.deploy_park.join(','),
+      landusedemand: '2',
+    })
+
+    const store = useLandDemandStore()
+    store.initializeFromLocalDraft(draftEnterprise, record, { refreshFromServer: true })
+
+    expect(store.currentStep.value).toBe(5)
+    expect(store.progressStep.value).toBe(5)
+    expect(store.hasLocalDraft.value).toBe(false)
+  })
+
   it('persists and discards only local draft metadata', () => {
     const store = useLandDemandStore()
     store.initialize(enterprise)
@@ -206,6 +268,32 @@ describe('land demand store', () => {
     store.discardLocalDraft()
     expect(repository.getDraft(enterprise.creditcode)).toBeUndefined()
     expect(store.hasLocalDraft.value).toBe(false)
+  })
+
+  it('clears the current enterprise draft and in-memory form on logout', () => {
+    const store = useLandDemandStore()
+    store.initialize(enterprise)
+    store.patch({ area: '31' })
+    store.saveLocalDraft()
+    repository.setDraft('91330200MA2OTHER01', {
+      form: { ...form, creditcode: '91330200MA2OTHER01', area: '99' },
+      currentStep: 4,
+      savedAt: 2_000,
+    })
+
+    store.clearForLogout()
+
+    expect(repository.getDraft(enterprise.creditcode)).toBeUndefined()
+    expect(repository.getDraft('91330200MA2OTHER01')).toBeUndefined()
+    expect(store.form.value.creditcode).toBeUndefined()
+    expect(store.currentStep.value).toBe(1)
+    expect(store.progressStep.value).toBe(1)
+    expect(store.hasRecord.value).toBe(false)
+    expect(store.hasLocalDraft.value).toBe(false)
+    expect(store.isDirty.value).toBe(false)
+
+    store.initializeFromLocalDraft(enterprise)
+    expect(store.form.value.area).toBe('')
   })
 
   it('marks persistence without retaining a server record object', async () => {
@@ -228,5 +316,29 @@ describe('land demand store', () => {
     expect(store.isDirty.value).toBe(false)
     expect(store).not.toHaveProperty('record')
     expect(store.form.value.area).toBe('30')
+  })
+
+  it('promotes a complete draft after persistence even when the viewed step is still one', async () => {
+    const draftEnterprise = {
+      ...enterprise,
+      creditcode: '91330200MA2DEMO005',
+    }
+    const store = useLandDemandStore()
+    store.initialize(draftEnterprise)
+    const record = await repository.save({
+      ...form,
+      creditcode: draftEnterprise.creditcode,
+      deploy_park: form.deploy_park.join(','),
+      landusedemand: '2',
+    })
+
+    store.markPersisted(record)
+
+    expect(store.currentStep.value).toBe(1)
+    expect(store.progressStep.value).toBe(5)
+    expect(repository.getDraft(draftEnterprise.creditcode)).toMatchObject({
+      currentStep: 1,
+      progressStep: 5,
+    })
   })
 })

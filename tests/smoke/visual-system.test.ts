@@ -30,7 +30,7 @@ describe('land-demand visual system', () => {
       'utf8',
     )
 
-    for (const label of ['基本信息', '用地需求', '投资项目', '融资及联系人', '确认提交']) {
+    for (const label of ['基本信息', '用地需求', '投资项目', '联系人信息', '确认提交']) {
       expect(source).toContain(`<text class="wizard-progress__label">${label}</text>`)
     }
     expect(source).toContain('wizard-progress__connector')

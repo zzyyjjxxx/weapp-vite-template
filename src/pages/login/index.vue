@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { LoginInput } from '@/features/auth/models'
 
-import { computed, onLoad, ref } from 'wevu'
+import { computed, onLoad, onShow, ref } from 'wevu'
 import AppIcon from '@/components/ui/app-icon/index.vue'
 import PageTransitionLoading from '@/components/ui/page-transition-loading/index.vue'
 import { useLoginMutation } from '@/features/auth/queries'
@@ -9,24 +9,46 @@ import { readStringDetail } from '@/platform/event-detail'
 import { usePageTransitionLoading } from '@/platform/page-transition'
 import { replaceUrl } from '@/router/navigation'
 import { parseReturnTo } from '@/router/query'
+import { useAuthStore } from '@/stores/auth'
 
 definePageJson({
   navigationBarTitleText: '用地需求填报',
 })
 
-const username = ref('demo')
-const password = ref('demo123')
+const username = ref('')
+const password = ref('')
 const usernameError = ref('')
 const passwordError = ref('')
 const formError = ref('')
 const returnTo = ref('/pages/home/index')
+const redirecting = ref(false)
+const auth = useAuthStore()
 const loginMutation = useLoginMutation()
 const isPending = loginMutation.isPending
 const { pending: transitioning, run: runTransition } = usePageTransitionLoading()
 const errorMessage = computed(() => formError.value || loginMutation.error.value?.message || '')
 
+async function redirectIfAuthenticated(): Promise<void> {
+  if (redirecting.value || isPending.value || !auth.ensureActiveSession()) {
+    return
+  }
+
+  redirecting.value = true
+  try {
+    await runTransition(() => replaceUrl(returnTo.value))
+  }
+  catch {
+    redirecting.value = false
+  }
+}
+
 onLoad((query) => {
   returnTo.value = parseReturnTo(query?.returnTo)
+  void redirectIfAuthenticated()
+})
+
+onShow(() => {
+  void redirectIfAuthenticated()
 })
 
 function updateUsername(detail: unknown): void {
@@ -45,6 +67,10 @@ function validate(input: LoginInput): boolean {
   return !usernameError.value && !passwordError.value
 }
 
+function buildFreshLoginUrl(url: string): string {
+  return `${url}${url.includes('?') ? '&' : '?'}freshLogin=1`
+}
+
 async function submit(): Promise<void> {
   formError.value = ''
   const input: LoginInput = {
@@ -58,7 +84,7 @@ async function submit(): Promise<void> {
   try {
     await runTransition(async () => {
       await loginMutation.mutateAsync(input)
-      await replaceUrl(returnTo.value)
+      await replaceUrl(buildFreshLoginUrl(returnTo.value))
     })
   }
   catch {
@@ -92,12 +118,13 @@ async function submit(): Promise<void> {
 
       <view class="login__field">
         <text class="login__field-label">用户名</text>
+        <text v-if="usernameError" class="login__field-error">{{ usernameError }}</text>
         <t-input
           data-testid="username"
           :value="username"
           :maxlength="32"
-          :status="usernameError ? 'error' : 'default'"
-          :tips="usernameError"
+          status="default"
+          tips=""
           placeholder="请输入统一社会信用代码"
           @change="updateUsername"
         >
@@ -110,13 +137,14 @@ async function submit(): Promise<void> {
       </view>
       <view class="login__field">
         <text class="login__field-label">密码</text>
+        <text v-if="passwordError" class="login__field-error">{{ passwordError }}</text>
         <t-input
           data-testid="password"
           type="password"
           :value="password"
           :maxlength="64"
-          :status="passwordError ? 'error' : 'default'"
-          :tips="passwordError"
+          status="default"
+          tips=""
           placeholder="请输入密码"
           @change="updatePassword"
         >
@@ -292,6 +320,14 @@ async function submit(): Promise<void> {
   margin-top: $space-2;
   font-size: 24rpx;
   line-height: 1.6;
+  color: $color-error;
+}
+
+.login__field-error {
+  display: block;
+  padding: 0 32rpx 4rpx;
+  font-size: 24rpx;
+  line-height: 1.5;
   color: $color-error;
 }
 

@@ -20,6 +20,7 @@ export interface EnterpriseInfo {
   creditcode: string
   county: string
   region: string
+  phone?: string
 }
 
 export interface AuthSession {

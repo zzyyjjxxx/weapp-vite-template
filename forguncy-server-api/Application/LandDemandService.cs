@@ -1,3 +1,4 @@
+using System.Globalization;
 using ForguncyServerApi.Domain;
 using ForguncyServerApi.Infrastructure;
 using MySql.Data.MySqlClient;
@@ -6,8 +7,6 @@ namespace ForguncyServerApi.Application;
 
 public sealed class LandDemandService
 {
-    private const string TimestampFormat = "yyyy-MM-dd HH:mm:ss";
-
     private readonly EnterpriseService enterpriseService;
     private readonly ILandDemandRepository repository;
     private readonly Func<DateTimeOffset> clock;
@@ -59,7 +58,7 @@ public sealed class LandDemandService
             return new(LandDemandOperationStatus.InvalidRequest, null);
         }
 
-        var timestamp = clock().ToString(TimestampFormat);
+        var timestamp = ToOleAutomationDate(clock());
         var record = CreateRecord(enterprise, normalizedRequest, timestamp);
 
         try
@@ -96,7 +95,7 @@ public sealed class LandDemandService
             return new(LandDemandOperationStatus.InvalidRequest, null);
         }
 
-        var timestamp = clock().ToString(TimestampFormat);
+        var timestamp = ToOleAutomationDate(clock());
         var updated = ApplyWritableFields(existing, normalizedRequest, timestamp, enterprise.CreditCode);
         var saved = await repository.UpdateWritableFieldsAsync(
             enterprise.CreditCode,
@@ -122,6 +121,9 @@ public sealed class LandDemandService
 
         return false;
     }
+
+    private static string ToOleAutomationDate(DateTimeOffset value) =>
+        value.DateTime.ToOADate().ToString(CultureInfo.InvariantCulture);
 
     private static LandDemandRecord CreateRecord(
         EnterpriseProfile enterprise,
@@ -164,9 +166,6 @@ public sealed class LandDemandService
         target.PredRdex = request.PredRdex;
         target.PredUnitenergy = request.PredUnitenergy;
         target.Projectdata = request.Projectdata;
-        target.IsFinancing = request.IsFinancing;
-        target.FinancingMoney = request.FinancingMoney;
-        target.FinancingTime = request.FinancingTime;
         target.Contact = request.Contact;
         target.Office = request.Office;
         target.Phone = request.Phone;
@@ -202,9 +201,6 @@ public sealed class LandDemandService
             PredRdex = record.PredRdex,
             PredUnitenergy = record.PredUnitenergy,
             Projectdata = record.Projectdata,
-            IsFinancing = record.IsFinancing,
-            FinancingMoney = record.FinancingMoney,
-            FinancingTime = record.FinancingTime,
             Contact = record.Contact,
             Office = record.Office,
             Phone = record.Phone,

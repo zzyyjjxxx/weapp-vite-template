@@ -29,9 +29,6 @@ const validForm: LandDemandForm = {
   pred_rdex: '200',
   pred_unitenergy: '3',
   projectdata: '建设智能机器人生产线',
-  is_financing: '有',
-  financing_money: '500',
-  financing_time: '2027-03',
   contact: '张示例',
   office: '法定代表人',
   phone: '13800000000',
@@ -56,17 +53,13 @@ describe('land demand review', () => {
       deploy_park: [],
       is_specialuse: '否',
       deploy_landtype: '',
-      is_financing: '没有',
-      financing_money: '',
-      financing_time: '',
     }).flatMap(group => group.items)
 
     expect(items.some(item => item.field === 'deploy_park')).toBe(false)
     expect(items.some(item => item.field === 'deploy_landtype')).toBe(false)
-    expect(items.some(item => item.field === 'financing_money')).toBe(false)
-    expect(items.some(item => item.field === 'financing_time')).toBe(false)
     expect(items.some(item => item.field === 'deploy_height')).toBe(true)
     expect(items.some(item => item.field === 'deploy_weight')).toBe(true)
+    expect(items.some(item => item.field === 'contact')).toBe(true)
   })
 
   it('exposes the review and verification runtime hooks', () => {
@@ -128,17 +121,24 @@ describe('land demand review', () => {
     expect(source).toContain('已发送至')
     expect(source).not.toContain('验证码已发送至')
     expect(source).toContain('margin-top: $space-2')
+    expect(source).toContain('min-height: 38rpx')
+    expect(source).toContain('verification-dialog__error--visible')
+    expect(source).not.toContain('v-if="props.error" class="verification-dialog__error"')
+    expect(source).toContain('custom-style="--td-popup-transition: none;"')
+    expect(source).toContain('const verificationDialogOverlayProps =')
+    expect(source).toContain(':overlay-props="verificationDialogOverlayProps"')
     expect(source).not.toContain('verification-dialog__resend-hint')
     expect(source).not.toContain('秒后可重新发送')
     expect(source).toContain('--td-input-vertical-padding: 8rpx 32rpx')
-    expect(source).toContain('padding-right: 96rpx')
-    expect(source).toContain('width: 88rpx')
+    expect(source).toContain('padding-right: 136rpx')
+    expect(source).toContain('width: 128rpx')
     expect(source).toContain('size="extra-small"')
     expect(source).toContain('setInterval(updateCountdown, 1000)')
     expect(source).toContain('button-layout="horizontal"')
     expect(source).toContain('cancel-btn="取消"')
     expect(source).toContain('confirm-btn="提交"')
-    expect(source).toContain('if (!submitDisabled.value)')
+    expect(source).toContain('emit(\'submit\')')
+    expect(source).not.toContain('props.code.length !== 6')
     expect(source).toContain('@cancel="close"')
     expect(source).toContain('@confirm="confirm"')
     expect(source).not.toContain(':cancel-btn="cancelButton"')

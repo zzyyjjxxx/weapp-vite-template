@@ -7,8 +7,15 @@ import type {
 } from './models'
 
 function serializeForm(form: LandDemandForm, status: LandDemandStatus) {
+  const {
+    is_financing: _isFinancing,
+    financing_money: _financingMoney,
+    financing_time: _financingTime,
+    ...formWithoutLegacyFinancing
+  } = form as LandDemandForm & Record<string, unknown>
+
   return {
-    ...form,
+    ...formWithoutLegacyFinancing,
     deploy_park: form.deploy_park.join(','),
     landusedemand: status,
   }
@@ -26,7 +33,15 @@ export function buildUpdatePayload(
   original: LandDemandRecord,
   status: LandDemandStatus,
 ): UpdateLandDemandPayload {
-  const { county: _county, region: _region, businessname: _businessname, ...mutableForm } = form
+  const {
+    county: _county,
+    region: _region,
+    businessname: _businessname,
+    is_financing: _isFinancing,
+    financing_money: _financingMoney,
+    financing_time: _financingTime,
+    ...mutableForm
+  } = form as LandDemandForm & Record<string, unknown>
 
   return {
     ...mutableForm,
