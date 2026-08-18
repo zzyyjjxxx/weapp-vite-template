@@ -27,9 +27,6 @@ const validForm: LandDemandForm = {
   pred_rdex: '200',
   pred_unitenergy: '3',
   projectdata: '项目建设内容',
-  is_financing: '没有',
-  financing_money: '',
-  financing_time: '',
   contact: '张三',
   office: '总经理',
   phone: '13800138000',
@@ -56,6 +53,9 @@ describe('land demand payload adapters', () => {
     expect(payload.landusedemand).toBe('2')
     expect(payload.deploy_park).toBe('330203,330205')
     expect(payload).not.toHaveProperty('updatetime')
+    expect(payload).not.toHaveProperty('is_financing')
+    expect(payload).not.toHaveProperty('financing_money')
+    expect(payload).not.toHaveProperty('financing_time')
   })
 
   it('builds an update payload with the selected status', () => {

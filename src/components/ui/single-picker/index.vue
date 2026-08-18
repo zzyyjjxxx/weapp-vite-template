@@ -15,12 +15,14 @@ const props = withDefaults(defineProps<{
   options?: readonly SinglePickerOptionInput[]
   placeholder?: string
   required?: boolean
+  error?: string | null
 }>(), {
   title: '',
   value: '',
   options: () => [],
   placeholder: '请选择',
   required: false,
+  error: '',
 })
 const emit = defineEmits<{
   change: [detail: { value: string }]
@@ -40,6 +42,7 @@ const displayValue = computed(() => (
   ?? props.placeholder
   ?? ''
 ))
+const errorText = computed(() => props.error ?? '')
 
 function open(): void {
   visible.value = true
@@ -69,7 +72,12 @@ function confirm(detail: unknown): void {
       arrow
       hover
       @tap="open"
-    />
+    >
+      <template #description>
+        <text v-if="errorText" class="field__error field__error--inside-cell">{{ errorText }}</text>
+        <slot name="error" />
+      </template>
+    </t-cell>
     <t-picker
       v-if="visible"
       :visible="visible"

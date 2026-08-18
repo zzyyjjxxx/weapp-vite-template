@@ -16,6 +16,9 @@ export function createQueryClient(): QueryClient {
   })
   const mutationCache = new MutationCache({
     onError: (error, _variables, _onMutateResult, mutation) => {
+      if (mutation.options.meta?.suppressGlobalErrorLog === true) {
+        return
+      }
       logger.error('mutation.failed', {
         mutationId: String(mutation.mutationId),
       }, error)

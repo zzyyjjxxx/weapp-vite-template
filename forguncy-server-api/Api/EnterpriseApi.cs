@@ -410,7 +410,8 @@ public class EnterpriseApi : ForguncyApi
                 profile.BusinessName,
                 profile.CreditCode,
                 profile.CountyName,
-                profile.Region));
+                profile.Region,
+                profile.Phone));
 
     private static ApiResponse CreateLoginResponse(LoginResult result)
     {
@@ -465,7 +466,8 @@ public class EnterpriseApi : ForguncyApi
         [property: JsonProperty("businessname")] string BusinessName,
         [property: JsonProperty("creditcode")] string CreditCode,
         [property: JsonProperty("county")] string County,
-        [property: JsonProperty("region")] string Region);
+        [property: JsonProperty("region")] string Region,
+        [property: JsonProperty("phone")] string Phone);
 
     private record SendCodeResponse(
         [property: JsonProperty("success")] bool Success,

@@ -2,20 +2,21 @@
 import type { FieldError, LandDemandForm } from '../models'
 
 import { useInvalidFieldScroll } from '../invalid-field-scroll'
+import { normalizeFieldErrorMessage } from '../validation'
 
-const props = defineProps<{ form: LandDemandForm, errors: readonly FieldError[] }>()
+const props = defineProps<{ form: LandDemandForm, errors?: readonly FieldError[] | null, scrollRequest: number, active: boolean }>()
 
 defineComponentJson({ component: true, styleIsolation: 'apply-shared' })
 
-useInvalidFieldScroll(() => props.errors, {
+useInvalidFieldScroll(() => props.errors ?? [], () => props.scrollRequest, {
   businessname: 'businessname-field',
   creditcode: 'creditcode-field',
   county: 'county-field',
   region: 'region-field',
-}, 'basic-info-step')
+}, 'basic-info-step', () => props.active)
 
 function fieldError(field: keyof LandDemandForm): string {
-  return props.errors.find(error => error.field === field)?.message ?? ''
+  return normalizeFieldErrorMessage(props.errors?.find(error => error.field === field)?.message ?? '')
 }
 </script>
 
@@ -26,6 +27,7 @@ function fieldError(field: keyof LandDemandForm): string {
 
     <view id="businessname-field" data-testid="businessname-field" class="field field--control">
       <view class="field__label"><text>企业名称</text><text class="field__required">*</text></view>
+      <text v-if="fieldError('businessname')" class="field__error field__error--before-control">{{ fieldError('businessname') }}</text>
       <t-input
         data-testid="businessname"
         label=""
@@ -34,10 +36,10 @@ function fieldError(field: keyof LandDemandForm): string {
         tips=""
         readonly
       />
-      <text v-if="fieldError('businessname')" class="field__error">{{ fieldError('businessname') }}</text>
     </view>
     <view id="creditcode-field" data-testid="creditcode-field" class="field field--control">
       <view class="field__label"><text>统一社会信用代码</text><text class="field__required">*</text></view>
+      <text v-if="fieldError('creditcode')" class="field__error field__error--before-control">{{ fieldError('creditcode') }}</text>
       <t-input
         data-testid="creditcode"
         label=""
@@ -46,10 +48,10 @@ function fieldError(field: keyof LandDemandForm): string {
         tips=""
         readonly
       />
-      <text v-if="fieldError('creditcode')" class="field__error">{{ fieldError('creditcode') }}</text>
     </view>
     <view id="county-field" data-testid="county-field" class="field field--control">
       <view class="field__label"><text>所在区（县、市）</text><text class="field__required">*</text></view>
+      <text v-if="fieldError('county')" class="field__error field__error--before-control">{{ fieldError('county') }}</text>
       <t-input
         data-testid="county"
         label=""
@@ -58,10 +60,10 @@ function fieldError(field: keyof LandDemandForm): string {
         tips=""
         readonly
       />
-      <text v-if="fieldError('county')" class="field__error">{{ fieldError('county') }}</text>
     </view>
     <view id="region-field" data-testid="region-field" class="field field--control">
       <view class="field__label"><text>所在镇街</text><text class="field__required">*</text></view>
+      <text v-if="fieldError('region')" class="field__error field__error--before-control">{{ fieldError('region') }}</text>
       <t-input
         data-testid="region"
         label=""
@@ -70,7 +72,6 @@ function fieldError(field: keyof LandDemandForm): string {
         tips=""
         readonly
       />
-      <text v-if="fieldError('region')" class="field__error">{{ fieldError('region') }}</text>
     </view>
   </view>
 </template>

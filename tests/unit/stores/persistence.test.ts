@@ -70,16 +70,42 @@ describe('auth persistence', () => {
     })
   })
 
+  it('overwrites an existing persisted session after a new login', async () => {
+    const auth = useAuthStore()
+    const previousSession = {
+      ...session,
+      token: 'previous-session-token',
+      enterprise: {
+        ...session.enterprise,
+        creditcode: '91330200MA2PREVIOUS01',
+      },
+    }
+    const nextSession = {
+      ...session,
+      token: 'next-session-token',
+      enterprise: {
+        ...session.enterprise,
+        creditcode: '91330200MA2NEXT0001',
+      },
+    }
+
+    storage.set(AUTH_STORAGE_KEY, { version: 1, session: previousSession })
+    auth.setSession(nextSession)
+    await nextTick()
+
+    expect(storage.get<PersistedAuthStateV1>(AUTH_STORAGE_KEY)).toEqual({
+      version: 1,
+      session: nextSession,
+    })
+  })
+
   it('clears persisted state on logout', async () => {
     const auth = useAuthStore()
     auth.setSession(session)
     auth.clearSession()
     await nextTick()
 
-    expect(storage.get(AUTH_STORAGE_KEY)).toEqual({
-      version: 1,
-      session: null,
-    })
+    expect(storage.get(AUTH_STORAGE_KEY)).toBeUndefined()
   })
 
   it('restores a valid session and clears malformed persisted sessions', () => {
@@ -119,6 +145,6 @@ describe('auth persistence', () => {
     expect(storage.get<PersistedAuthStateV1>(AUTH_STORAGE_KEY)?.session).toEqual(session)
 
     subscriber?.({}, { session: null, sessionClearRevision: 1 })
-    expect(storage.get<PersistedAuthStateV1>(AUTH_STORAGE_KEY)?.session).toBeNull()
+    expect(storage.get<PersistedAuthStateV1>(AUTH_STORAGE_KEY)).toBeUndefined()
   })
 })

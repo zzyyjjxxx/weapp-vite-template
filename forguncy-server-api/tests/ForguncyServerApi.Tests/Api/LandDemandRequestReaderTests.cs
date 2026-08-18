@@ -31,9 +31,6 @@ public sealed class LandDemandRequestReaderTests
             "\"pred_rdex\":300.000003," +
             "\"pred_unitenergy\":400.000004," +
             "\"projectdata\":\"Synthetic project\"," +
-            "\"is_financing\":\"0\"," +
-            "\"financing_money\":null," +
-            "\"financing_time\":null," +
             "\"contact\":\"Synthetic Contact\"," +
             "\"office\":\"Synthetic Office\"," +
             "\"phone\":\"13800000000\"," +
@@ -60,9 +57,6 @@ public sealed class LandDemandRequestReaderTests
         Assert.Equal(300.000003m, result.PredRdex);
         Assert.Equal(400.000004m, result.PredUnitenergy);
         Assert.Equal("Synthetic project", result.Projectdata);
-        Assert.Equal("0", result.IsFinancing);
-        Assert.Null(result.FinancingMoney);
-        Assert.Null(result.FinancingTime);
         Assert.Equal("Synthetic Contact", result.Contact);
         Assert.Equal("Synthetic Office", result.Office);
         Assert.Equal("13800000000", result.Phone);

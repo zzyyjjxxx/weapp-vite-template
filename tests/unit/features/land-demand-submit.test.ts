@@ -28,9 +28,6 @@ const validForm: LandDemandForm = {
   pred_rdex: '200',
   pred_unitenergy: '3',
   projectdata: '建设智能机器人生产线',
-  is_financing: '没有',
-  financing_money: '',
-  financing_time: '',
   contact: '张示例',
   office: '法定代表人',
   phone: '13800000000',
@@ -62,14 +59,11 @@ describe('land demand submit controller', () => {
 
     const result = await controller.requestCode({
       ...validForm,
-      is_financing: '有',
-      financing_money: '',
-      financing_time: '',
+      investment: '',
     }, true)
 
     expect(result.errors).toEqual(expect.arrayContaining([
-      expect.objectContaining({ field: 'financing_money', step: 4 }),
-      expect.objectContaining({ field: 'financing_time', step: 4 }),
+      expect.objectContaining({ field: 'investment', step: 3 }),
     ]))
     expect(sendCode).not.toHaveBeenCalled()
   })

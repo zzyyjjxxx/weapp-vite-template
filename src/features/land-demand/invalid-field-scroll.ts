@@ -19,15 +19,28 @@ async function scrollInvalidField(
   )
 }
 
+export function findFirstInvalidField(
+  currentErrors: readonly FieldError[],
+  fieldTestIds: Partial<Record<FieldError['field'], string>>,
+): FieldError | undefined {
+  return currentErrors.find(error => Boolean(fieldTestIds[error.field]))
+}
+
 export function useInvalidFieldScroll(
   errors: () => readonly FieldError[],
+  scrollRequest: () => number,
   fieldTestIds: Partial<Record<FieldError['field'], string>>,
   componentId: string,
+  active: () => boolean = () => true,
 ): void {
   const pageScrollApi = createPageScrollAdapter()
 
-  watch(errors, (currentErrors) => {
-    const firstInvalidField = currentErrors.find(error => fieldTestIds[error.field])
+  watch(scrollRequest, () => {
+    if (!active()) {
+      return
+    }
+
+    const firstInvalidField = findFirstInvalidField(errors(), fieldTestIds)
     const testId = firstInvalidField
       ? fieldTestIds[firstInvalidField.field]
       : undefined
@@ -36,5 +49,5 @@ export function useInvalidFieldScroll(
     }
 
     void scrollInvalidField(testId, componentId, pageScrollApi)
-  }, { immediate: true })
+  })
 }

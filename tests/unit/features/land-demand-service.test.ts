@@ -3,6 +3,7 @@ import type { LandDemandForm } from '@/features/land-demand/models'
 
 import { readFileSync } from 'node:fs'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { nextTick, ref } from 'wevu'
 import { useLandDemandQuery, useSaveLandDemandMutation, useUpdateLandDemandMutation } from '@/features/land-demand/queries'
 import { landDemandKeys } from '@/features/land-demand/query-keys'
 import { configureLandDemandRepository, createMockLandDemandRepository } from '@/features/land-demand/repository'
@@ -10,6 +11,7 @@ import { getLandDemandInfo, saveLandDemand, updateLandDemand } from '@/features/
 import { createQueryClient } from '@/shared/query/client'
 import { configureQueryLifecycleAdapter, resetQueryLifecycleAdapter } from '@/shared/query/lifecycle'
 import { clearPrivateQueryCaches, PRIVATE_QUERY_SCOPE } from '@/shared/query/private-cache'
+import { useAuthStore } from '@/stores/auth'
 import { useLandDemandStore } from '@/stores/land-demand'
 import { createMemoryStorage } from '../../helpers/memory-storage'
 
@@ -49,9 +51,6 @@ const form: LandDemandForm = {
   pred_rdex: '200',
   pred_unitenergy: '3',
   projectdata: '项目建设内容',
-  is_financing: '没有',
-  financing_money: '',
-  financing_time: '',
   contact: enterprise.contact,
   office: enterprise.office,
   phone: enterprise.phone,
@@ -170,6 +169,109 @@ describe('land demand service and queries', () => {
     await query.refetch()
     expect(query.data.value?.creditcode).toBe(form.creditcode)
 
+    lifecycle.dispose()
+    resetQueryLifecycleAdapter()
+    client.clear()
+    client.unmount()
+  })
+
+  it('re-resolves the detail query when the authenticated credit code changes', async () => {
+    const client = createQueryClient()
+    const lifecycle = createLifecycle()
+    configureQueryLifecycleAdapter(lifecycle)
+    const requested: string[] = []
+    const queryRepository = {
+      ...repository,
+      get: async (creditcode: string) => {
+        requested.push(creditcode)
+        return repository.get(creditcode)
+      },
+    }
+    const creditcode = ref(form.creditcode)
+    const query = useLandDemandQuery(() => creditcode.value, {
+      client,
+      repository: queryRepository,
+    })
+
+    await query.refetch()
+    creditcode.value = '91330200MA2OTHER01'
+    await nextTick()
+    await query.refetch()
+
+    expect(requested).toContain(form.creditcode)
+    expect(requested).toContain('91330200MA2OTHER01')
+
+    lifecycle.dispose()
+    resetQueryLifecycleAdapter()
+    client.clear()
+    client.unmount()
+  })
+
+  it('starts the detail query when authentication becomes available after page setup', async () => {
+    const client = createQueryClient()
+    const lifecycle = createLifecycle()
+    configureQueryLifecycleAdapter(lifecycle)
+    const requested: string[] = []
+    const queryRepository = {
+      ...repository,
+      get: async (creditcode: string) => {
+        requested.push(creditcode)
+        return repository.get(creditcode)
+      },
+    }
+    const creditcode = ref('')
+    const query = useLandDemandQuery(() => creditcode.value, {
+      client,
+      repository: queryRepository,
+    })
+
+    expect(query.isPending.value).toBe(true)
+    creditcode.value = form.creditcode
+    await nextTick()
+    await query.refetch()
+
+    expect(requested).toEqual([form.creditcode])
+    expect(query.isPending.value).toBe(false)
+    expect(query.isError.value).toBe(false)
+
+    lifecycle.dispose()
+    resetQueryLifecycleAdapter()
+    client.clear()
+    client.unmount()
+  })
+
+  it('starts the detail query from the authenticated enterprise computed value', async () => {
+    const client = createQueryClient()
+    const lifecycle = createLifecycle()
+    configureQueryLifecycleAdapter(lifecycle)
+    const requested: string[] = []
+    const queryRepository = {
+      ...repository,
+      get: async (creditcode: string) => {
+        requested.push(creditcode)
+        return repository.get(creditcode)
+      },
+    }
+    const auth = useAuthStore()
+    auth.clearSession()
+    const query = useLandDemandQuery(
+      () => auth.enterprise.value?.creditcode ?? '',
+      { client, repository: queryRepository },
+    )
+
+    auth.setSession({
+      token: 'access-token',
+      expiresAt: Date.now() + 60_000,
+      enterprise,
+    })
+    await nextTick()
+    await new Promise<void>(resolve => setTimeout(resolve, 0))
+
+    expect(requested).toEqual([form.creditcode])
+    expect(query.isPending.value).toBe(false)
+    expect(query.isError.value).toBe(false)
+
+    auth.clearSession()
     lifecycle.dispose()
     resetQueryLifecycleAdapter()
     client.clear()

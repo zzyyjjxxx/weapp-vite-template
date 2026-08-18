@@ -25,6 +25,9 @@ export function setupRouter(): RouterNavigation {
 
     const meta: RouteMeta | undefined = resolveRouteMeta(to.path)
     const auth = useAuthStore()
+    if (to.path === '/pages/login/index' && auth.ensureActiveSession()) {
+      return '/pages/home/index'
+    }
     if (meta?.auth && !auth.ensureActiveSession()) {
       return buildLoginRedirect(to.fullPath)
     }

@@ -18,8 +18,10 @@ definePageJson({
 const auth = useAuthStore()
 const { authorized } = useProtectedPage('/pages/land-demand/success')
 const enterprise = auth.enterprise
-const creditcode = enterprise.value?.creditcode ?? ''
+const creditcode = () => enterprise.value?.creditcode ?? ''
 const query = useLandDemandQuery(creditcode)
+const queryPending = query.isPending
+const queryFailed = query.isError
 const record = query.data
 const { pending: transitioning, run: runTransition } = usePageTransitionLoading()
 const redirected = ref(false)
@@ -29,7 +31,7 @@ const recordBusinessName = computed(() => record.value?.businessname ?? '--')
 const recordUpdateTime = computed(() => formatDateTime(record.value?.updatetime))
 
 watchEffect(() => {
-  if (!authorized.value || query.isPending.value || query.isError.value || submitted.value || redirected.value) {
+  if (!authorized.value || queryPending.value || queryFailed.value || submitted.value || redirected.value) {
     return
   }
   redirected.value = true
@@ -53,9 +55,9 @@ async function viewDetail(): Promise<void> {
     icon="list-check"
   >
     <view class="land-demand-success">
-      <AppLoading v-if="query.isPending" />
+      <AppLoading v-if="queryPending" />
       <AppError
-        v-else-if="query.isError"
+        v-else-if="queryFailed"
         title="提交结果加载失败"
         :message="queryErrorMessage"
       />
@@ -71,7 +73,7 @@ async function viewDetail(): Promise<void> {
             <text class="land-demand-success__copy">{{ recordBusinessName }}</text>
           </view>
           <view class="land-demand-success__row">
-            <text class="land-demand-success__label">提交时间</text>
+            <text class="land-demand-success__label">更新时间</text>
             <text class="land-demand-success__copy">{{ recordUpdateTime }}</text>
           </view>
           <view class="land-demand-success__row">

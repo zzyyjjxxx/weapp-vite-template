@@ -7,13 +7,14 @@ import { readStringDetail } from '@/platform/event-detail'
 import { getDirections, INDUSTRY_TRACK_DIRECTIONS } from '../dictionaries/industry-tracks'
 import { getIndustryDisplay, NATIONAL_INDUSTRY_OPTIONS } from '../industry-selector'
 import { useInvalidFieldScroll } from '../invalid-field-scroll'
+import { normalizeFieldErrorMessage } from '../validation'
 
-const props = defineProps<{ form: LandDemandForm, errors: readonly FieldError[] }>()
+const props = defineProps<{ form: LandDemandForm, errors?: readonly FieldError[] | null, scrollRequest: number, active: boolean }>()
 const emit = defineEmits<{ change: [patch: Partial<LandDemandForm>] }>()
 
 defineComponentJson({ component: true, styleIsolation: 'apply-shared' })
 
-useInvalidFieldScroll(() => props.errors, {
+useInvalidFieldScroll(() => props.errors ?? [], () => props.scrollRequest, {
   investment: 'investment-field',
   project_hydm: 'project-hydm-field',
   keyindustry: 'keyindustry-field',
@@ -23,7 +24,7 @@ useInvalidFieldScroll(() => props.errors, {
   pred_rdex: 'pred-rdex-field',
   pred_unitenergy: 'pred-unitenergy-field',
   projectdata: 'projectdata-field',
-}, 'project-info-step')
+}, 'project-info-step', () => props.active)
 
 const trackOptions = ref(Object.keys(INDUSTRY_TRACK_DIRECTIONS))
 const industryOptions = ref([...NATIONAL_INDUSTRY_OPTIONS])
@@ -43,7 +44,7 @@ onMounted(() => {
 })
 
 function fieldError(field: keyof LandDemandForm): string {
-  return props.errors.find(error => error.field === field)?.message ?? ''
+  return normalizeFieldErrorMessage(props.errors?.find(error => error.field === field)?.message ?? '')
 }
 
 function changeText(field: keyof LandDemandForm, detail: unknown): void {
@@ -71,6 +72,7 @@ function changeIndustry(detail: unknown): void {
 
     <view id="investment-field" data-testid="investment-field" class="field field--control">
       <view class="field__label"><text>固定资产投资额（万元）</text><text class="field__required">*</text></view>
+      <text v-if="fieldError('investment')" class="field__error field__error--before-control">{{ fieldError('investment') }}</text>
       <t-input
         data-testid="investment"
         label=""
@@ -80,7 +82,6 @@ function changeIndustry(detail: unknown): void {
         tips=""
         @change="changeText('investment', $event)"
       />
-      <text v-if="fieldError('investment')" class="field__error">{{ fieldError('investment') }}</text>
     </view>
 
     <view v-if="optionsReady" id="project-hydm-field" data-testid="project-hydm-field" class="field field--selector">
@@ -93,8 +94,11 @@ function changeIndustry(detail: unknown): void {
         required
         arrow
         @tap="openIndustrySelector"
-      />
-      <text v-if="fieldError('project_hydm')" class="field__error">{{ fieldError('project_hydm') }}</text>
+      >
+        <template #description>
+          <text v-if="fieldError('project_hydm')" class="field__error field__error--inside-cell">{{ fieldError('project_hydm') }}</text>
+        </template>
+      </t-cell>
       <t-cascader
         data-testid="project-hydm-cascader"
         :visible="industrySelectorVisible"
@@ -118,8 +122,11 @@ function changeIndustry(detail: unknown): void {
         placeholder="请选择赛道"
         required
         @change="changeText('keyindustry', $event)"
-      />
-      <text v-if="fieldError('keyindustry')" class="field__error">{{ fieldError('keyindustry') }}</text>
+      >
+        <template #error>
+          <text v-if="fieldError('keyindustry')" class="field__error field__error--inside-cell">{{ fieldError('keyindustry') }}</text>
+        </template>
+      </SinglePicker>
     </view>
     <view v-if="optionsReady" id="futureindustry-field" data-testid="futureindustry-field" class="field field--selector">
       <SinglePicker
@@ -130,12 +137,16 @@ function changeIndustry(detail: unknown): void {
         placeholder="请选择方向"
         required
         @change="changeText('futureindustry', $event)"
-      />
-      <text v-if="fieldError('futureindustry')" class="field__error">{{ fieldError('futureindustry') }}</text>
+      >
+        <template #error>
+          <text v-if="fieldError('futureindustry')" class="field__error field__error--inside-cell">{{ fieldError('futureindustry') }}</text>
+        </template>
+      </SinglePicker>
     </view>
 
     <view id="pred-ys-field" data-testid="pred-ys-field" class="field field--control">
       <view class="field__label"><text>预计年营业收入（万元）</text><text class="field__required">*</text></view>
+      <text v-if="fieldError('pred_ys')" class="field__error field__error--before-control">{{ fieldError('pred_ys') }}</text>
       <t-input
         data-testid="pred-ys"
         label=""
@@ -145,10 +156,10 @@ function changeIndustry(detail: unknown): void {
         tips=""
         @change="changeText('pred_ys', $event)"
       />
-      <text v-if="fieldError('pred_ys')" class="field__error">{{ fieldError('pred_ys') }}</text>
     </view>
     <view id="pred-tax-field" data-testid="pred-tax-field" class="field field--control">
       <view class="field__label"><text>预计年税收（万元）</text><text class="field__required">*</text></view>
+      <text v-if="fieldError('pred_tax')" class="field__error field__error--before-control">{{ fieldError('pred_tax') }}</text>
       <t-input
         data-testid="pred-tax"
         label=""
@@ -158,10 +169,10 @@ function changeIndustry(detail: unknown): void {
         tips=""
         @change="changeText('pred_tax', $event)"
       />
-      <text v-if="fieldError('pred_tax')" class="field__error">{{ fieldError('pred_tax') }}</text>
     </view>
     <view id="pred-rdex-field" data-testid="pred-rdex-field" class="field field--control">
       <view class="field__label"><text>预计研发投入（万元）</text><text class="field__required">*</text></view>
+      <text v-if="fieldError('pred_rdex')" class="field__error field__error--before-control">{{ fieldError('pred_rdex') }}</text>
       <t-input
         data-testid="pred-rdex"
         label=""
@@ -171,10 +182,10 @@ function changeIndustry(detail: unknown): void {
         tips=""
         @change="changeText('pred_rdex', $event)"
       />
-      <text v-if="fieldError('pred_rdex')" class="field__error">{{ fieldError('pred_rdex') }}</text>
     </view>
     <view id="pred-unitenergy-field" data-testid="pred-unitenergy-field" class="field field--control">
       <view class="field__label"><text>项目单位能耗增加值（万元/吨标煤）</text><text class="field__required">*</text></view>
+      <text v-if="fieldError('pred_unitenergy')" class="field__error field__error--before-control">{{ fieldError('pred_unitenergy') }}</text>
       <t-input
         data-testid="pred-unitenergy"
         label=""
@@ -184,10 +195,10 @@ function changeIndustry(detail: unknown): void {
         tips=""
         @change="changeText('pred_unitenergy', $event)"
       />
-      <text v-if="fieldError('pred_unitenergy')" class="field__error">{{ fieldError('pred_unitenergy') }}</text>
     </view>
     <view id="projectdata-field" data-testid="projectdata-field" class="field field--control">
       <view class="field__label"><text>项目建设内容</text><text class="field__required">*</text></view>
+      <text v-if="fieldError('projectdata')" class="field__error field__error--before-control">{{ fieldError('projectdata') }}</text>
       <t-textarea
         data-testid="projectdata"
         label=""
@@ -195,7 +206,6 @@ function changeIndustry(detail: unknown): void {
         placeholder="请说明主要产品、建设规模和工艺"
         @change="changeText('projectdata', $event)"
       />
-      <text v-if="fieldError('projectdata')" class="field__error">{{ fieldError('projectdata') }}</text>
     </view>
   </view>
 </template>

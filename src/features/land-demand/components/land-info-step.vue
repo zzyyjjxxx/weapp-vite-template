@@ -4,14 +4,17 @@ import type { FieldError, LandDemandForm, YesNo } from '../models'
 import { ref } from 'wevu'
 import SinglePicker from '@/components/ui/single-picker/index.vue'
 import { readStringArrayDetail, readStringDetail } from '@/platform/event-detail'
+import { LAND_TYPE_OPTIONS } from '../dictionaries/land-types'
+import { EXPECT_PARK_OPTIONS, PARK_OPTIONS } from '../dictionaries/parks'
 import { useInvalidFieldScroll } from '../invalid-field-scroll'
+import { normalizeFieldErrorMessage } from '../validation'
 
-const props = defineProps<{ form: LandDemandForm, errors: readonly FieldError[] }>()
+const props = defineProps<{ form: LandDemandForm, errors?: readonly FieldError[] | null, scrollRequest: number, active: boolean }>()
 const emit = defineEmits<{ change: [patch: Partial<LandDemandForm>] }>()
 
 defineComponentJson({ component: true, styleIsolation: 'apply-shared' })
 
-useInvalidFieldScroll(() => props.errors, {
+useInvalidFieldScroll(() => props.errors ?? [], () => props.scrollRequest, {
   area: 'area-field',
   building_area: 'building-area-field',
   expect_park: 'expect-park-field',
@@ -22,29 +25,16 @@ useInvalidFieldScroll(() => props.errors, {
   deploy_weight: 'deploy-weight-field',
   is_specialuse: 'is-specialuse-field',
   deploy_landtype: 'deploy-landtype-field',
-}, 'land-info-step')
+}, 'land-info-step', () => props.active)
 
 const yesNoOptions = ['是', '否'] as const
 const expectTimeVisible = ref(false)
-const parkOptions = [
-  { value: '330200', label: '宁波市' },
-  { value: '330203', label: '海曙区' },
-  { value: '330205', label: '江北区' },
-  { value: '330206', label: '北仑区' },
-  { value: '330211', label: '镇海区' },
-  { value: '330212', label: '鄞州区' },
-  { value: '330213', label: '奉化区' },
-  { value: '330225', label: '象山县' },
-  { value: '330226', label: '宁海县' },
-  { value: '330262', label: '高新区' },
-  { value: '330281', label: '余姚市' },
-  { value: '330282', label: '慈溪市' },
-  { value: '3302821', label: '前湾新区' },
-] as const
-const landTypeOptions = ['小微园', '租售型闲置空间', '租售型标准厂房', '以上皆可'] as const
+const parkOptions = PARK_OPTIONS
+const expectParkOptions = EXPECT_PARK_OPTIONS
+const landTypeOptions = LAND_TYPE_OPTIONS
 
 function fieldError(field: keyof LandDemandForm): string {
-  return props.errors.find(error => error.field === field)?.message ?? ''
+  return normalizeFieldErrorMessage(props.errors?.find(error => error.field === field)?.message ?? '')
 }
 
 function selectedParkNames(): string {
@@ -93,6 +83,7 @@ function changeExpectTime(detail: unknown): void {
 
     <view id="area-field" data-testid="area-field" class="field field--control">
       <view class="field__label"><text>用地面积（亩）</text><text class="field__required">*</text></view>
+      <text v-if="fieldError('area')" class="field__error field__error--before-control">{{ fieldError('area') }}</text>
       <t-input
         data-testid="area"
         label=""
@@ -102,10 +93,10 @@ function changeExpectTime(detail: unknown): void {
         tips=""
         @change="changeText('area', $event)"
       />
-      <text v-if="fieldError('area')" class="field__error">{{ fieldError('area') }}</text>
     </view>
     <view id="building-area-field" data-testid="building-area-field" class="field field--control">
       <view class="field__label"><text>建筑面积（平方米）</text><text class="field__required">*</text></view>
+      <text v-if="fieldError('building_area')" class="field__error field__error--before-control">{{ fieldError('building_area') }}</text>
       <t-input
         data-testid="building-area"
         label=""
@@ -115,7 +106,6 @@ function changeExpectTime(detail: unknown): void {
         tips=""
         @change="changeText('building_area', $event)"
       />
-      <text v-if="fieldError('building_area')" class="field__error">{{ fieldError('building_area') }}</text>
     </view>
 
     <view id="expect-park-field" data-testid="expect-park-field" class="field field--selector">
@@ -123,12 +113,15 @@ function changeExpectTime(detail: unknown): void {
         data-testid="expect-park"
         title="意向园区"
         :value="props.form.expect_park || ''"
-        :options="parkOptions"
+        :options="expectParkOptions"
         placeholder="请选择园区"
         required
         @change="changeText('expect_park', $event)"
-      />
-      <text v-if="fieldError('expect_park')" class="field__error">{{ fieldError('expect_park') }}</text>
+      >
+        <template #error>
+          <text v-if="fieldError('expect_park')" class="field__error field__error--inside-cell">{{ fieldError('expect_park') }}</text>
+        </template>
+      </SinglePicker>
     </view>
 
     <view id="expect-time-field" data-testid="expect-time-field" class="field field--selector">
@@ -141,7 +134,11 @@ function changeExpectTime(detail: unknown): void {
         arrow
         required
         @tap="openExpectTime"
-      />
+      >
+        <template #description>
+          <text v-if="fieldError('expect_time')" class="field__error field__error--inside-cell">{{ fieldError('expect_time') }}</text>
+        </template>
+      </t-cell>
       <t-date-time-picker
         data-testid="expect-time-picker"
         :visible="expectTimeVisible"
@@ -155,7 +152,6 @@ function changeExpectTime(detail: unknown): void {
         @cancel="closeExpectTime"
         @close="closeExpectTime"
       />
-      <text v-if="fieldError('expect_time')" class="field__error">{{ fieldError('expect_time') }}</text>
     </view>
 
     <view id="is-deploy-field" data-testid="is-deploy-field" class="field field--selector">
@@ -167,11 +163,15 @@ function changeExpectTime(detail: unknown): void {
         placeholder="请选择"
         required
         @change="changeDeployChoice"
-      />
-      <text v-if="fieldError('is_deploy')" class="field__error">{{ fieldError('is_deploy') }}</text>
+      >
+        <template #error>
+          <text v-if="fieldError('is_deploy')" class="field__error field__error--inside-cell">{{ fieldError('is_deploy') }}</text>
+        </template>
+      </SinglePicker>
     </view>
     <view v-if="props.form.is_deploy === '是'" id="deploy-park-field" data-testid="deploy-park-field" class="field field--multi">
       <view class="field__label"><text>可调剂园区</text><text class="field__required">*</text></view>
+      <text v-if="fieldError('deploy_park')" class="field__error field__error--before-control">{{ fieldError('deploy_park') }}</text>
       <text
         v-if="props.form.deploy_park.length > 0"
         data-testid="deploy-park-selection"
@@ -185,11 +185,11 @@ function changeExpectTime(detail: unknown): void {
         :options="parkOptions"
         @change="changeDeployParks"
       />
-      <text v-if="fieldError('deploy_park')" class="field__error">{{ fieldError('deploy_park') }}</text>
     </view>
 
     <view id="deploy-height-field" data-testid="deploy-height-field" class="field field--control">
       <view class="field__label"><text>层高要求（米，选填）</text></view>
+      <text v-if="fieldError('deploy_height')" class="field__error field__error--before-control">{{ fieldError('deploy_height') }}</text>
       <t-input
         data-testid="deploy-height"
         label=""
@@ -199,10 +199,10 @@ function changeExpectTime(detail: unknown): void {
         tips=""
         @change="changeText('deploy_height', $event)"
       />
-      <text v-if="fieldError('deploy_height')" class="field__error">{{ fieldError('deploy_height') }}</text>
     </view>
     <view id="deploy-weight-field" data-testid="deploy-weight-field" class="field field--control">
       <view class="field__label"><text>承重要求（吨/平方米，选填）</text></view>
+      <text v-if="fieldError('deploy_weight')" class="field__error field__error--before-control">{{ fieldError('deploy_weight') }}</text>
       <t-input
         data-testid="deploy-weight"
         label=""
@@ -212,7 +212,6 @@ function changeExpectTime(detail: unknown): void {
         tips=""
         @change="changeText('deploy_weight', $event)"
       />
-      <text v-if="fieldError('deploy_weight')" class="field__error">{{ fieldError('deploy_weight') }}</text>
     </view>
 
     <view id="is-specialuse-field" data-testid="is-specialuse-field" class="field field--selector">
@@ -224,8 +223,11 @@ function changeExpectTime(detail: unknown): void {
         placeholder="请选择"
         required
         @change="changeSpecialUse"
-      />
-      <text v-if="fieldError('is_specialuse')" class="field__error">{{ fieldError('is_specialuse') }}</text>
+      >
+        <template #error>
+          <text v-if="fieldError('is_specialuse')" class="field__error field__error--inside-cell">{{ fieldError('is_specialuse') }}</text>
+        </template>
+      </SinglePicker>
     </view>
     <view v-if="props.form.is_specialuse === '是'" id="deploy-landtype-field" data-testid="deploy-landtype-field" class="field field--selector">
       <SinglePicker
@@ -236,8 +238,11 @@ function changeExpectTime(detail: unknown): void {
         placeholder="请选择类型"
         required
         @change="changeText('deploy_landtype', $event)"
-      />
-      <text v-if="fieldError('deploy_landtype')" class="field__error">{{ fieldError('deploy_landtype') }}</text>
+      >
+        <template #error>
+          <text v-if="fieldError('deploy_landtype')" class="field__error field__error--inside-cell">{{ fieldError('deploy_landtype') }}</text>
+        </template>
+      </SinglePicker>
     </view>
   </view>
 </template>

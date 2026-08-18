@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { LandDemandStep } from '../step-controller'
 
+import { computed } from 'wevu'
+
 const props = withDefaults(defineProps<{
   currentStep: LandDemandStep
   progressStep?: LandDemandStep
@@ -9,6 +11,18 @@ const props = withDefaults(defineProps<{
   progressStep: 1,
   incompleteSteps: () => [],
 })
+const progressLimit = computed<LandDemandStep>(() => Math.max(
+  props.currentStep,
+  props.progressStep ?? props.currentStep,
+) as LandDemandStep)
+const activeIncompleteSteps = computed<LandDemandStep[]>(() => (
+  (props.incompleteSteps ?? []).filter(step => step <= progressLimit.value)
+))
+const completedSteps = computed<LandDemandStep[]>(() => (
+  (props.currentStep === 1 || !activeIncompleteSteps.value.includes(props.currentStep))
+    ? [props.currentStep]
+    : []
+))
 
 defineComponentJson({ component: true })
 </script>
@@ -19,10 +33,10 @@ defineComponentJson({ component: true })
       <view
         class="wizard-progress__step"
         :class="{
-          'wizard-progress__step--active': 1 <= Math.max(props.currentStep, props.progressStep ?? props.currentStep),
+          'wizard-progress__step--active': 1 <= progressLimit,
           'wizard-progress__step--current': props.currentStep === 1,
-          'wizard-progress__step--complete': props.currentStep === 1 && !props.incompleteSteps?.includes(1),
-          'wizard-progress__step--incomplete': props.incompleteSteps?.includes(1) ?? false,
+          'wizard-progress__step--complete': completedSteps.includes(1),
+          'wizard-progress__step--incomplete': activeIncompleteSteps.includes(1) && props.currentStep !== 1,
         }"
       >
         <view class="wizard-progress__indicator">
@@ -34,10 +48,10 @@ defineComponentJson({ component: true })
       <view
         class="wizard-progress__step"
         :class="{
-          'wizard-progress__step--active': 2 <= Math.max(props.currentStep, props.progressStep ?? props.currentStep),
+          'wizard-progress__step--active': 2 <= progressLimit,
           'wizard-progress__step--current': props.currentStep === 2,
-          'wizard-progress__step--complete': props.currentStep === 2 && !props.incompleteSteps?.includes(2),
-          'wizard-progress__step--incomplete': props.incompleteSteps?.includes(2) ?? false,
+          'wizard-progress__step--complete': completedSteps.includes(2),
+          'wizard-progress__step--incomplete': activeIncompleteSteps.includes(2),
         }"
       >
         <view class="wizard-progress__indicator">
@@ -49,10 +63,10 @@ defineComponentJson({ component: true })
       <view
         class="wizard-progress__step"
         :class="{
-          'wizard-progress__step--active': 3 <= Math.max(props.currentStep, props.progressStep ?? props.currentStep),
+          'wizard-progress__step--active': 3 <= progressLimit,
           'wizard-progress__step--current': props.currentStep === 3,
-          'wizard-progress__step--complete': props.currentStep === 3 && !props.incompleteSteps?.includes(3),
-          'wizard-progress__step--incomplete': props.incompleteSteps?.includes(3) ?? false,
+          'wizard-progress__step--complete': completedSteps.includes(3),
+          'wizard-progress__step--incomplete': activeIncompleteSteps.includes(3),
         }"
       >
         <view class="wizard-progress__indicator">
@@ -64,24 +78,25 @@ defineComponentJson({ component: true })
       <view
         class="wizard-progress__step"
         :class="{
-          'wizard-progress__step--active': 4 <= Math.max(props.currentStep, props.progressStep ?? props.currentStep),
+          'wizard-progress__step--active': 4 <= progressLimit,
           'wizard-progress__step--current': props.currentStep === 4,
-          'wizard-progress__step--complete': props.currentStep === 4 && !props.incompleteSteps?.includes(4),
-          'wizard-progress__step--incomplete': props.incompleteSteps?.includes(4) ?? false,
+          'wizard-progress__step--complete': completedSteps.includes(4),
+          'wizard-progress__step--incomplete': activeIncompleteSteps.includes(4),
         }"
       >
         <view class="wizard-progress__indicator">
           <text class="wizard-progress__number">4</text>
         </view>
         <view class="wizard-progress__connector" />
-        <text class="wizard-progress__label">融资及联系人</text>
+        <text class="wizard-progress__label">联系人信息</text>
       </view>
       <view
         class="wizard-progress__step"
         :class="{
-          'wizard-progress__step--active': 5 <= Math.max(props.currentStep, props.progressStep ?? props.currentStep),
+          'wizard-progress__step--active': 5 <= progressLimit,
           'wizard-progress__step--current': props.currentStep === 5,
-          'wizard-progress__step--complete': props.currentStep === 5,
+          'wizard-progress__step--complete': completedSteps.includes(5),
+          'wizard-progress__step--incomplete': activeIncompleteSteps.includes(5),
         }"
       >
         <view class="wizard-progress__indicator">

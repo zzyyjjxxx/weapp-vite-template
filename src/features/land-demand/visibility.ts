@@ -1,4 +1,4 @@
-import type { FinancingChoice, LandDemandForm, YesNo } from './models'
+import type { LandDemandForm, YesNo } from './models'
 
 const CITY_PARK = '330200'
 
@@ -20,15 +20,6 @@ export function applySpecialUseChoice(form: LandDemandForm, value: YesNo): LandD
     ...form,
     is_specialuse: value,
     deploy_landtype: value === '否' ? '' : form.deploy_landtype,
-  }
-}
-
-export function applyFinancingChoice(form: LandDemandForm, value: FinancingChoice): LandDemandForm {
-  return {
-    ...form,
-    is_financing: value,
-    financing_money: value === '没有' ? '' : form.financing_money,
-    financing_time: value === '没有' ? '' : form.financing_time,
   }
 }
 

@@ -173,6 +173,21 @@
   color: $color-error;
 }
 
+.field__error--before-control {
+  box-sizing: border-box;
+  padding: $space-1 32rpx 0;
+  margin-top: 0;
+}
+
+.field__error--inside-cell {
+  display: block;
+  padding: 0;
+  margin-top: 4rpx;
+  font-size: 24rpx;
+  line-height: 36rpx;
+  color: $color-error;
+}
+
 .field-selector__center {
   flex: 0 0 210rpx;
   min-width: 210rpx;

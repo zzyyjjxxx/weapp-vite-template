@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Globalization;
 using ForguncyServerApi.Application;
 using ForguncyServerApi.Domain;
 using ForguncyServerApi.Infrastructure;
@@ -35,12 +36,9 @@ public sealed class LandDemandServiceTests
                 "DeployWeight",
                 "ExpectPark",
                 "ExpectTime",
-                "FinancingMoney",
-                "FinancingTime",
                 "Futureindustry",
                 "Investment",
                 "IsDeploy",
-                "IsFinancing",
                 "IsSpecialuse",
                 "Keyindustry",
                 "Landusedemand",
@@ -86,14 +84,11 @@ public sealed class LandDemandServiceTests
             PredRdex = 300m,
             PredUnitenergy = 15m,
             Projectdata = "Build a new production line.",
-            IsFinancing = "没有",
-            FinancingMoney = 99999999999999.999999m,
-            FinancingTime = "2027-12",
             Contact = "Alice",
             Office = "General Manager",
             Phone = "13800000000",
             Landusedemand = "1",
-            Updatetime = "2026-08-06 10:20:30"
+            Updatetime = OleDate(2026, 8, 6, 10, 20, 30)
         };
 
         var json = JsonConvert.SerializeObject(response);
@@ -118,12 +113,9 @@ public sealed class LandDemandServiceTests
                 "deploy_weight",
                 "expect_park",
                 "expect_time",
-                "financing_money",
-                "financing_time",
                 "futureindustry",
                 "investment",
                 "is_deploy",
-                "is_financing",
                 "is_specialuse",
                 "keyindustry",
                 "landusedemand",
@@ -198,7 +190,7 @@ public sealed class LandDemandServiceTests
         Assert.Equal("Yinzhou", result.Record.County);
         Assert.Equal("Shounan", result.Record.Region);
         Assert.Equal("1", result.Record.Landusedemand);
-        Assert.Equal("2026-08-06 10:20:30", result.Record.Updatetime);
+        Assert.Equal(OleDate(2026, 8, 6, 10, 20, 30), result.Record.Updatetime);
     }
 
     [Fact]
@@ -262,8 +254,8 @@ public sealed class LandDemandServiceTests
         Assert.Equal("Yinzhou", landDemandRepository.LastInsertedRecord.County);
         Assert.Equal("Shounan", landDemandRepository.LastInsertedRecord.Region);
         Assert.Equal("91330200SYNTHETIC", landDemandRepository.LastInsertedRecord.Updateuser);
-        Assert.Equal("2026-08-06 10:20:30", landDemandRepository.LastInsertedRecord.Updatetime);
-        Assert.Equal("2026-08-06 10:20:30", result.Record!.Updatetime);
+        Assert.Equal(OleDate(2026, 8, 6, 10, 20, 30), landDemandRepository.LastInsertedRecord.Updatetime);
+        Assert.Equal(OleDate(2026, 8, 6, 10, 20, 30), result.Record!.Updatetime);
     }
 
     [Fact]
@@ -317,7 +309,7 @@ public sealed class LandDemandServiceTests
 
         var result = await service.UpdateAsync(
             new EnterpriseIdentity(7, "91330200SYNTHETIC"),
-            ValidSubmittedRequest() with { FinancingTime = "2026-13", IsFinancing = "1" },
+            ValidSubmittedRequest() with { ExpectTime = "2026-13" },
             CancellationToken.None);
 
         Assert.Equal(LandDemandOperationStatus.InvalidRequest, result.Status);
@@ -361,14 +353,14 @@ public sealed class LandDemandServiceTests
         Assert.Equal("80亩", result.Record.Area);
         Assert.Equal("Expanded project description.", result.Record.Projectdata);
         Assert.Equal("2", result.Record.Landusedemand);
-        Assert.Equal("2026-08-07 09:08:07", result.Record.Updatetime);
+        Assert.Equal(OleDate(2026, 8, 7, 9, 8, 7), result.Record.Updatetime);
         Assert.NotNull(landDemandRepository.CurrentRecord);
         Assert.Equal(99, landDemandRepository.CurrentRecord!.Id);
         Assert.Equal("Synthetic Enterprise", landDemandRepository.CurrentRecord.Businessname);
         Assert.Equal("91330200SYNTHETIC", landDemandRepository.CurrentRecord.Creditcode);
         Assert.Equal("Yinzhou", landDemandRepository.CurrentRecord.County);
         Assert.Equal("Shounan", landDemandRepository.CurrentRecord.Region);
-        Assert.Equal("2026-08-07 09:08:07", landDemandRepository.CurrentRecord.Updatetime);
+        Assert.Equal(OleDate(2026, 8, 7, 9, 8, 7), landDemandRepository.CurrentRecord.Updatetime);
         Assert.Equal("91330200SYNTHETIC", landDemandRepository.CurrentRecord.Updateuser);
     }
 
@@ -421,6 +413,9 @@ public sealed class LandDemandServiceTests
             landDemandRepository,
             clock ?? (() => new DateTimeOffset(2026, 8, 6, 10, 20, 30, TimeSpan.FromHours(8))));
 
+    private static string OleDate(int year, int month, int day, int hour, int minute, int second) =>
+        new DateTime(year, month, day, hour, minute, second).ToOADate().ToString(CultureInfo.InvariantCulture);
+
     private static EnterpriseProfile CreateEnterpriseProfile() =>
         new()
         {
@@ -458,14 +453,11 @@ public sealed class LandDemandServiceTests
             PredRdex = 300m,
             PredUnitenergy = 15m,
             Projectdata = "Build a new production line.",
-            IsFinancing = "0",
-            FinancingMoney = null,
-            FinancingTime = null,
             Contact = "Alice",
             Office = "General Manager",
             Phone = "13800000000",
             Landusedemand = "1",
-            Updatetime = "2026-08-06 10:20:30",
+            Updatetime = OleDate(2026, 8, 6, 10, 20, 30),
             Updateuser = "91330200SYNTHETIC"
         };
 
@@ -498,9 +490,6 @@ public sealed class LandDemandServiceTests
             PredRdex = 300m,
             PredUnitenergy = 15m,
             Projectdata = "Build a new production line.",
-            IsFinancing = "0",
-            FinancingMoney = null,
-            FinancingTime = null,
             Contact = "Alice",
             Office = "General Manager",
             Phone = "13800000000",
@@ -603,9 +592,6 @@ public sealed class LandDemandServiceTests
             CurrentRecord.PredRdex = request.PredRdex;
             CurrentRecord.PredUnitenergy = request.PredUnitenergy;
             CurrentRecord.Projectdata = request.Projectdata;
-            CurrentRecord.IsFinancing = request.IsFinancing;
-            CurrentRecord.FinancingMoney = request.FinancingMoney;
-            CurrentRecord.FinancingTime = request.FinancingTime;
             CurrentRecord.Contact = request.Contact;
             CurrentRecord.Office = request.Office;
             CurrentRecord.Phone = request.Phone;

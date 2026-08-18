@@ -28,7 +28,9 @@ const resendDisabled = computed(() => (
 const resendLabel = computed(() => retryCountdown.value > 0
   ? `${retryCountdown.value}秒`
   : '重新发送')
-const submitDisabled = computed(() => Boolean(props.loading) || props.code.length !== 6)
+const verificationDialogOverlayProps = {
+  style: '--td-overlay-transition-duration: 0ms;',
+}
 let countdownTimer: ReturnType<typeof setInterval> | undefined
 
 defineComponentJson({ component: true, styleIsolation: 'apply-shared' })
@@ -72,9 +74,7 @@ function close(): void {
 }
 
 function confirm(): void {
-  if (!submitDisabled.value) {
-    emit('submit')
-  }
+  emit('submit')
 }
 
 function resend(): void {
@@ -90,6 +90,8 @@ function resend(): void {
     :visible="props.visible"
     title="法人手机号验证"
     :content="description || ''"
+    custom-style="--td-popup-transition: none;"
+    :overlay-props="verificationDialogOverlayProps"
     cancel-btn="取消"
     confirm-btn="提交"
     button-layout="horizontal"
@@ -99,6 +101,12 @@ function resend(): void {
     @confirm="confirm"
   >
     <view slot="content" class="verification-dialog">
+      <text
+        class="verification-dialog__error"
+        :class="{ 'verification-dialog__error--visible': Boolean(props.error) }"
+      >
+        {{ props.error || ' ' }}
+      </text>
       <view class="verification-dialog__code-row">
         <view class="verification-dialog__input-wrap">
           <t-input
@@ -130,7 +138,6 @@ function resend(): void {
           </t-button>
         </view>
       </view>
-      <text v-if="props.error" class="verification-dialog__error">{{ props.error }}</text>
     </view>
   </t-dialog>
 </template>
@@ -144,9 +151,20 @@ function resend(): void {
 }
 
 .verification-dialog__error {
+  box-sizing: border-box;
   display: block;
+  visibility: hidden;
+  min-height: 38rpx;
+  margin-top: $space-2;
+  overflow: hidden;
   font-size: 25rpx;
-  line-height: 1.5;
+  line-height: 38rpx;
+  color: transparent;
+}
+
+.verification-dialog__error--visible {
+  visibility: visible;
+  color: $color-error;
 }
 
 .verification-dialog__code-row {
@@ -160,7 +178,7 @@ function resend(): void {
 .verification-dialog__input-wrap {
   box-sizing: border-box;
   width: 100%;
-  padding-right: 96rpx;
+  padding-right: 136rpx;
 }
 
 .verification-dialog__input {
@@ -187,7 +205,7 @@ function resend(): void {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  width: 88rpx;
+  width: 128rpx;
   height: 64rpx;
 }
 
@@ -199,10 +217,5 @@ function resend(): void {
   padding-left: 0;
   font-size: 22rpx;
   line-height: 1.4;
-}
-
-.verification-dialog__error {
-  margin-top: $space-2;
-  color: $color-error;
 }
 </style>

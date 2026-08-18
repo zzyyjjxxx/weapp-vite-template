@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { MutationObserver } from '@tanstack/query-core'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createQueryClient } from '@/shared/query/client'
 
@@ -19,5 +20,21 @@ describe('query client', () => {
     expect(defaults.queries?.refetchOnReconnect).toBe(true)
     expect(defaults.mutations?.retry).toBe(0)
     expect(defaults.queries?.retry).toBe(0)
+  })
+
+  it('does not log errors that are handled by the verification dialog', async () => {
+    client = createQueryClient()
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const mutation = new MutationObserver(client, {
+      mutationKey: ['verification', 'send-code'],
+      mutationFn: async () => {
+        throw new Error('验证码错误')
+      },
+      meta: { suppressGlobalErrorLog: true },
+    })
+
+    await expect(mutation.mutate()).rejects.toThrow('验证码错误')
+    expect(consoleError).not.toHaveBeenCalled()
+    consoleError.mockRestore()
   })
 })

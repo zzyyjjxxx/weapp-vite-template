@@ -4,16 +4,30 @@ import type { LandDemandDraft, LandDemandForm, LandDemandRecord } from '@/featur
 import { defineStore, ref } from 'wevu'
 import { createLandDemandForm } from '@/features/land-demand/defaults'
 import { getLandDemandRepository } from '@/features/land-demand/repository'
+import { resolveProgressStep } from '@/features/land-demand/validation'
 
 import './manager'
 
 type LandDemandStep = 1 | 2 | 3 | 4 | 5
 
+interface InitializeFromLocalDraftOptions {
+  refreshFromServer?: boolean
+}
+
 function cloneForm(form: LandDemandForm): LandDemandForm {
-  return {
+  const cloned = {
     ...form,
     deploy_park: [...form.deploy_park],
-  }
+  } as LandDemandForm & Record<string, unknown>
+
+  // Drafts written by older builds may still contain the removed financing
+  // fields. Strip them at every store boundary so they cannot reappear in
+  // the UI or leak into a save/update payload.
+  delete cloned.is_financing
+  delete cloned.financing_money
+  delete cloned.financing_time
+
+  return cloned
 }
 
 function formSignature(value: LandDemandForm): string {
@@ -34,6 +48,14 @@ function withAuthenticatedIdentity(
     county: enterprise.county,
     region: enterprise.region,
   }
+}
+
+function resolveServerDraftStep(
+  enterprise: EnterpriseProfile,
+  record: LandDemandRecord,
+): LandDemandStep {
+  const serverForm = createLandDemandForm(enterprise, record)
+  return resolveProgressStep(serverForm)
 }
 
 export const useLandDemandStore = defineStore('land-demand', () => {
@@ -64,11 +86,19 @@ export const useLandDemandStore = defineStore('land-demand', () => {
     submittedBaselineSignature = submittedForm ? formSignature(submittedForm) : undefined
     baselineSignature = submittedBaselineSignature ?? formSignature(initializedForm)
     const submitted = record?.landusedemand === '1'
-    const initializedStep = draft?.currentStep ?? (submitted ? 5 : 1)
+    const initializedStep = draft?.currentStep
+      ?? (submitted
+        ? 5
+        : record
+          ? resolveServerDraftStep(nextEnterprise, record)
+          : 1)
+    const formProgressStep = resolveProgressStep(initializedForm, initializedStep)
     currentStep.value = initializedStep
     progressStep.value = Math.max(
-      initializedStep,
-      submitted ? 5 : (draft?.progressStep ?? initializedStep),
+      formProgressStep,
+      submitted
+        ? 5
+        : (draft?.progressStep ?? initializedStep),
     ) as LandDemandStep
     hasRecord.value = Boolean(record)
     hasLocalDraft.value = Boolean(draft)
@@ -78,11 +108,28 @@ export const useLandDemandStore = defineStore('land-demand', () => {
   function initializeFromLocalDraft(
     nextEnterprise: EnterpriseProfile,
     record?: LandDemandRecord,
+    options: InitializeFromLocalDraftOptions = {},
   ): void {
+    const repository = getLandDemandRepository()
+    let draft = repository.getDraft(nextEnterprise.creditcode)
+    if (options.refreshFromServer && draft) {
+      if (!record || record.landusedemand === '1') {
+        repository.removeDraft(nextEnterprise.creditcode)
+        draft = undefined
+      }
+      else {
+        draft = {
+          ...draft,
+          form: cloneForm(createLandDemandForm(nextEnterprise, record)),
+          savedAt: Date.now(),
+        }
+        repository.setDraft(nextEnterprise.creditcode, draft)
+      }
+    }
     initialize(
       nextEnterprise,
       record,
-      getLandDemandRepository().getDraft(nextEnterprise.creditcode),
+      draft,
     )
   }
 
@@ -125,14 +172,32 @@ export const useLandDemandStore = defineStore('land-demand', () => {
     isDirty.value = formSignature(form.value) !== baselineSignature
   }
 
+  function clearForLogout(creditcode = form.value.creditcode): void {
+    getLandDemandRepository().clearDrafts(creditcode)
+    enterprise = undefined
+    form.value = {} as LandDemandForm
+    currentStep.value = 1
+    progressStep.value = 1
+    hasRecord.value = false
+    hasLocalDraft.value = false
+    isDirty.value = false
+    baselineSignature = ''
+    submittedBaselineSignature = undefined
+  }
+
   function markPersisted(record: LandDemandRecord): void {
     const isDraftRecord = record.landusedemand === '2'
+    const persistedForm = enterprise
+      ? createLandDemandForm(enterprise, record)
+      : form.value
+    const persistedProgressStep = resolveProgressStep(persistedForm, currentStep.value)
     hasRecord.value = true
     if (isDraftRecord) {
       submittedBaselineSignature = undefined
-      // A temporary save still needs the local step metadata so the workbench
-      // can show the latest completed step after the page is replaced.
-      saveLocalDraft()
+      // Server data can contain later-step values even when local navigation
+      // metadata still says that the user last viewed step 1.
+      progressStep.value = Math.max(progressStep.value, persistedProgressStep) as LandDemandStep
+      hasLocalDraft.value = true
     }
     else {
       hasLocalDraft.value = false
@@ -140,11 +205,16 @@ export const useLandDemandStore = defineStore('land-demand', () => {
       getLandDemandRepository().removeDraft(record.creditcode)
     }
     if (enterprise) {
-      form.value = createLandDemandForm(enterprise, record)
+      form.value = persistedForm
     }
     baselineSignature = formSignature(form.value)
     submittedBaselineSignature = isDraftRecord ? undefined : baselineSignature
     isDirty.value = false
+    if (isDraftRecord) {
+      // Persist the canonical server response and the corrected progress
+      // metadata, rather than the pre-save local snapshot.
+      saveLocalDraft()
+    }
   }
 
   return {
@@ -160,6 +230,7 @@ export const useLandDemandStore = defineStore('land-demand', () => {
     goToStep,
     saveLocalDraft,
     discardLocalDraft,
+    clearForLogout,
     markPersisted,
   }
 })

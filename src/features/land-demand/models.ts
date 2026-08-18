@@ -1,6 +1,6 @@
 export type YesNo = '是' | '否'
-export type FinancingChoice = '有' | '没有'
 export type LandDemandStatus = '1' | '2'
+export type LandDemandRecordStatus = '0' | LandDemandStatus
 
 export interface LandDemandForm {
   county: string
@@ -26,9 +26,6 @@ export interface LandDemandForm {
   pred_rdex: string
   pred_unitenergy: string
   projectdata: string
-  is_financing: FinancingChoice
-  financing_money: string
-  financing_time: string
   contact: string
   office: string
   phone: string
@@ -36,7 +33,7 @@ export interface LandDemandForm {
 
 export interface LandDemandRecord extends Omit<LandDemandForm, 'deploy_park'> {
   deploy_park: string
-  landusedemand: LandDemandStatus
+  landusedemand: LandDemandRecordStatus
   updatetime: string
   lastSubmittedAt?: string
   updateuser: string
@@ -49,19 +46,17 @@ export interface LandDemandRecord extends Omit<LandDemandForm, 'deploy_park'> {
   registrationType?: number
 }
 
-export type LandDemandRecordInput = Omit<LandDemandRecord, 'is_financing'> & {
-  is_financing: FinancingChoice | ''
-}
+export type LandDemandRecordInput = LandDemandRecord
 
 export type SaveLandDemandPayload = Omit<
   LandDemandRecord,
-  'updatetime' | 'updateuser' | 'newproject' | 'industryCode'
->
+  'updatetime' | 'updateuser' | 'newproject' | 'industryCode' | 'landusedemand'
+> & { landusedemand: LandDemandStatus }
 
 export type UpdateLandDemandPayload = Omit<
   LandDemandRecord,
-  'county' | 'region' | 'businessname' | 'updatetime' | 'updateuser'
-> & { newproject: '1' }
+  'county' | 'region' | 'businessname' | 'updatetime' | 'updateuser' | 'landusedemand'
+> & { landusedemand: LandDemandStatus, newproject: '1' }
 
 export interface LandDemandDraft {
   form: LandDemandForm

@@ -12,7 +12,6 @@ export function createLandDemandForm(
 ): LandDemandForm {
   const {
     deploy_park,
-    is_financing: savedFinancing,
     landusedemand: _landusedemand,
     updatetime: _updatetime,
     lastSubmittedAt: _lastSubmittedAt,
@@ -26,6 +25,10 @@ export function createLandDemandForm(
     registrationType: _registrationType,
     ...savedForm
   } = record ?? {}
+  const normalizedSavedForm = { ...savedForm } as Record<string, unknown>
+  delete normalizedSavedForm.is_financing
+  delete normalizedSavedForm.financing_money
+  delete normalizedSavedForm.financing_time
 
   const form: LandDemandForm = {
     county: enterprise.county,
@@ -51,13 +54,10 @@ export function createLandDemandForm(
     pred_rdex: '',
     pred_unitenergy: '',
     projectdata: '',
-    financing_money: '',
-    financing_time: '',
     contact: enterprise.contact,
     office: enterprise.office,
     phone: enterprise.phone,
-    ...savedForm,
-    is_financing: savedFinancing === '有' ? '有' : '没有',
+    ...normalizedSavedForm,
   }
 
   return {

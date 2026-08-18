@@ -23,6 +23,7 @@ const DEMO_ENTERPRISE: EnterpriseProfile = {
 }
 
 const SESSION_DURATION_MS = 8 * 60 * 60 * 1_000
+const REFRESH_DURATION_MS = 7 * 24 * 60 * 60 * 1_000
 
 let configuredRepository: AuthRepository | undefined
 
@@ -59,8 +60,25 @@ export function createMockAuthRepository(options: {
 
       return cloneSession({
         token: 'mock-demo-session-token',
+        refreshToken: 'mock-demo-refresh-token',
+        tokenType: 'Bearer',
         expiresAt: now() + SESSION_DURATION_MS,
+        refreshExpiresAt: now() + REFRESH_DURATION_MS,
         enterprise: DEMO_ENTERPRISE,
+      })
+    },
+
+    async refresh(session: AuthSession): Promise<AuthSession> {
+      await wait(delayMs)
+      if (session.refreshToken !== 'mock-demo-refresh-token') {
+        throw new Error('登录状态已失效，请重新登录')
+      }
+
+      return cloneSession({
+        ...session,
+        token: 'mock-demo-session-token',
+        expiresAt: now() + SESSION_DURATION_MS,
+        refreshExpiresAt: now() + REFRESH_DURATION_MS,
       })
     },
   }

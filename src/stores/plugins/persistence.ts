@@ -55,9 +55,16 @@ function isAuthSession(value: unknown): value is AuthSession {
     return false
   }
 
+  const refreshToken = unwrapRef(value.refreshToken)
+  const tokenType = unwrapRef(value.tokenType)
+  const refreshExpiresAt = unwrapRef(value.refreshExpiresAt)
+
   return (
     typeof value.token === 'string'
     && typeof value.expiresAt === 'number'
+    && (refreshToken === undefined || typeof refreshToken === 'string')
+    && (tokenType === undefined || typeof tokenType === 'string')
+    && (refreshExpiresAt === undefined || typeof refreshExpiresAt === 'number')
     && isEnterpriseProfile(value.enterprise)
   )
 }
@@ -113,6 +120,10 @@ export function createPersistencePlugin(storage: StorageAdapter) {
         return
       }
       sessionClearRevision = nextSessionClearRevision
+      if (!session) {
+        storage.remove(AUTH_STORAGE_KEY)
+        return
+      }
       storage.set<PersistedAuthStateV1>(AUTH_STORAGE_KEY, {
         version: 1,
         session,

@@ -25,6 +25,12 @@ interface QueryOptions {
   repository?: LandDemandRepository
 }
 
+type CreditcodeSource = string | (() => string)
+
+function resolveCreditcode(source: CreditcodeSource): string {
+  return typeof source === 'function' ? source() : source
+}
+
 export interface SaveLandDemandVariables {
   form: LandDemandForm
   status: LandDemandStatus
@@ -49,21 +55,24 @@ function cachePrivateRecord(client: QueryClient, record: LandDemandRecord): void
 }
 
 export function useLandDemandQuery(
-  creditcode: string,
+  creditcode: CreditcodeSource,
   options: QueryOptions = {},
 ): UseQueryResult<LandDemandRecord | null, Error> {
-  return useQuery(() => ({
-    queryKey: landDemandKeys.detail(creditcode),
-    queryFn: async ({ signal }) => {
-      const record = await getLandDemandInfo(creditcode, {
-        repository: options.repository,
-        signal,
-      })
-      return record ?? null
-    },
-    enabled: Boolean(creditcode),
-    meta: { scope: 'private' },
-  }), options.client ?? queryClient)
+  return useQuery(() => {
+    const currentCreditcode = resolveCreditcode(creditcode)
+    return {
+      queryKey: landDemandKeys.detail(currentCreditcode),
+      queryFn: async ({ signal }) => {
+        const record = await getLandDemandInfo(currentCreditcode, {
+          repository: options.repository,
+          signal,
+        })
+        return record ?? null
+      },
+      enabled: Boolean(currentCreditcode),
+      meta: { scope: 'private' },
+    }
+  }, options.client ?? queryClient)
 }
 
 export function useSaveLandDemandMutation(
@@ -102,6 +111,7 @@ export function useSendVerificationCodeMutation(
   return useMutation(() => ({
     mutationKey: [...landDemandKeys.all, 'send-verification-code'],
     mutationFn: phone => sendVerificationCode(phone, { repository: options.repository }),
+    meta: { suppressGlobalErrorLog: true },
     retry: 0,
   }), options.client ?? queryClient)
 }
@@ -114,6 +124,7 @@ export function useVerifyVerificationCodeMutation(
     mutationFn: variables => verifyVerificationCode(variables.phone, variables.code, {
       repository: options.repository,
     }),
+    meta: { suppressGlobalErrorLog: true },
     retry: 0,
   }), options.client ?? queryClient)
 }

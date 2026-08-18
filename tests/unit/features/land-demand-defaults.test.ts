@@ -1,7 +1,7 @@
 import type { EnterpriseProfile } from '@/features/auth/models'
-import type { FinancingChoice, LandDemandRecordInput } from '@/features/land-demand/models'
+import type { LandDemandRecordInput } from '@/features/land-demand/models'
 
-import { describe, expect, expectTypeOf, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { createLandDemandForm } from '@/features/land-demand/defaults'
 
 const enterprise: EnterpriseProfile = {
@@ -27,7 +27,6 @@ describe('land demand form defaults', () => {
       office: enterprise.office,
       phone: enterprise.phone,
       deploy_park: [],
-      is_financing: '没有',
     })
   })
 
@@ -37,11 +36,16 @@ describe('land demand form defaults', () => {
     expect(form.deploy_park).toEqual(['330203', '330205'])
   })
 
-  it('defaults missing financing demand to 没有', () => {
-    const legacyRecord = { is_financing: '' } satisfies Partial<LandDemandRecordInput>
+  it('does not restore removed financing fields from a legacy record', () => {
+    const legacyRecord = {
+      is_financing: '',
+      financing_money: '100',
+      financing_time: '2027-06',
+    } as unknown as Partial<LandDemandRecordInput>
     const form = createLandDemandForm(enterprise, legacyRecord)
 
-    expect(form.is_financing).toBe('没有')
-    expectTypeOf(form.is_financing).toEqualTypeOf<FinancingChoice>()
+    expect(form).not.toHaveProperty('is_financing')
+    expect(form).not.toHaveProperty('financing_money')
+    expect(form).not.toHaveProperty('financing_time')
   })
 })
