@@ -1,6 +1,6 @@
 # 企业用地需求填报小程序
 
-基于 Weapp-Vite、Wevu、TDesign MiniProgram、构建期 TailwindCSS 和 TanStack Query Core 的企业用地需求填报小程序。认证和用地需求记录通过 `http://localhost:17163/` 的 HTTP Repository 接入；验证码和本地草稿仍使用 Mock/微信小程序 Storage，仅用于本地开发和验收，不代表生产后端、真实短信或正式企业数据。
+基于 Weapp-Vite、Wevu、TDesign MiniProgram、构建期 TailwindCSS 和 TanStack Query Core 的企业用地需求填报小程序。认证和用地需求记录通过正式环境 `http://183.134.232.143:8082/components/nx/yz/` 的 HTTP Repository 接入；验证码和本地草稿仍使用 Mock/微信小程序 Storage，仅用于本地流程测试，不代表真实短信或生产数据。
 
 ## 本地体验
 

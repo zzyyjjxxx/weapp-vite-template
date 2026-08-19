@@ -3026,6 +3026,28 @@ current worktree so the new `dist` output is loaded.
 | `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
 | Live WeChat Developer Tools compile/click-through | not run | Manual runtime confirmation remains pending |
 
+## 接入正式环境 API（2026-08-19，实际结果）
+
+- 正式环境统一基地址改为 `http://183.134.232.143:8082/components/nx/yz/`；登录、刷新、企业信息和用地需求 Repository 继续使用原有相对路由，验证码与本地草稿仍保持 Mock/Storage 边界。
+- TDD RED：新增默认登录 URL 断言后，聚焦测试退出 1；实际收到的 URL 仍为 `http://localhost:17163/customapi/enterpriseapi/login`。
+- TDD GREEN：切换基地址后，正式 URL 聚焦测试退出 0，1 个文件、4 个测试通过。
+
+| 命令 / 检查 | 退出码 | 实际结果 |
+| --- | ---: | --- |
+| `pnpm exec vitest run tests/unit/platform/http-client.test.ts`（切换前 RED） | 1 | 1 个测试失败；默认 URL 仍指向本地地址。 |
+| 同一聚焦命令（切换后 GREEN） | 0 | 1 个文件、4 个测试通过。 |
+| `pnpm typecheck:app` | 0 | App TypeScript 检查通过。 |
+| `pnpm typecheck:e2e` | 0 | E2E TypeScript 检查通过。 |
+| `pnpm lint` | 0 | 零警告产品 lint 通过。 |
+| `pnpm stylelint` | 0 | 样式检查通过。 |
+| `pnpm test` | 1 | 42 个文件通过、221 个测试通过；既有 `tests/unit/components/land-demand-wizard.test.ts` 的 1 个源码字符串断言因 Windows `core.autocrlf=true` 产生的 CRLF/LF 差异失败，与本次 API 变更无关。 |
+| `pnpm build` | 0 | 微信小程序构建通过；主包 807 KB。 |
+| `pnpm analyze:budget` | 0 | 包体预算检查通过。 |
+| `pnpm verify:generated-runtime` | 1 | 既有 TDesign 生成产物仍包含 `getSystemInfoSync`，被运行时兼容性断言阻断；与本次 API 变更无关。 |
+| 生成产物正式 URL 检查 | 0 | `dist/weapp-vendors/wevu-watch.js` 已包含正式环境基地址。 |
+| `git diff --check` | 0 | 无空白错误，仅有 Windows LF→CRLF 转换警告。 |
+| 正式 API / 微信开发者工具运行时验证 | 未执行 | 未使用真实账号发起登录，也未声称网络可达或 DevTools 交互通过。 |
+
 ## Open submitted edits at the first invalid step (2026-08-13, actual results)
 
 - The workbench `修改填报` action no longer defaults to step 5. When no step was explicitly selected, it now uses the existing `resumeStep`, which is the first step returned by the submitted-record validation.

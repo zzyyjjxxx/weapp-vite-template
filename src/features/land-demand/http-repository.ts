@@ -260,7 +260,7 @@ function mapLandDemandError(error: unknown, fallback: string): Error {
     case 'invalid_request':
       return new Error('用地需求数据格式不正确')
     case 'network_error':
-      return new Error('无法连接本地 API，请确认 http://localhost:17163/ 可访问')
+      return new Error('无法连接 API，请检查网络或稍后重试')
     default:
       return new Error(fallback)
   }

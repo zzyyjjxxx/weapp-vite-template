@@ -90,7 +90,7 @@ function createResponseError(statusCode: number, data: unknown): ApiError {
 
 function createNetworkError(): ApiError {
   return new ApiError(
-    'Unable to connect to the local API. Check that the development service is running.',
+    'Unable to connect to the API. Check network connectivity or the service status.',
     { code: 'network_error' },
   )
 }

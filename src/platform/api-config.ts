@@ -1,7 +1,7 @@
 /**
- * Local development endpoint supplied for the Forguncy custom APIs.
+ * Official environment endpoint supplied for the Forguncy custom APIs.
  *
- * Replace this value in the deployment configuration when the API is hosted
- * outside the local WeChat DevTools machine.
+ * Keep the trailing slash so that the shared HTTP client can append the
+ * relative `customapi/**` routes without changing each Repository.
  */
-export const API_BASE_URL = 'http://localhost:17163/'
+export const API_BASE_URL = 'http://183.134.232.143:8082/components/nx/yz/'

@@ -1,7 +1,10 @@
 # 用地需求 HTTP Client 与 Repository
 
-应用运行时在 `src/app.vue` 配置真实 HTTP Repository，默认请求基地址为
-`http://localhost:17163/`。验证码暂时仍由本地 Mock Repository 处理，以便本地开发服务不可达时继续测试提交流程；步骤草稿也继续使用微信小程序 Storage。本地步骤草稿是明确的例外，由 LandDemand Store 直接调用 Repository，不经过 Service 或 Query。单元测试仍可注入 Mock Repository。
+应用运行时在 `src/app.vue` 配置真实 HTTP Repository，默认请求基地址为正式环境
+`http://183.134.232.143:8082/components/nx/yz/`。验证码暂时仍由本地 Mock Repository
+处理，步骤草稿也继续使用微信小程序 Storage；这两项是本地客户端能力，不调用正式短信或接口。
+本地步骤草稿是明确的例外，由 LandDemand Store 直接调用 Repository，不经过 Service 或 Query。
+单元测试仍可注入 Mock Repository。
 
 ## 接口边界
 
@@ -58,7 +61,9 @@ phone numbers, tokens, or complete form payloads.
 4. 由后端生成 `updatetime/updateuser`；每次新增、暂存、修改或提交都会更新 `updatetime`，并以 Excel/OLE Automation 日期序列字符串保存到 `landusedemand_info.updatetime`；适配器读取后转换为前端可展示的日期时间。服务端验证码接入前，验证码挑战和校验留在本地 Mock。
 5. 写接口成功后重新读取 `getlanddemand` 的正式记录，不依赖部署版本可能返回的空 body 或成功标记；同时保持 Query 键、私有缓存清理和新增后切换修改语义。
 
-生产请求域名、真实短信和后端部署不属于当前本地开发配置；部署前应替换 `src/platform/api-config.ts` 中的基地址。
+当前默认基地址由 `src/platform/api-config.ts` 统一维护；如果后续需要切换到其他环境，只修改该配置，
+不要改动页面、Service、Query 或 Repository 中的相对路由。正式环境还需要在微信开发者工具/小程序后台
+配置可用的 request 合法域名，并确认网络策略允许当前接口地址。
 ## Storage 失败语义
 
 Storage 键不存在时读取为空；真正的读取异常以及写入、删除失败都必须向调用方抛出。

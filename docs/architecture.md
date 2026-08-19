@@ -1,6 +1,6 @@
 # 用地需求填报架构
 
-本仓库只包含企业用地需求填报小程序。认证和用地需求记录通过可替换的 HTTP Service/Repository 访问本地开发 API；验证码与本地草稿仍使用 Mock 和微信小程序 Storage，不包含生产凭据、真实短信或发布流程。
+本仓库只包含企业用地需求填报小程序。认证和用地需求记录通过可替换的 HTTP Service/Repository 访问正式环境 API；验证码与本地草稿仍使用 Mock 和微信小程序 Storage，不包含生产凭据、真实短信或发布流程。
 
 ## 分层
 
@@ -19,7 +19,7 @@
   -> Wevu Store + Query/Mutation
   -> Auth 或 LandDemand Service
   -> 可替换 Repository 接口
-  -> HTTP Repository -> 本地开发 API
+  -> HTTP Repository -> 正式环境 API
   -> 验证码/草稿 Mock -> 微信小程序 Storage
 ```
 

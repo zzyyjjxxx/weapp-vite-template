@@ -104,7 +104,7 @@ function mapAuthError(error: unknown, fallback: string): Error {
     case 'invalid_refresh_token':
       return new Error('登录状态已失效，请重新登录')
     case 'network_error':
-      return new Error('无法连接本地 API，请确认 http://localhost:17163/ 可访问')
+      return new Error('无法连接 API，请检查网络或稍后重试')
     default:
       return new Error(fallback)
   }

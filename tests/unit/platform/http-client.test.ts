@@ -4,6 +4,24 @@ import { describe, expect, it } from 'vitest'
 import { createApiClient } from '@/platform/http-client'
 
 describe('api client', () => {
+  it('uses the official API prefix for default requests', async () => {
+    let captured: MiniProgramRequestOptions | undefined
+    const client = createApiClient({
+      request: (options) => {
+        captured = options
+        options.success?.({ statusCode: 200, data: { ok: true } })
+      },
+    })
+
+    await client.request('POST', '/customapi/enterpriseapi/login', {
+      body: { username: 'enterprise', password: 'secret' },
+    })
+
+    expect(captured?.url).toBe(
+      'http://183.134.232.143:8082/components/nx/yz/customapi/enterpriseapi/login',
+    )
+  })
+
   it('builds JSON requests with the bearer token', async () => {
     let captured: MiniProgramRequestOptions | undefined
     const client = createApiClient({
