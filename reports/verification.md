@@ -3053,6 +3053,20 @@ current worktree so the new `dist` output is loaded.
 | `weapp_devtools_connect` | 超时 | DevTools 自动化服务端口未连通。 |
 | `curl.exe` 无账号 GET 探测 | 0 | HTTP 404；仅作主机连通性证据，未发送真实凭据。 |
 
+## 正式环境登录运行时测试（2026-08-19，实际结果）
+
+- 已检测到微信开发者工具服务端口 `40637` 已启用；通过官方 `auto` 命令为当前项目建立 Automator 端口 `10149`。
+- DevTools 运行时连接成功，确认项目路径为 `C:\Users\hp\.codex\worktrees\a07f\weapp-vite-template`，当前页面为 `pages/login/index`。
+- 使用用户提供的测试账号执行一次登录。页面保持在登录页，运行时 `errorMessage` 为“企业信息不存在”，没有建立会话或进入首页。该结果确认请求已到达正式接口并收到业务错误响应；不能视为登录成功。
+- 测试结束后已清空运行时中的用户名和密码；没有将账号、密码、token 或完整请求体写入仓库或报告。
+
+| 命令 / 检查 | 结果 | 实际证据 |
+| --- | --- | --- |
+| `detectWechatDevtoolsServicePort()` | 通过 | `servicePort=40637`、`servicePortEnabled=true`。 |
+| 官方 `cli.bat auto --project <current> --auto-port 10149` | 通过 | 返回 `auto`，端口 `10149` 监听。 |
+| `weapp_devtools_connect` | 通过 | 连接到当前 `a07f` 项目，页面为登录页。 |
+| 正式环境登录点击 | 业务失败 | 页面显示“企业信息不存在”；未进入首页。 |
+
 ## 接入正式环境 API（2026-08-19，实际结果）
 
 - 正式环境统一基地址改为 `http://183.134.232.143:8082/components/nx/yz/`；登录、刷新、企业信息和用地需求 Repository 继续使用原有相对路由，验证码与本地草稿仍保持 Mock/Storage 边界。
