@@ -3360,3 +3360,20 @@ current worktree so the new `dist` output is loaded.
 | `pnpm analyze:budget` | 0 | 包体预算检查通过。 |
 | `pnpm typecheck` / `pnpm lint` / `pnpm stylelint` | 0 | 全部通过。 |
 | `pnpm test` | 1 | 42 个文件、221 个测试通过；仍为既有 Windows CRLF/LF 源码字符串断言失败，与本次上传配置无关。 |
+
+## 补齐正式上传优化开关（2026-08-19，实际结果）
+
+- 修复前的未使用文件过滤已将上传源包从 `3358KB` 降至 `2067KB`，但仍超过 `2MB`；同时微信开发者工具报告 JS 压缩和组件按需注入未通过。
+- 已将 `project.config.json` 的 `setting.minified` 设为 `true`，并在 `src/app.vue` 的应用级 JSON 中加入 `lazyCodeLoading: 'requiredComponents'`。
+- 未调整页面路由、Repository、正式 API 地址或分包边界；登录页背景图的显式上传白名单保持不变。
+- 本次只完成构建和静态门禁，未使用未指定的版本号/描述直接创建线上上传版本。
+
+| 命令 / 检查 | 退出码 | 实际结果 |
+| --- | ---: | --- |
+| 上传优化配置契约测试 | 0 | 1 个测试通过；确认 JS 压缩、组件按需注入和背景图白名单配置存在。 |
+| `pnpm build` | 0 | 微信小程序构建通过；主包 `807KB`。 |
+| 生成配置检查 | 0 | `minified=true`、`ignoreUploadUnusedFiles=true`、`dist/app.json.lazyCodeLoading=requiredComponents`，背景图存在。 |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified。 |
+| `pnpm analyze:budget` | 0 | 包体预算检查通过。 |
+| `pnpm typecheck` / `pnpm lint` / `pnpm stylelint` | 0 | 全部通过。 |
+| 正式上传成功验证 | 未执行 | 需先由用户确认上传版本号和描述；当前只完成上传前配置修复。 |

@@ -52,6 +52,7 @@ defineAppJson({
   },
   style: 'v2',
   componentFramework: 'glass-easel',
+  lazyCodeLoading: 'requiredComponents',
   sitemapLocation: 'sitemap.json',
 })
 </script>

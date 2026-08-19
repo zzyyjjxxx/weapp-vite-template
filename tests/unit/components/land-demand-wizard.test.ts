@@ -72,15 +72,18 @@ describe('land demand wizard component contract', () => {
     expect(source).toMatch(/\.login__field-label\s*\{[\s\S]*min-height:\s*48rpx;[\s\S]*padding-left:\s*32rpx;[\s\S]*font-size:\s*32rpx;[\s\S]*font-weight:\s*400;[\s\S]*line-height:\s*48rpx;[\s\S]*color:\s*\$color-text;/)
   })
 
-  it('filters unused upload files while retaining the login hero', () => {
+  it('enables upload optimizations while retaining the login hero', () => {
     const projectConfig = JSON.parse(readFileSync('project.config.json', 'utf8')) as {
-      setting?: { ignoreUploadUnusedFiles?: boolean }
+      setting?: { ignoreUploadUnusedFiles?: boolean, minified?: boolean }
       packOptions?: {
         include?: Array<{ type?: string, value?: string }>
       }
     }
+    const app = readFileSync('src/app.vue', 'utf8')
 
     expect(projectConfig.setting?.ignoreUploadUnusedFiles).toBe(true)
+    expect(projectConfig.setting?.minified).toBe(true)
+    expect(app).toContain('lazyCodeLoading: \'requiredComponents\'')
     expect(projectConfig.packOptions?.include).toContainEqual({
       type: 'file',
       value: 'assets/land-planning-hero.png',
