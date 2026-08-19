@@ -3026,6 +3026,19 @@ current worktree so the new `dist` output is loaded.
 | `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
 | Live WeChat Developer Tools compile/click-through | not run | Manual runtime confirmation remains pending |
 
+## 正式环境登录成功重测（2026-08-19，实际结果）
+
+- 使用当前工作树和已启用的微信开发者工具服务端口 `40637`，通过 Automator 端口 `10149` 连接并执行登录页到首页的最小运行时验证。
+- 登录成功后实际跳转到 `pages/home/index?freshLogin=1`；首页运行时数据为 `authorized=true`、`queryFailed=false`、`submitted=true`。
+- 服务端返回企业名称“宁波市测试有限公司”，页面状态为“已提交”，上次更新时间为 `2026-05-06 10:48:59`。这证明正式接口登录及登录后的企业信息、用地需求查询链路已在微信开发者工具运行时打通。
+- 未执行任何填报修改或提交操作；未将账号、密码、token 或完整请求体写入仓库或报告。
+
+| 命令 / 检查 | 结果 | 实际证据 |
+| --- | --- | --- |
+| `weapp_devtools_connect` | 通过 | 连接到当前 `a07f` 项目，初始页面为 `pages/login/index`。 |
+| 正式环境登录点击 | 通过 | 登录页跳转至 `pages/home/index?freshLogin=1`。 |
+| 首页运行时状态 | 通过 | `authorized=true`、`queryFailed=false`、`submitted=true`，服务端企业信息已展示。 |
+
 ## 正式接口验证重跑（2026-08-19，实际结果）
 
 本次重跑未修改源码。首次构建后重新生成产物，TDesign 兼容性补丁已生效，生成运行时校验由失败恢复为通过。
