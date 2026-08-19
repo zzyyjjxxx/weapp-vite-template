@@ -72,7 +72,7 @@ describe('land demand wizard component contract', () => {
     expect(source).toMatch(/\.login__field-label\s*\{[\s\S]*min-height:\s*48rpx;[\s\S]*padding-left:\s*32rpx;[\s\S]*font-size:\s*32rpx;[\s\S]*font-weight:\s*400;[\s\S]*line-height:\s*48rpx;[\s\S]*color:\s*\$color-text;/)
   })
 
-  it('forces the login hero into real-device debug packages', () => {
+  it('filters unused upload files while retaining the login hero', () => {
     const projectConfig = JSON.parse(readFileSync('project.config.json', 'utf8')) as {
       setting?: { ignoreUploadUnusedFiles?: boolean }
       packOptions?: {
@@ -80,7 +80,7 @@ describe('land demand wizard component contract', () => {
       }
     }
 
-    expect(projectConfig.setting?.ignoreUploadUnusedFiles).toBe(false)
+    expect(projectConfig.setting?.ignoreUploadUnusedFiles).toBe(true)
     expect(projectConfig.packOptions?.include).toContainEqual({
       type: 'file',
       value: 'assets/land-planning-hero.png',

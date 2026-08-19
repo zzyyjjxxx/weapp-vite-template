@@ -19,7 +19,7 @@
         "miniprogramNpmDistDir": "./dist"
       }
     ],
-    "ignoreUploadUnusedFiles": false,
+    "ignoreUploadUnusedFiles": true,
     "compileHotReLoad": false,
     "skylineRenderEnable": false,
     "packNpmManually": true,

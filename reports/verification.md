@@ -3342,3 +3342,21 @@ current worktree so the new `dist` output is loaded.
 | `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
 | `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
 | Live WeChat Developer Tools compile/click-through | not run | Manual runtime confirmation remains pending |
+
+## 修复正式上传包体超限（2026-08-19，实际结果）
+
+- 通过微信开发者工具官方 CLI 复现了上传失败：`80051`，上传源包 `3358KB`，上限 `2MB`。
+- 原因不是正式 API 或端口不可达，而是 `project.config.json` 的 `setting.ignoreUploadUnusedFiles=false` 让未被运行时引用的构建文件也进入上传源包；`pnpm analyze:budget` 统计的实际主包仍为约 `807KB`。
+- 已将 `ignoreUploadUnusedFiles` 改为 `true`，并保留 `packOptions.include` 对登录页背景图的显式上传白名单，避免图片因未被脚本引用而被过滤。
+- `project.private.config.json` 中的 `bigPackageSizeSupport=true` 仅用于预览/真机调试的 4MB 选项，不能替代正式上传的未使用文件过滤。
+- 本次未直接发布新版本；未指定上传版本号和描述，避免产生新的线上版本。
+
+| 命令 / 检查 | 退出码 | 实际结果 |
+| --- | ---: | --- |
+| 微信开发者工具 CLI 上传复现（修复前） | 10 | 稳定复现 `source size 3358KB exceed max limit 2MB`。 |
+| 新增包体配置契约测试 | 0 | 1 个测试通过；确认过滤未使用文件且保留登录页背景图。 |
+| `pnpm build` | 0 | 微信小程序构建通过；主包 `807KB`。 |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified。 |
+| `pnpm analyze:budget` | 0 | 包体预算检查通过。 |
+| `pnpm typecheck` / `pnpm lint` / `pnpm stylelint` | 0 | 全部通过。 |
+| `pnpm test` | 1 | 42 个文件、221 个测试通过；仍为既有 Windows CRLF/LF 源码字符串断言失败，与本次上传配置无关。 |
