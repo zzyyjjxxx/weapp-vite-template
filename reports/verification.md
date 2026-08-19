@@ -3038,6 +3038,21 @@ current worktree so the new `dist` output is loaded.
 | `pnpm analyze:budget` | 0 | 包体预算检查通过。 |
 | 正式 API / 微信开发者工具运行时验证 | 未执行 | 未使用真实账号，未声称正式接口可达。 |
 
+## 启动正式环境测试（2026-08-19，实际结果）
+
+- 已从当前工作树 `C:\Users\hp\.codex\worktrees\a07f\weapp-vite-template` 构建并打开微信开发者工具项目；`wxfilewatcher_x64.exe` 观察到的项目路径为当前 `a07f` 工作树，不再是旧的 `e50c` 工作树。
+- 生成产物中的默认 API 基地址为 `http://183.134.232.143:8082/components/nx/yz/`。
+- 正式接口主机的无账号 `GET /customapi/enterpriseapi/login` 探测返回 HTTP 404；登录契约为 POST，因此该结果只证明主机可达，不代表登录失败或接口不可用。
+- DevTools 自动化连接到当前项目超时，自动端口 `10148` 未监听；未执行真实账号登录、页面点击或小程序运行时请求断言。
+
+| 命令 / 检查 | 退出码 | 实际结果 |
+| --- | ---: | --- |
+| `pnpm build` | 0 | 微信小程序构建通过；主包 807 KB。 |
+| `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified. |
+| `pnpm open` | 手动终止等待进程 | 当前项目监听路径已切换到 `a07f` 工作树，DevTools 项目已启动。 |
+| `weapp_devtools_connect` | 超时 | DevTools 自动化服务端口未连通。 |
+| `curl.exe` 无账号 GET 探测 | 0 | HTTP 404；仅作主机连通性证据，未发送真实凭据。 |
+
 ## 接入正式环境 API（2026-08-19，实际结果）
 
 - 正式环境统一基地址改为 `http://183.134.232.143:8082/components/nx/yz/`；登录、刷新、企业信息和用地需求 Repository 继续使用原有相对路由，验证码与本地草稿仍保持 Mock/Storage 边界。
