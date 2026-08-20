@@ -973,7 +973,7 @@ Observed result: no whitespace or patch-format errors; only Git line-ending warn
 - `pnpm test:e2e` 退出 0：9/9 场景通过（46.6 秒）；最终运行时扫描为
   `RUNTIME_PATH=pages/home/index`、`RUNTIME_BLOCKING=[]`。用户已有的 `skills-lock.json` 未暂存。
 
-## 项目级 MCP stdio 握手修复（2026-08-03）
+## 直接合入 main 的验证（2026-08-10，实际结果）
 
 - 项目级 `.codex/config.toml` 与 `.mcp.json` 改用 `scripts/weapp-vite-mcp.mjs`，绕过
   `wv mcp` 启动时写入 stdout 的引导文本，确保 stdout 仅包含 JSON-RPC。
@@ -3342,7 +3342,6 @@ current worktree so the new `dist` output is loaded.
 | `pnpm verify:generated-runtime` | 0 | Generated runtime contract verified |
 | `git diff --check` | 0 | No whitespace errors; expected LF-to-CRLF warnings only |
 | Live WeChat Developer Tools compile/click-through | not run | Manual runtime confirmation remains pending |
-
 ## 修复正式上传包体超限（2026-08-19，实际结果）
 
 - 通过微信开发者工具官方 CLI 复现了上传失败：`80051`，上传源包 `3358KB`，上限 `2MB`。
@@ -3377,3 +3376,11 @@ current worktree so the new `dist` output is loaded.
 | `pnpm analyze:budget` | 0 | 包体预算检查通过。 |
 | `pnpm typecheck` / `pnpm lint` / `pnpm stylelint` | 0 | 全部通过。 |
 | 正式上传成功验证 | 未执行 | 需先由用户确认上传版本号和描述；当前只完成上传前配置修复。 |
+
+## Main worktree local verification record retained during merge (2026-08-10)
+
+- 从 `origin/codex/land-demand-ui-fixes` 合入 `main`，生成合并提交 `359aa2e`；主分支原有的本地报告修改已保留，未覆盖。
+- `pnpm test` 退出码 `0`：39 个测试文件、186 个测试全部通过。
+- `pnpm typecheck`、`pnpm lint`、`pnpm stylelint` 均退出码 `0`；lint 无警告。
+- `pnpm build` 退出码 `0`，微信小程序主包 785 KB；重新构建后 `pnpm verify:generated-runtime` 退出码 `0`。
+- `pnpm analyze:budget` 和 `git diff --check` 通过；本次未进行微信开发者工具实时交互验证。

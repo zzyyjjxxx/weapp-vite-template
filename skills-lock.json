@@ -5,13 +5,13 @@
       "source": "sonofmagic/skills",
       "sourceType": "github",
       "skillPath": "skills/weapp-vite/docs-and-website-sync/SKILL.md",
-      "computedHash": "7b5bb42ef6441850793bf09dfeffdcb174dcc951438045efe83bdf54734def48"
+      "computedHash": "0a25fe8e4c53402ce779764146971b8aec078289218b95317a458194173427a3"
     },
     "native-to-weapp-vite-wevu-migration": {
       "source": "sonofmagic/skills",
       "sourceType": "github",
       "skillPath": "skills/weapp-vite/native-to-weapp-vite-wevu-migration/SKILL.md",
-      "computedHash": "3e9300925a6ac2385a0cd81391a16184cb91f6c8d62003e5bff37ceddbab6832"
+      "computedHash": "1f7c244850f4b65345b1916f26ee2f6d4433fc198b73ffc09c2dd9c0e1a88079"
     },
     "playwright-cli": {
       "source": "sonofmagic/skills",
@@ -23,37 +23,37 @@
       "source": "sonofmagic/skills",
       "sourceType": "github",
       "skillPath": "skills/weapp-vite/release-and-changeset-best-practices/SKILL.md",
-      "computedHash": "c336d6a35854ebaf6feb03f60f50242b5db0b39e27c9d427c5f42e4cc6a2f72a"
+      "computedHash": "cc6acf776cef7f364f072b53ea8394946d66b4727b514e846d7043c6fc751e3c"
     },
     "weapp-devtools-e2e-best-practices": {
       "source": "sonofmagic/skills",
       "sourceType": "github",
       "skillPath": "skills/weapp-vite/weapp-devtools-e2e-best-practices/SKILL.md",
-      "computedHash": "bc56483a3a5372fcaa857131fbfb402226e95a1e3c0fd0225b23322a60de514f"
+      "computedHash": "d8aed4ce97568e25a6c5810db7ce6ac6529e3e63b578f010c6b10753da2f0809"
     },
     "weapp-tailwindcss": {
       "source": "sonofmagic/skills",
       "sourceType": "github",
       "skillPath": "skills/weapp-tailwindcss/weapp-tailwindcss/SKILL.md",
-      "computedHash": "3fb52a09e4046049bb1cc92b450741783cb01344cbda43b9e53fc3c031475d73"
+      "computedHash": "0040dd302de594d51c63077a92048142b0c1c7a3f427aaab6f12aa34b963a1fd"
     },
     "weapp-vite-best-practices": {
       "source": "sonofmagic/skills",
       "sourceType": "github",
       "skillPath": "skills/weapp-vite/weapp-vite-best-practices/SKILL.md",
-      "computedHash": "8874ac70d8b0b1de52f48ed0c053776786f738378f4c6938cef6a16c5a0e7023"
+      "computedHash": "2817b17ff43006b145ed83409423ad75003ace1369a5773cb8506bdd60573230"
     },
     "weapp-vite-vue-sfc-best-practices": {
       "source": "sonofmagic/skills",
       "sourceType": "github",
       "skillPath": "skills/weapp-vite/weapp-vite-vue-sfc-best-practices/SKILL.md",
-      "computedHash": "816157e035f5132c0262fbaf18a2fe2adcec26f006a109dc78f4819211b71783"
+      "computedHash": "d5a915b65d4a352973b236c579fb3faf86b4ea22bd358862b93858d3c383e732"
     },
     "wevu-best-practices": {
       "source": "sonofmagic/skills",
       "sourceType": "github",
       "skillPath": "skills/weapp-vite/wevu-best-practices/SKILL.md",
-      "computedHash": "14c6d07170f4de35a144e1f79131ff8b4d4863b1d3602a50c0d7304edf52c167"
+      "computedHash": "8c0b3cb3731494a85d451bedcfa11dc72053d5875d16560d1cef79a948414fb5"
     }
   }
 }
